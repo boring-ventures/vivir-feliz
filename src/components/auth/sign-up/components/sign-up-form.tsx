@@ -1,9 +1,9 @@
 "use client";
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FacebookIcon, GithubIcon, UploadCloud } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,51 +16,31 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/utils/password-input";
-import { PasswordStrengthIndicator } from "@/components/utils/password-strength-indicator";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { SignUpFormProps, SignUpFormData } from "@/types/auth/sign-up";
 import { signUpFormSchema } from "@/types/auth/sign-up";
 import { toast } from "@/components/ui/use-toast";
-import Image from "next/image";
-import { uploadAvatar } from "@/lib/supabase/upload-avatar";
 import { useRouter } from "next/navigation";
 import { saltAndHashPassword } from "@/lib/auth/password-crypto";
+import Link from "next/link";
 
 export function SignUpForm({ className, ...props }: SignUpFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useAuth();
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [password, setPassword] = useState("");
   const router = useRouter();
 
   const form = useForm<SignUpFormData>({
     resolver: zodResolver(signUpFormSchema),
     defaultValues: {
+      fullName: "",
       email: "",
-      firstName: "",
-      lastName: "",
+      phone: "",
       password: "",
       confirmPassword: "",
+      acceptTerms: false,
+      acceptWhatsApp: false,
     },
   });
-
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
-    form.setValue("password", e.target.value);
-  };
 
   async function onSubmit(data: SignUpFormData) {
     try {
@@ -82,20 +62,10 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
       }
 
       if (user) {
-        let avatarUrl = null;
-        if (avatarFile) {
-          try {
-            avatarUrl = await uploadAvatar(avatarFile, user.id);
-          } catch (error) {
-            console.error("Avatar upload failed:", error);
-            toast({
-              title: "Warning",
-              description:
-                "Failed to upload avatar, you can add it later from your profile.",
-              variant: "default",
-            });
-          }
-        }
+        // Split fullName into firstName and lastName
+        const nameParts = data.fullName.trim().split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
 
         const response = await fetch("/api/profile", {
           method: "POST",
@@ -104,18 +74,18 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
           },
           body: JSON.stringify({
             userId: user.id,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            birthDate: data.birthDate,
-            avatarUrl,
+            firstName,
+            lastName,
+            phone: data.phone,
+            acceptWhatsApp: data.acceptWhatsApp,
           }),
         });
 
         let result: Record<string, unknown>;
-        let text = ""; // Define text outside the try block
+        let text = "";
 
         try {
-          text = await response.text(); // Assign value inside try
+          text = await response.text();
           result = text ? JSON.parse(text) : {};
 
           if (!response.ok) {
@@ -136,9 +106,9 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
         }
 
         toast({
-          title: "Success",
+          title: "Éxito",
           description:
-            "Your account has been created! Please verify your email to continue.",
+            "Tu cuenta ha sido creada! Revisa tu email para verificar tu cuenta.",
         });
 
         // Redirect to verification page instead of dashboard if email confirmation is required
@@ -153,7 +123,7 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Something went wrong. Please try again.";
+          : "Algo salió mal. Por favor intenta de nuevo.";
 
       toast({
         title: "Error",
@@ -166,89 +136,86 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
   }
 
   return (
-    <div className={cn("grid gap-6", className)} {...props}>
+    <div className={cn("space-y-4", className)} {...props}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative h-24 w-24">
-              {avatarPreview ? (
-                <Image
-                  src={avatarPreview}
-                  alt="Avatar preview"
-                  fill
-                  className="rounded-full object-cover"
-                />
-              ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted">
-                  <UploadCloud className="h-8 w-8 text-muted-foreground" />
-                </div>
-              )}
-            </div>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              className="w-full max-w-xs"
-            />
-          </div>
-
           <FormField
             control={form.control}
-            name="email"
+            name="fullName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Nombre Completo
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="name@example.com" {...field} />
+                  <Input
+                    placeholder="Tu nombre completo"
+                    className="h-11"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="firstName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>First Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="John" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Last Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Email
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="tu@email.com"
+                    type="email"
+                    className="h-11"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Teléfono
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="+591-7-123-4567"
+                    type="tel"
+                    className="h-11"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Contraseña
+                </FormLabel>
                 <FormControl>
                   <PasswordInput
-                    placeholder="********"
+                    placeholder="Mínimo 6 caracteres"
+                    className="h-11"
                     {...field}
-                    onChange={handlePasswordChange}
                   />
                 </FormControl>
-                <PasswordStrengthIndicator password={password} />
                 <FormMessage />
               </FormItem>
             )}
@@ -259,50 +226,77 @@ export function SignUpForm({ className, ...props }: SignUpFormProps) {
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Confirmar Contraseña
+                </FormLabel>
                 <FormControl>
-                  <PasswordInput placeholder="********" {...field} />
+                  <PasswordInput
+                    placeholder="Repite tu contraseña"
+                    className="h-11"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <Button className="w-full" disabled={isLoading}>
-            Create Account
+          <FormField
+            control={form.control}
+            name="acceptTerms"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <label className="text-sm text-gray-600 cursor-pointer">
+                    Acepto los{" "}
+                    <Link
+                      href="/terms"
+                      className="text-blue-600 hover:text-blue-700 underline"
+                    >
+                      términos y condiciones
+                    </Link>
+                  </label>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="acceptWhatsApp"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <label className="text-sm text-gray-600 cursor-pointer">
+                    Acepto recibir notificaciones por WhatsApp
+                  </label>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <Button
+            type="submit"
+            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+            disabled={isLoading}
+          >
+            {isLoading ? "CREANDO CUENTA..." : "CREAR CUENTA"}
           </Button>
         </form>
       </Form>
-
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
-            Or continue with
-          </span>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          className="w-full"
-          type="button"
-          disabled={isLoading}
-        >
-          <GithubIcon className="h-4 w-4" /> GitHub
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full"
-          type="button"
-          disabled={isLoading}
-        >
-          <FacebookIcon className="h-4 w-4" /> Facebook
-        </Button>
-      </div>
     </div>
   );
 }

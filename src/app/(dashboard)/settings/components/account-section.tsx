@@ -25,6 +25,19 @@ export function AccountSection() {
       })
     : "N/A";
 
+  const getRoleDisplay = (role: string) => {
+    switch (role) {
+      case "ADMIN":
+        return "Administrador";
+      case "PARENT":
+        return "Padre/Madre";
+      case "THERAPIST":
+        return "Terapeuta";
+      default:
+        return "Usuario";
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -62,8 +75,7 @@ export function AccountSection() {
           <div className="space-y-1">
             <p className="text-sm font-medium">Rol</p>
             <p className="text-sm text-muted-foreground">
-              {(profile.role as string) === "USER" && "Usuario"}
-              {(profile.role as string) === "SUPERADMIN" && "Administrador"}
+              {getRoleDisplay(profile.role as string)}
             </p>
           </div>
 
@@ -72,6 +84,34 @@ export function AccountSection() {
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <CalendarClock className="h-3.5 w-3.5" />
               <span>{createdAt}</span>
+            </div>
+          </div>
+
+          {profile.phone && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Teléfono</p>
+              <p className="text-sm text-muted-foreground">{profile.phone}</p>
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Notificaciones WhatsApp</p>
+            <div>
+              {profile.acceptWhatsApp ? (
+                <Badge
+                  variant="outline"
+                  className="bg-green-50 text-green-700 hover:bg-green-50 border-green-200"
+                >
+                  Activadas
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="bg-gray-50 text-gray-700 hover:bg-gray-50 border-gray-200"
+                >
+                  Desactivadas
+                </Badge>
+              )}
             </div>
           </div>
         </div>

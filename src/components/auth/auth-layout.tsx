@@ -1,20 +1,25 @@
-import { Brain } from "lucide-react"
+import { Heart } from "lucide-react";
+import Link from "next/link";
 
 interface Props {
-    children: React.ReactNode
-  }
-  
-  export default function AuthLayout({ children }: Props) {
-    return (
-      <div className='container grid h-svh flex-col items-center justify-center bg-primary-foreground lg:max-w-none lg:px-0'>
-        <div className='mx-auto flex w-full flex-col justify-center space-y-2 sm:w-[480px] lg:p-8'>
-          <div className='mb-4 flex items-center justify-center'>
-            <Brain className='mr-2 h-6 w-6' />
-            <h1 className='text-xl font-medium'>POSITIVE Next</h1>
-          </div>
-          {children}
+  children: React.ReactNode;
+}
+
+export default function AuthLayout({ children }: Props) {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center">
+          <Link
+            href="/"
+            className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+          >
+            <Heart className="h-8 w-8" />
+            <h1 className="text-2xl font-bold text-gray-900">Vivir Feliz</h1>
+          </Link>
         </div>
+        {children}
       </div>
-    )
-  }
-  
+    </div>
+  );
+}

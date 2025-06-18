@@ -229,7 +229,7 @@ export function SettingsForm() {
             </CardContent>
           </Card>
 
-          {(profile?.role as string) === "SUPERADMIN" && (
+          {(profile?.role as string) === "ADMIN" && (
             <Card>
               <CardHeader>
                 <CardTitle>Información de Rol</CardTitle>
@@ -241,9 +241,9 @@ export function SettingsForm() {
                 <div className="flex items-center space-x-2">
                   <span className="text-sm font-medium">Rol:</span>
                   <span className="text-sm text-muted-foreground">
-                    {(profile?.role as string) === "USER" && "Usuario"}
-                    {(profile?.role as string) === "SUPERADMIN" &&
-                      "Administrador"}
+                    {(profile?.role as string) === "PARENT" && "Padre/Madre"}
+                    {(profile?.role as string) === "THERAPIST" && "Terapeuta"}
+                    {(profile?.role as string) === "ADMIN" && "Administrador"}
                   </span>
                 </div>
               </CardContent>

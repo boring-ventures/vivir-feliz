@@ -12,7 +12,16 @@ type AuthContextType = {
   profile: Profile | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string
+  ) => Promise<{
+    success: boolean;
+    user: User | null;
+    session: Session | null;
+    confirmEmail: boolean;
+    error: Error | null;
+  }>;
   signOut: () => Promise<void>;
 };
 
@@ -22,7 +31,13 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   isLoading: true,
   signIn: async () => {},
-  signUp: async () => {},
+  signUp: async () => ({
+    success: false,
+    user: null,
+    session: null,
+    confirmEmail: false,
+    error: null,
+  }),
   signOut: async () => {},
 });
 
@@ -95,11 +110,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (error) throw error;
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        return {
+          success: false,
+          user: null,
+          session: null,
+          confirmEmail: false,
+          error,
+        };
+      }
+
+      return {
+        success: true,
+        user: data.user,
+        session: data.session,
+        confirmEmail: !data.session, // If no session, email confirmation is required
+        error: null,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        user: null,
+        session: null,
+        confirmEmail: false,
+        error: error instanceof Error ? error : new Error("Unknown error"),
+      };
+    }
   };
 
   const signOut = async () => {
@@ -118,4 +160,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext); 
+export const useAuth = () => useContext(AuthContext);

@@ -15,20 +15,23 @@ datasource db {
 }
 
 enum UserRole {
-  USER
-  SUPERADMIN
+  ADMIN
+  PARENT
+  THERAPIST
 }
 
 model Profile {
-  id            String               @id @default(cuid())
-  userId        String               @unique
-  avatarUrl     String?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  active        Boolean              @default(true)
-  firstName     String?              @map("first_name")
-  lastName      String?              @map("last_name")
-  role          UserRole             @default(USER)
+  id               String               @id @default(cuid())
+  userId           String               @unique
+  avatarUrl        String?
+  phone            String?
+  acceptWhatsApp   Boolean              @default(false) @map("accept_whatsapp")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  active           Boolean              @default(true)
+  firstName        String?              @map("first_name")
+  lastName         String?              @map("last_name")
+  role             UserRole             @default(PARENT)
 
   @@index([userId])
   @@map("profiles")
