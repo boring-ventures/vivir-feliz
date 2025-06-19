@@ -76,6 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state change:", event, session);
+
       setSession(session);
       setUser(session?.user ?? null);
 
@@ -87,8 +89,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(false);
 
+      // Handle different auth events
       if (event === "SIGNED_OUT") {
         router.push("/sign-in");
+      } else if (event === "SIGNED_IN" && session) {
+        // Only redirect to dashboard if we're not already there
+        if (
+          typeof window !== "undefined" &&
+          !window.location.pathname.startsWith("/dashboard")
+        ) {
+          router.push("/dashboard");
+        }
+      } else if (event === "TOKEN_REFRESHED" && session) {
+        // User is authenticated, ensure they have access to dashboard
+        if (typeof window !== "undefined" && window.location.pathname === "/") {
+          router.push("/dashboard");
+        }
       }
     });
 
@@ -111,9 +127,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
+      // Get the site URL from the environment or current location
+      const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        (typeof window !== "undefined"
+          ? window.location.origin
+          : "http://localhost:3000");
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${siteUrl}/auth/callback`,
+          data: {
+            email_confirmed: false,
+          },
+        },
       });
 
       if (error) {

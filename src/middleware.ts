@@ -34,9 +34,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // If there's a session and the user is on the root page, redirect to dashboard
+  if (session && req.nextUrl.pathname === "/") {
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = "/dashboard";
+    return NextResponse.redirect(redirectUrl);
+  }
+
   return res;
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/sign-in", "/sign-up", "/auth/callback"],
+  matcher: ["/dashboard/:path*", "/sign-in", "/sign-up", "/auth/callback", "/"],
 };

@@ -16,140 +16,169 @@ import {
   ServerCrash,
   UserX,
   Users,
+  BarChart,
+  Calendar,
+  FileText,
+  CreditCard,
+  UserCog,
+  Clock,
+  ClipboardList,
+  Shield,
+  Heart,
 } from "lucide-react";
 import type { SidebarData } from "../types";
 
-export const sidebarData: SidebarData = {
-  user: {
-    name: "satnaing",
-    email: "satnaingdev@gmail.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  teams: [
-    {
-      name: "Shadcn Admin",
-      logo: Command,
-      plan: "Vite + ShadcnUI",
-    },
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-  ],
-  navGroups: [
-    {
-      title: "General",
-      items: [
-        {
-          title: "Dashboard",
-          url: "/",
-          icon: LayoutDashboard,
+export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
+  const baseTeam = {
+    name: "Vivir Feliz",
+    logo: Heart,
+    plan: "Centro de Terapia Infantil",
+  };
+
+  switch (userRole) {
+    case "ADMIN":
+      return {
+        user: {
+          name: "Admin",
+          email: "admin@vivirfeliz.com",
+          avatar: "/avatars/admin.jpg",
         },
-        {
-          title: "Tasks",
-          url: "/tasks",
-          icon: CheckSquare,
+        teams: [baseTeam],
+        navGroups: [
+          {
+            title: "Administración",
+            items: [
+              {
+                title: "Dashboard",
+                url: "/admin/dashboard",
+                icon: BarChart,
+              },
+              {
+                title: "Usuarios",
+                url: "/admin/usuarios",
+                icon: Users,
+              },
+              {
+                title: "Terapeutas",
+                url: "/admin/terapeutas",
+                icon: UserCog,
+              },
+              {
+                title: "Citas",
+                url: "/admin/citas",
+                icon: Calendar,
+              },
+              {
+                title: "Reportes",
+                url: "/admin/reportes",
+                icon: FileText,
+              },
+            ],
+          },
+          {
+            title: "Sistema",
+            items: [
+              {
+                title: "Configuración",
+                url: "/admin/configuracion",
+                icon: Settings,
+              },
+            ],
+          },
+        ],
+      };
+
+    case "THERAPIST":
+      return {
+        user: {
+          name: "Dr. María Fernández",
+          email: "maria@vivirfeliz.com",
+          avatar: "/avatars/therapist.jpg",
         },
-        {
-          title: "Apps",
-          url: "/apps",
-          icon: AppWindow,
+        teams: [baseTeam],
+        navGroups: [
+          {
+            title: "Mi Trabajo",
+            items: [
+              {
+                title: "Dashboard",
+                url: "/therapist/dashboard",
+                icon: BarChart,
+              },
+              {
+                title: "Mi Agenda",
+                url: "/therapist/agenda",
+                icon: Calendar,
+              },
+              {
+                title: "Mis Pacientes",
+                url: "/therapist/pacientes",
+                icon: Users,
+              },
+              {
+                title: "Sesiones",
+                url: "/therapist/sesiones",
+                icon: ClipboardList,
+              },
+              {
+                title: "Reportes",
+                url: "/therapist/reportes",
+                icon: FileText,
+              },
+              {
+                title: "Horarios",
+                url: "/therapist/horarios",
+                icon: Clock,
+              },
+            ],
+          },
+        ],
+      };
+
+    case "PARENT":
+    default:
+      return {
+        user: {
+          name: "María González",
+          email: "maria.gonzalez@email.com",
+          avatar: "/avatars/parent.jpg",
         },
-        {
-          title: "Chats",
-          url: "/chats",
-          badge: "3",
-          icon: MessageSquare,
-        },
-        {
-          title: "Users",
-          url: "/users",
-          icon: Users,
-        },
-      ],
-    },
-    {
-      title: "Pages",
-      items: [
-        {
-          title: "Auth",
-          icon: Lock,
-          items: [
-            {
-              title: "Sign In",
-              url: "/sign-in",
-            },
-            {
-              title: "Sign In (2 Col)",
-              url: "/sign-in-2",
-            },
-            {
-              title: "Sign Up",
-              url: "/sign-up",
-            },
-            {
-              title: "Forgot Password",
-              url: "/forgot-password",
-            },
-            {
-              title: "OTP",
-              url: "/otp",
-            },
-          ],
-        },
-        {
-          title: "Errors",
-          icon: Bug,
-          items: [
-            {
-              title: "Unauthorized",
-              url: "/401",
-              icon: LockKeyhole,
-            },
-            {
-              title: "Forbidden",
-              url: "/403",
-              icon: UserX,
-            },
-            {
-              title: "Not Found",
-              url: "/404",
-              icon: AlertCircle,
-            },
-            {
-              title: "Internal Server Error",
-              url: "/500",
-              icon: ServerCrash,
-            },
-            {
-              title: "Maintenance Error",
-              url: "/503",
-              icon: Ban,
-            },
-          ],
-        },
-      ],
-    },
-    {
-      title: "Other",
-      items: [
-        {
-          title: "Settings",
-          icon: Settings,
-          url: "/settings",
-        },
-        {
-          title: "Help Center",
-          url: "/help-center",
-          icon: HelpCircle,
-        },
-      ],
-    },
-  ],
+        teams: [baseTeam],
+        navGroups: [
+          {
+            title: "Mi Cuenta",
+            items: [
+              {
+                title: "Dashboard",
+                url: "/parent/dashboard",
+                icon: BarChart,
+              },
+              {
+                title: "Citas",
+                url: "/parent/citas",
+                icon: Calendar,
+              },
+              {
+                title: "Documentos",
+                url: "/parent/documentos",
+                icon: FileText,
+              },
+              {
+                title: "Pagos",
+                url: "/parent/pagos",
+                icon: CreditCard,
+              },
+              {
+                title: "Progreso",
+                url: "/parent/progreso",
+                icon: BarChart,
+              },
+            ],
+          },
+        ],
+      };
+  }
 };
+
+// Legacy export for backward compatibility
+export const sidebarData: SidebarData = getRoleBasedSidebarData("PARENT");
