@@ -135,9 +135,9 @@ export default function TherapistDashboardPage() {
   ];
 
   const [open, setOpen] = useState(false);
-  const [selectedPaciente, setSelectedPaciente] = useState(null);
+  const [selectedPaciente, setSelectedPaciente] = useState<string | null>(null);
 
-  const handleOpenModal = (paciente) => {
+  const handleOpenModal = (paciente: string) => {
     setSelectedPaciente(paciente);
     setOpen(true);
   };

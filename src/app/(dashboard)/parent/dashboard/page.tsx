@@ -6,11 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Clock,
-  User,
   Calendar,
   FileText,
-  Bell,
-  Eye,
   Download,
   MessageSquare,
   CheckCircle,
@@ -213,7 +210,8 @@ export default function ParentDashboardPage() {
                   <div className="flex-1">
                     <p className="text-sm font-medium">Comentario de sesión</p>
                     <p className="text-xs text-muted-foreground">
-                      "Excelente progreso en pronunciación" - Hace 1 semana
+                      &quot;Excelente progreso en pronunciación&quot; - Hace 1
+                      semana
                     </p>
                   </div>
                 </div>

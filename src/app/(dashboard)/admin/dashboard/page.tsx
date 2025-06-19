@@ -10,15 +10,9 @@ import {
   DollarSign,
   Star,
   TrendingUp,
-  Clock,
   FileText,
   AlertCircle,
   CheckCircle,
-  Target,
-  Activity,
-  ArrowUpRight,
-  Eye,
-  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 
