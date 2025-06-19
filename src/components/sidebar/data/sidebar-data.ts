@@ -25,6 +25,8 @@ import {
   ClipboardList,
   Shield,
   Heart,
+  Stethoscope,
+  BookOpen,
 } from "lucide-react";
 import type { SidebarData } from "../types";
 
@@ -91,8 +93,8 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
     case "THERAPIST":
       return {
         user: {
-          name: "Dr. María Fernández",
-          email: "maria@vivirfeliz.com",
+          name: "Dr. Carlos Mendoza",
+          email: "carlos@vivirfeliz.com",
           avatar: "/avatars/therapist.jpg",
         },
         teams: [baseTeam],
@@ -116,6 +118,11 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
                 icon: Users,
               },
               {
+                title: "Análisis de Consulta",
+                url: "/therapist/analisis",
+                icon: BookOpen,
+              },
+              {
                 title: "Sesiones",
                 url: "/therapist/sesiones",
                 icon: ClipboardList,
@@ -124,11 +131,6 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
                 title: "Reportes",
                 url: "/therapist/reportes",
                 icon: FileText,
-              },
-              {
-                title: "Horarios",
-                url: "/therapist/horarios",
-                icon: Clock,
               },
             ],
           },

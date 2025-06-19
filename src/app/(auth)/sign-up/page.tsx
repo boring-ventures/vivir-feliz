@@ -23,14 +23,14 @@ export default function SignUpPage() {
           <div className="text-center">
             <div className="text-sm text-gray-600">
               ¿Ya tienes cuenta?{" "}
-              <Link
-                href="/sign-in"
+            <Link
+              href="/sign-in"
                 className="text-blue-600 hover:text-blue-700 underline font-medium"
-              >
+            >
                 Iniciar Sesión
-              </Link>
+            </Link>
             </div>
-          </div>
+        </div>
         </CardContent>
       </Card>
     </AuthLayout>

@@ -1,219 +1,361 @@
 "use client";
 
+import { RoleGuard } from "@/components/auth/role-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, Stethoscope } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import {
+  User,
+  Calendar,
+  Bell,
+  Clock,
+  Users,
+  TrendingUp,
+  Eye,
+  Send,
+} from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function TherapistDashboardPage() {
+  const proximasCitas = [
+    {
+      id: 1,
+      hora: "10:00 AM",
+      paciente: "Juan Pérez González",
+      edad: 8,
+      tipo: "Consulta Inicial",
+      estado: "confirmada",
+      duracion: "60 min",
+      notas: "Primera evaluación - Déficit de atención",
+    },
+    {
+      id: 2,
+      hora: "2:00 PM",
+      paciente: "Ana García López",
+      edad: 6,
+      tipo: "Seguimiento",
+      estado: "confirmada",
+      duracion: "45 min",
+      notas: "Sesión 8/24 - Terapia del lenguaje",
+    },
+    {
+      id: 3,
+      hora: "4:30 PM",
+      paciente: "Pedro Mamani Flores",
+      edad: 7,
+      tipo: "Evaluación",
+      estado: "pendiente",
+      duracion: "90 min",
+      notas: "Evaluación neuropsicológica",
+    },
+  ];
+
+  const estadisticasRapidas = [
+    {
+      titulo: "Pacientes Activos",
+      valor: "12",
+      cambio: "+2",
+      tendencia: "up",
+      color: "text-blue-700",
+      bgColor: "bg-blue-50",
+      icon: <Users className="h-6 w-6 text-blue-600" />,
+    },
+    {
+      titulo: "Citas Esta Semana",
+      valor: "18",
+      cambio: "+3",
+      tendencia: "up",
+      color: "text-green-700",
+      bgColor: "bg-green-50",
+      icon: <Calendar className="h-6 w-6 text-green-600" />,
+    },
+    {
+      titulo: "Tasa de Asistencia",
+      valor: "92%",
+      cambio: "+5%",
+      tendencia: "up",
+      color: "text-amber-700",
+      bgColor: "bg-amber-50",
+      icon: <TrendingUp className="h-6 w-6 text-amber-600" />,
+    },
+    {
+      titulo: "Evaluaciones Completadas",
+      valor: "8",
+      cambio: "+1",
+      tendencia: "up",
+      color: "text-purple-700",
+      bgColor: "bg-purple-50",
+      icon: <Clock className="h-6 w-6 text-purple-600" />,
+    },
+  ];
+
+  const pacientesRecientes = [
+    {
+      id: 1,
+      nombre: "Juan Pérez González",
+      edad: 8,
+      diagnostico: "Déficit de Atención",
+      estado: "En tratamiento",
+      progreso: 75,
+      proximaCita: "Hoy 10:00 AM",
+      sesiones: "8/24",
+      estadoColor: "bg-green-100 text-green-800",
+    },
+    {
+      id: 2,
+      nombre: "Ana García López",
+      edad: 6,
+      diagnostico: "Retraso del Lenguaje",
+      estado: "En tratamiento",
+      progreso: 60,
+      proximaCita: "Hoy 2:00 PM",
+      sesiones: "12/24",
+      estadoColor: "bg-green-100 text-green-800",
+    },
+    {
+      id: 3,
+      nombre: "Pedro Mamani Flores",
+      edad: 7,
+      diagnostico: "Evaluación Pendiente",
+      estado: "En evaluación",
+      progreso: 25,
+      proximaCita: "Hoy 4:30 PM",
+      sesiones: "2/4",
+      estadoColor: "bg-amber-100 text-amber-800",
+    },
+  ];
+
+  const [open, setOpen] = useState(false);
+  const [selectedPaciente, setSelectedPaciente] = useState(null);
+
+  const handleOpenModal = (paciente) => {
+    setSelectedPaciente(paciente);
+    setOpen(true);
+  };
+
   return (
-    <main className="p-6">
-      <div className="mb-6 flex items-center space-x-2">
-        <Stethoscope className="h-6 w-6 text-blue-600" />
-        <div>
-          <h1 className="text-2xl font-bold">
-            Bienvenido/a, Dr. María Fernández
-          </h1>
-          <p className="text-muted-foreground">
-            Mi panel de trabajo profesional
-          </p>
+    <RoleGuard allowedRoles={["THERAPIST"]}>
+      <div className="min-h-screen bg-gray-100">
+        {/* Header */}
+        <header className="bg-white shadow-sm p-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-semibold">
+              Bienvenido/a, Dr. Carlos Mendoza
+            </h1>
+            <p className="text-gray-600">HOY - Miércoles, 15 Enero 2025</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                3
+              </span>
+            </Button>
+            <Button variant="outline" size="icon">
+              <User className="h-5 w-5" />
+            </Button>
+          </div>
+        </header>
+
+        {/* Dashboard Content */}
+        <div className="p-6">
+          {/* Estadísticas Rápidas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {estadisticasRapidas.map((stat, index) => (
+              <Card key={index}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">{stat.titulo}</p>
+                      <p className={`text-2xl font-bold ${stat.color}`}>
+                        {stat.valor}
+                      </p>
+                      <p className="text-sm text-green-600 flex items-center">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        {stat.cambio}
+                      </p>
+                    </div>
+                    <div className={`p-3 rounded-full ${stat.bgColor}`}>
+                      {stat.icon}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Próximas Citas */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg font-semibold">
+                      Próximas Citas
+                    </CardTitle>
+                    <Link href="/therapist/agenda">
+                      <Button variant="outline" size="sm">
+                        Ver Agenda Completa
+                      </Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {proximasCitas.map((cita) => (
+                      <div
+                        key={cita.id}
+                        className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <div className="bg-blue-100 p-2 rounded-full">
+                                <Clock className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-lg">
+                                  {cita.hora}
+                                </p>
+                                <p className="text-gray-600">{cita.duracion}</p>
+                              </div>
+                            </div>
+                            <div className="ml-11">
+                              <h4 className="font-medium">{cita.paciente}</h4>
+                              <p className="text-sm text-gray-600">
+                                {cita.edad} años - {cita.tipo}
+                              </p>
+                              <p className="text-sm text-gray-500 mt-1">
+                                {cita.notas}
+                              </p>
+                              <Badge
+                                className={
+                                  cita.estado === "confirmada"
+                                    ? "bg-green-100 text-green-800 mt-2"
+                                    : "bg-yellow-100 text-yellow-800 mt-2"
+                                }
+                              >
+                                {cita.estado === "confirmada"
+                                  ? "✅ Confirmada"
+                                  : "⏳ Pendiente"}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenModal(cita.paciente)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Ver Paciente
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Pacientes Recientes */}
+          <div className="grid grid-cols-1">
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-lg font-semibold">
+                    Pacientes Recientes
+                  </CardTitle>
+                  <Link href="/therapist/pacientes">
+                    <Button variant="outline" size="sm">
+                      Ver Todos
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {pacientesRecientes.map((paciente) => (
+                    <div
+                      key={paciente.id}
+                      className="p-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-medium">{paciente.nombre}</h4>
+                          <p className="text-sm text-gray-600">
+                            {paciente.edad} años - {paciente.diagnostico}
+                          </p>
+                        </div>
+                        <Badge className={paciente.estadoColor}>
+                          {paciente.estado}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progreso del tratamiento</span>
+                          <span>{paciente.sesiones} sesiones</span>
+                        </div>
+                        <Progress value={paciente.progreso} className="h-2" />
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-gray-600">
+                            Próxima: {paciente.proximaCita}
+                          </p>
+                          <div className="flex space-x-1">
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <Send className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Detalles del Paciente</DialogTitle>
+              <DialogDescription>
+                Información detallada del paciente seleccionado.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="name" className="text-right text-gray-900">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  value={selectedPaciente || ""}
+                  className="col-span-3 flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Nombre del paciente"
+                  disabled
+                />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pacientes Activos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">3 nuevos este mes</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Citas Hoy</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">2 completadas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Esta Semana</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">32</div>
-            <p className="text-xs text-muted-foreground">citas programadas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Reportes Pendientes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">2 urgentes</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Próximas Citas */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold">
-              Próximas Citas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Sofía Rodríguez</p>
-                  <p className="text-sm text-gray-600">Terapia Ocupacional</p>
-                  <p className="text-sm text-blue-600">10:00 AM - 11:00 AM</p>
-                </div>
-                <Badge>Ahora</Badge>
-              </div>
-              <div className="flex justify-between items-center p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">Luis Martín</p>
-                  <p className="text-sm text-gray-600">Fisioterapia</p>
-                  <p className="text-sm text-gray-600">11:30 AM - 12:30 PM</p>
-                </div>
-              </div>
-              <div className="flex justify-between items-center p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">Emma Silva</p>
-                  <p className="text-sm text-gray-600">Fonoaudiología</p>
-                  <p className="text-sm text-gray-600">2:00 PM - 3:00 PM</p>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4">
-              <Link href="/therapist/agenda">
-                <Button variant="outline" className="w-full">
-                  Ver Agenda Completa
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Actividad Reciente */}
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg font-semibold">
-                Actividad Reciente
-              </CardTitle>
-              <Badge>3 nuevas</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Reporte completado</p>
-                  <p className="text-sm text-gray-600">
-                    Evaluación inicial - Sofía R.
-                  </p>
-                </div>
-                <span className="text-sm text-gray-500">10:30 AM</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Sesión completada</p>
-                  <p className="text-sm text-gray-600">
-                    Terapia física - Luis M.
-                  </p>
-                </div>
-                <span className="text-sm text-gray-500">9:00 AM</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Nuevo paciente asignado</p>
-                  <p className="text-sm text-gray-600">
-                    Emma Silva - Fonoaudiología
-                  </p>
-                </div>
-                <span className="text-sm text-gray-500">Ayer</span>
-              </div>
-            </div>
-            <div className="mt-4">
-              <Link href="/therapist/sesiones">
-                <Button variant="outline" className="w-full">
-                  Ver Todas las Sesiones
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tareas Pendientes */}
-      <h2 className="text-xl font-semibold mb-4">Tareas Pendientes</h2>
-      <Card>
-        <CardContent className="p-0">
-          <ul className="divide-y">
-            <li className="p-4 hover:bg-gray-50">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Completar reporte de progreso</p>
-                  <p className="text-sm text-gray-600">
-                    Paciente: Carlos Méndez - Vence mañana
-                  </p>
-                </div>
-                <div className="flex items-center">
-                  <Badge variant="destructive">Urgente</Badge>
-                  <ChevronRight className="h-4 w-4 text-gray-400 ml-2" />
-                </div>
-              </div>
-            </li>
-            <li className="p-4 hover:bg-gray-50">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Actualizar plan de tratamiento</p>
-                  <p className="text-sm text-gray-600">
-                    Paciente: Ana López - Revisión semanal
-                  </p>
-                </div>
-                <div className="flex items-center">
-                  <Badge variant="secondary">Pendiente</Badge>
-                  <ChevronRight className="h-4 w-4 text-gray-400 ml-2" />
-                </div>
-              </div>
-            </li>
-            <li className="p-4 hover:bg-gray-50">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Revisar disponibilidad</p>
-                  <p className="text-sm text-gray-600">
-                    Solicitudes de citas para la próxima semana
-                  </p>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-sm text-gray-500 mr-2">
-                    5 solicitudes
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-    </main>
+    </RoleGuard>
   );
 }
