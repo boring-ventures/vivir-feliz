@@ -1,17 +1,235 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+model Profile {
+  id                 String              @id @default(cuid())
+  userId             String              @unique
+  avatarUrl          String?
+  active             Boolean             @default(true)
+  firstName          String?             @map("first_name")
+  lastName           String?             @map("last_name")
+  role               UserRole            @default(PARENT)
+  acceptWhatsApp     Boolean             @default(false) @map("accept_whatsapp")
+  address            String?
+  biography          String?
+  createdAt          DateTime            @default(now()) @map("created_at")
+  dateOfBirth        DateTime?           @map("date_of_birth")
+  nationalId         String?             @unique @map("national_id")
+  phone              String?
+  specialty          SpecialtyType?
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  appointments       Appointment[]       @relation("TherapistAppointments")
+  patients           Patient[]           @relation("ParentPatients")
+  schedule           Schedule?
+  treatmentProposals TreatmentProposal[] @relation("TherapistProposals")
+
+  @@index([userId])
+  @@index([nationalId])
+  @@map("profiles")
+}
+
+model Patient {
+  id                 String              @id @default(cuid())
+  parentId           String              @map("parent_id")
+  firstName          String              @map("first_name")
+  lastName           String              @map("last_name")
+  dateOfBirth        DateTime            @map("date_of_birth")
+  gender             String?
+  nationalId         String?             @unique @map("national_id")
+  phone              String?
+  email              String?
+  address            String?
+  emergencyContact   String?             @map("emergency_contact")
+  emergencyPhone     String?             @map("emergency_phone")
+  allergies          String?
+  medications        String?
+  medicalHistory     String?             @map("medical_history")
+  specialNeeds       String?             @map("special_needs")
+  isActive           Boolean             @default(true) @map("is_active")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  appointments       Appointment[]
+  medicalRecords     MedicalRecord[]
+  parent             Profile             @relation("ParentPatients", fields: [parentId], references: [id])
+  treatmentProposals TreatmentProposal[]
+
+  @@index([parentId])
+  @@index([nationalId])
+  @@map("patients")
+}
+
+model TreatmentProposal {
+  id                String         @id @default(cuid())
+  patientId         String         @map("patient_id")
+  therapistId       String         @map("therapist_id")
+  title             String
+  description       String?
+  diagnosis         String?
+  objectives        String[]
+  methodology       String?
+  totalSessions     Int            @map("total_sessions")
+  sessionDuration   Int            @map("session_duration")
+  frequency         String
+  estimatedDuration String?        @map("estimated_duration")
+  sessionPrice      Decimal        @map("session_price") @db.Decimal(10, 2)
+  totalAmount       Decimal        @map("total_amount") @db.Decimal(10, 2)
+  paymentPlan       String?        @map("payment_plan")
+  status            ProposalStatus @default(PAYMENT_PENDING)
+  proposalDate      DateTime       @default(now()) @map("proposal_date")
+  approvedDate      DateTime?      @map("approved_date")
+  startDate         DateTime?      @map("start_date")
+  endDate           DateTime?      @map("end_date")
+  notes             String?
+  parentNotes       String?        @map("parent_notes")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  appointments      Appointment[]
+  payments          Payment[]
+  patient           Patient        @relation(fields: [patientId], references: [id])
+  therapist         Profile        @relation("TherapistProposals", fields: [therapistId], references: [id])
+
+  @@index([patientId])
+  @@index([therapistId])
+  @@index([status])
+  @@map("treatment_proposals")
+}
+
+model Payment {
+  id              String            @id @default(cuid())
+  proposalId      String            @map("proposal_id")
+  amount          Decimal           @db.Decimal(10, 2)
+  paymentDate     DateTime          @map("payment_date")
+  paymentMethod   String            @map("payment_method")
+  referenceNumber String?           @map("reference_number")
+  status          PaymentStatus     @default(PENDING)
+  confirmedBy     String?           @map("confirmed_by")
+  confirmedAt     DateTime?         @map("confirmed_at")
+  notes           String?
+  receipt         String?
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  proposal        TreatmentProposal @relation(fields: [proposalId], references: [id])
+
+  @@index([proposalId])
+  @@index([status])
+  @@map("payments")
+}
+
+model MedicalRecord {
+  id            String       @id @default(cuid())
+  patientId     String       @map("patient_id")
+  recordType    String       @map("record_type")
+  title         String
+  content       String
+  attachments   String[]
+  appointmentId String?      @map("appointment_id")
+  recordDate    DateTime     @map("record_date")
+  createdBy     String       @map("created_by")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  patient       Patient      @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([recordType])
+  @@map("medical_records")
+}
+
+model Schedule {
+  id           String        @id @default(cuid())
+  therapistId  String        @unique @map("therapist_id")
+  isActive     Boolean       @default(true) @map("is_active")
+  timeZone     String        @default("America/La_Paz") @map("time_zone")
+  startTime    String        @default("08:00") @map("start_time")
+  endTime      String        @default("18:00") @map("end_time")
+  slotDuration Int           @default(60) @map("slot_duration")
+  breakBetween Int           @default(15) @map("break_between")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  blockedSlots BlockedSlot[]
+  therapist    Profile       @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  timeSlots    TimeSlot[]
+
+  @@map("schedules")
+}
+
+model TimeSlot {
+  id               String            @id @default(cuid())
+  scheduleId       String            @map("schedule_id")
+  dayOfWeek        DayOfWeek         @map("day_of_week")
+  startTime        String            @map("start_time")
+  endTime          String            @map("end_time")
+  isAvailable      Boolean           @default(true) @map("is_available")
+  appointmentTypes AppointmentType[] @map("appointment_types")
+  maxAppointments  Int               @default(1) @map("max_appointments")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  schedule         Schedule          @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, dayOfWeek, startTime])
+  @@map("time_slots")
+}
+
+model BlockedSlot {
+  id          String   @id @default(cuid())
+  scheduleId  String   @map("schedule_id")
+  date        DateTime
+  startTime   String   @map("start_time")
+  endTime     String   @map("end_time")
+  reason      String?
+  isRecurring Boolean  @default(false) @map("is_recurring")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  schedule    Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@map("blocked_slots")
+}
+
+model Appointment {
+  id                 String             @id @default(cuid())
+  therapistId        String             @map("therapist_id")
+  date               DateTime
+  startTime          String             @map("start_time")
+  endTime            String             @map("end_time")
+  type               AppointmentType
+  patientName        String?            @map("patient_name")
+  patientAge         Int?               @map("patient_age")
+  parentName         String?            @map("parent_name")
+  parentPhone        String?            @map("parent_phone")
+  parentEmail        String?            @map("parent_email")
+  notes              String?
+  price              Decimal?           @db.Decimal(10, 2)
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  attendedBy         String[]           @map("attended_by")
+  cancellationReason String?            @map("cancellation_reason")
+  cancelledBy        String?            @map("cancelled_by")
+  homework           String?
+  nextSessionPlan    String?            @map("next_session_plan")
+  patientId          String?            @map("patient_id")
+  proposalId         String?            @map("proposal_id")
+  rescheduledFrom    DateTime?          @map("rescheduled_from")
+  rescheduledTo      DateTime?          @map("rescheduled_to")
+  sessionNotes       String?            @map("session_notes")
+  status             AppointmentStatus  @default(SCHEDULED)
+  patient            Patient?           @relation(fields: [patientId], references: [id])
+  proposal           TreatmentProposal? @relation(fields: [proposalId], references: [id])
+  therapist          Profile            @relation("TherapistAppointments", fields: [therapistId], references: [id])
+  medicalRecords     MedicalRecord[]
+
+  @@index([therapistId])
+  @@index([patientId])
+  @@index([proposalId])
+  @@index([date])
+  @@index([status])
+  @@map("appointments")
 }
 
 enum UserRole {
@@ -20,19 +238,55 @@ enum UserRole {
   THERAPIST
 }
 
-model Profile {
-  id               String               @id @default(cuid())
-  userId           String               @unique
-  avatarUrl        String?
-  phone            String?
-  acceptWhatsApp   Boolean              @default(false) @map("accept_whatsapp")
-  createdAt        DateTime             @default(now()) @map("created_at")
-  updatedAt        DateTime             @updatedAt @map("updated_at")
-  active           Boolean              @default(true)
-  firstName        String?              @map("first_name")
-  lastName         String?              @map("last_name")
-  role             UserRole             @default(PARENT)
+enum SpecialtyType {
+  SPEECH_THERAPIST
+  OCCUPATIONAL_THERAPIST
+  PSYCHOPEDAGOGUE
+  ASD_THERAPIST
+  NEUROPSYCHOLOGIST
+  COORDINATOR
+}
 
-  @@index([userId])
-  @@map("profiles")
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum AppointmentType {
+  CONSULTA
+  ENTREVISTA
+  SEGUIMIENTO
+  TERAPIA
+}
+
+enum ProposalStatus {
+  PAYMENT_PENDING
+  PAYMENT_CONFIRMED
+  APPOINTMENTS_SCHEDULED
+  TREATMENT_ACTIVE
+  TREATMENT_COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  COMPLETED
+  OVERDUE
+  CANCELLED
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
 }

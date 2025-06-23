@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Heart,
   BookOpen,
+  UserPlus,
 } from "lucide-react";
 import type { SidebarData } from "../types";
 
@@ -39,13 +40,18 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
               },
               {
                 title: "Usuarios",
-                url: "/admin/usuarios",
+                url: "/admin/users",
                 icon: Users,
               },
               {
                 title: "Terapeutas",
-                url: "/admin/terapeutas",
+                url: "/admin/therapists",
                 icon: UserCog,
+              },
+              {
+                title: "Pacientes",
+                url: "/admin/patients",
+                icon: UserPlus,
               },
               {
                 title: "Citas",
