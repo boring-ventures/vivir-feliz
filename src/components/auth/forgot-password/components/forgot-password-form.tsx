@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { getSiteUrl } from "@/lib/utils";
 
 const formSchema = z.object({
   email: z
@@ -49,8 +50,7 @@ export function ForgotPasswordForm({
       setIsLoading(true);
 
       // Get the site URL from the environment or current location
-      const siteUrl =
-        process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const siteUrl = getSiteUrl();
 
       // Call Supabase's resetPasswordForEmail method
       const { error } = await supabase.auth.resetPasswordForEmail(data.email, {

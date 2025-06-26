@@ -5,6 +5,7 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type { User, Session } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import type { Profile } from "@/types/profile";
+import { getSiteUrl } from "@/lib/utils";
 
 type AuthContextType = {
   user: User | null;
@@ -128,11 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     try {
       // Get the site URL from the environment or current location
-      const siteUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        (typeof window !== "undefined"
-          ? window.location.origin
-          : "http://localhost:3000");
+      const siteUrl = getSiteUrl();
 
       const { data, error } = await supabase.auth.signUp({
         email,

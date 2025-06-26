@@ -2,6 +2,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { getSiteUrl } from "@/lib/utils";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -61,8 +62,7 @@ export function useAuth() {
   const signUp = async (email: string, hashedPassword: string) => {
     try {
       // Get the site URL from the environment or current location
-      const siteUrl =
-        process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const siteUrl = getSiteUrl();
 
       // The password has already been hashed client-side
       const { data, error } = await supabase.auth.signUp({
