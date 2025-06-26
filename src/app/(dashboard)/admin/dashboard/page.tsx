@@ -107,6 +107,75 @@ export default function AdminDashboardPage() {
           </Card>
         </div>
 
+        {/* Quick Access to Requests */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-blue-600" />
+                  Solicitudes de Consulta
+                </CardTitle>
+                <Badge variant="secondary">Nuevas</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Gestiona las solicitudes de consulta inicial recibidas desde
+                  el sitio web.
+                </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Pendientes</span>
+                  <Badge className="bg-yellow-100 text-yellow-800">5</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Programadas</span>
+                  <Badge className="bg-blue-100 text-blue-800">12</Badge>
+                </div>
+                <Link href="/admin/consultation-requests">
+                  <Button className="w-full mt-2">
+                    Ver Solicitudes de Consulta
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg flex items-center">
+                  <Users className="h-5 w-5 mr-2 text-green-600" />
+                  Solicitudes de Entrevista
+                </CardTitle>
+                <Badge variant="secondary">Derivaciones</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Gestiona las entrevistas con derivación de colegios e
+                  instituciones.
+                </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Pendientes</span>
+                  <Badge className="bg-yellow-100 text-yellow-800">3</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Programadas</span>
+                  <Badge className="bg-blue-100 text-blue-800">8</Badge>
+                </div>
+                <Link href="/admin/interview-requests">
+                  <Button variant="outline" className="w-full mt-2">
+                    Ver Solicitudes de Entrevista
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Métricas Secundarias */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>

@@ -300,7 +300,7 @@ export default function AdminProposalsPage() {
                                 {proposal.status === "completed" &&
                                   "analysisDate" in proposal && (
                                     <p className="text-xs text-gray-500 mt-1">
-                                      Análisis: {proposal.analysisDate}
+                                      Análisis: {String(proposal.analysisDate)}
                                     </p>
                                   )}
                               </div>
@@ -313,7 +313,7 @@ export default function AdminProposalsPage() {
                                     Diagnóstico:
                                   </span>
                                   <p className="text-sm text-green-700 mt-1">
-                                    {proposal.diagnosis}
+                                    {String(proposal.diagnosis)}
                                   </p>
                                 </div>
                               )}

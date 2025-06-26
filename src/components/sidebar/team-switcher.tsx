@@ -15,8 +15,10 @@ export function TeamSwitcher({
     plan: string;
   }[];
 }) {
-  const { isMobile } = useSidebar();
-  const [activeTeam, setActiveTeam] = React.useState(teams[0]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { isMobile: _isMobile } = useSidebar();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [activeTeam, _setActiveTeam] = React.useState(teams[0]);
 
   return (
     <SidebarMenu>

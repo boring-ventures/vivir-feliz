@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, UserPlus, Calendar, Phone, Mail } from "lucide-react";
-import Link from "next/link";
 
 export default function AdminNuevosPacientesPage() {
   const [busqueda, setBusqueda] = useState("");
@@ -93,7 +92,7 @@ export default function AdminNuevosPacientesPage() {
     }
   };
 
-  const getAccionButton = (estado: string, pacienteId: number) => {
+  const getAccionButton = (estado: string) => {
     switch (estado) {
       case "pendiente_revision":
         return (
@@ -267,7 +266,7 @@ export default function AdminNuevosPacientesPage() {
                           >
                             Ver Detalles
                           </Button>
-                          {getAccionButton(paciente.estado, paciente.id)}
+                          {getAccionButton(paciente.estado)}
                         </div>
                       </div>
                     </div>

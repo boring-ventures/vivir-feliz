@@ -29,6 +29,8 @@ model Profile {
   patients           Patient[]           @relation("ParentPatients")
   schedule           Schedule?
   treatmentProposals TreatmentProposal[] @relation("TherapistProposals")
+  interviewRequests  InterviewRequest[]  @relation("TherapistInterviewRequests")
+  consultationRequests ConsultationRequest[] @relation("TherapistConsultationRequests")
 
   @@index([userId])
   @@index([nationalId])
@@ -232,6 +234,107 @@ model Appointment {
   @@map("appointments")
 }
 
+model InterviewRequest {
+  id                    String                @id @default(cuid())
+  childFirstName        String                @map("child_first_name")
+  childLastName         String                @map("child_last_name")
+  childDateOfBirth      DateTime              @map("child_date_of_birth")
+  childGender           String                @map("child_gender")
+  parentName            String                @map("parent_name")
+  parentPhone           String                @map("parent_phone")
+  parentEmail           String                @map("parent_email")
+  schoolName            String                @map("school_name")
+  derivationDescription String                @map("derivation_description")
+  derivationFileUrl     String?               @map("derivation_file_url")
+  status                InterviewRequestStatus @default(PENDING)
+  notes                 String?
+  scheduledDate         DateTime?             @map("scheduled_date")
+  scheduledTime         String?               @map("scheduled_time")
+  assignedTherapistId   String?               @map("assigned_therapist_id")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+  assignedTherapist     Profile?              @relation("TherapistInterviewRequests", fields: [assignedTherapistId], references: [id])
+
+  @@index([status])
+  @@index([parentEmail])
+  @@index([assignedTherapistId])
+  @@map("interview_requests")
+}
+
+model ConsultationRequest {
+  id                    String                    @id @default(cuid())
+  
+  // Child data
+  childName             String                    @map("child_name")
+  childGender           String                    @map("child_gender")
+  childDateOfBirth      DateTime                  @map("child_date_of_birth")
+  childLivesWith        String                    @map("child_lives_with")
+  childOtherLivesWith   String?                   @map("child_other_lives_with")
+  childAddress          String                    @map("child_address")
+  
+  // Parent data (mother)
+  motherName            String?                   @map("mother_name")
+  motherAge             String?                   @map("mother_age")
+  motherPhone           String?                   @map("mother_phone")
+  motherEmail           String?                   @map("mother_email")
+  motherEducation       String?                   @map("mother_education")
+  motherOccupation      String?                   @map("mother_occupation")
+  
+  // Parent data (father)
+  fatherName            String?                   @map("father_name")
+  fatherAge             String?                   @map("father_age")
+  fatherPhone           String?                   @map("father_phone")
+  fatherEmail           String?                   @map("father_email")
+  fatherEducation       String?                   @map("father_education")
+  fatherOccupation      String?                   @map("father_occupation")
+  
+  // School data
+  schoolName            String?                   @map("school_name")
+  schoolPhone           String?                   @map("school_phone")
+  schoolAddress         String?                   @map("school_address")
+  schoolLevel           String?                   @map("school_level")
+  teacherName           String?                   @map("teacher_name")
+  
+  // Consultation reasons (stored as JSON)
+  consultationReasons   Json                      @map("consultation_reasons")
+  referredBy            String?                   @map("referred_by")
+  
+  // System fields
+  status                ConsultationRequestStatus @default(PENDING)
+  notes                 String?
+  scheduledDate         DateTime?                 @map("scheduled_date")
+  scheduledTime         String?                   @map("scheduled_time")
+  assignedTherapistId   String?                   @map("assigned_therapist_id")
+  price                 Decimal?                  @default(250.00) @db.Decimal(10, 2)
+  createdAt             DateTime                  @default(now()) @map("created_at")
+  updatedAt             DateTime                  @updatedAt @map("updated_at")
+  
+  // Relations
+  children              ConsultationChild[]
+  assignedTherapist     Profile?                  @relation("TherapistConsultationRequests", fields: [assignedTherapistId], references: [id])
+
+  @@index([status])
+  @@index([childName])
+  @@index([assignedTherapistId])
+  @@map("consultation_requests")
+}
+
+model ConsultationChild {
+  id                    String               @id @default(cuid())
+  consultationRequestId String               @map("consultation_request_id")
+  name                  String
+  dateOfBirth           DateTime             @map("date_of_birth")
+  schoolGrade           String               @map("school_grade")
+  hasProblems           Boolean              @default(false) @map("has_problems")
+  problemDescription    String?              @map("problem_description")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  consultationRequest   ConsultationRequest  @relation(fields: [consultationRequestId], references: [id], onDelete: Cascade)
+
+  @@index([consultationRequestId])
+  @@map("consultation_children")
+}
+
 enum UserRole {
   ADMIN
   PARENT
@@ -289,4 +392,18 @@ enum AppointmentStatus {
   CANCELLED
   NO_SHOW
   RESCHEDULED
+}
+
+enum InterviewRequestStatus {
+  PENDING
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum ConsultationRequestStatus {
+  PENDING
+  SCHEDULED
+  COMPLETED
+  CANCELLED
 }

@@ -1,5 +1,4 @@
 import {
-  Settings,
   Users,
   BarChart,
   Calendar,
@@ -12,6 +11,8 @@ import {
   UserPlus,
   History,
   Receipt,
+  MessageSquare,
+  CalendarPlus,
 } from "lucide-react";
 import type { SidebarData } from "../types";
 
@@ -59,6 +60,16 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
                 title: "Usuarios",
                 url: "/admin/users",
                 icon: Users,
+              },
+              {
+                title: "Solicitudes de Consulta",
+                url: "/admin/consultation-requests",
+                icon: CalendarPlus,
+              },
+              {
+                title: "Solicitudes de Entrevista",
+                url: "/admin/interview-requests",
+                icon: MessageSquare,
               },
               {
                 title: "Propuestas",

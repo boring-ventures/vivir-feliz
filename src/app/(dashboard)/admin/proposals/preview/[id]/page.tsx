@@ -330,7 +330,9 @@ export default function AdminProposalPreviewPage() {
                   <Checkbox
                     id="confirmation"
                     checked={confirmation}
-                    onCheckedChange={setConfirmation}
+                    onCheckedChange={(checked) =>
+                      setConfirmation(checked === true)
+                    }
                   />
                   <Label
                     htmlFor="confirmation"
