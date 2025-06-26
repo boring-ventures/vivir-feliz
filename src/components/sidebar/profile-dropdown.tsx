@@ -93,25 +93,11 @@ export function ProfileDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/profile">
-              <User className="mr-2 h-4 w-4" />
-              Perfil
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
             <Link href="/settings">
               <Settings className="mr-2 h-4 w-4" />
               Configuración
             </Link>
           </DropdownMenuItem>
-          {profile.role === UserRole.ADMIN && (
-            <DropdownMenuItem asChild>
-              <Link href="/admin">
-                <BadgeCheck className="mr-2 h-4 w-4" />
-                Administración
-              </Link>
-            </DropdownMenuItem>
-          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem

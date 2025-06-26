@@ -34,19 +34,19 @@ export function ThemeSwitch() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end'>
         <DropdownMenuItem onClick={() => setTheme('light')}>
-          Light{' '}
+          Claro{' '}
           <Check
             className={cn('ml-auto h-4 w-4', theme !== 'light' && 'hidden')}
           />
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme('dark')}>
-          Dark
+          Oscuro
           <Check
             className={cn('ml-auto h-4 w-4', theme !== 'dark' && 'hidden')}
           />
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme('system')}>
-          System
+          Sistema
           <Check
             className={cn('ml-auto h-4 w-4', theme !== 'system' && 'hidden')}
           />

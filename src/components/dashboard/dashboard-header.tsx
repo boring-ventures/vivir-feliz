@@ -31,7 +31,7 @@ export function DashboardHeader() {
             className="flex items-center gap-2"
           >
             <LogOut className="h-4 w-4" />
-            Sign Out
+            Cerrar sesión
           </Button>
         </div>
       </div>

@@ -10,6 +10,8 @@ import {
   Heart,
   BookOpen,
   UserPlus,
+  History,
+  Receipt,
 } from "lucide-react";
 import type { SidebarData } from "../types";
 
@@ -39,39 +41,29 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
                 icon: BarChart,
               },
               {
-                title: "Usuarios",
-                url: "/admin/users",
-                icon: Users,
-              },
-              {
                 title: "Terapeutas",
                 url: "/admin/therapists",
                 icon: UserCog,
               },
               {
-                title: "Pacientes",
-                url: "/admin/patients",
+                title: "Nuevos pacientes",
+                url: "/admin/nuevos-pacientes",
                 icon: UserPlus,
               },
               {
-                title: "Citas",
-                url: "/admin/citas",
-                icon: Calendar,
+                title: "Historial de pacientes",
+                url: "/admin/patients",
+                icon: History,
               },
               {
-                title: "Reportes",
-                url: "/admin/reportes",
-                icon: FileText,
+                title: "Usuarios",
+                url: "/admin/users",
+                icon: Users,
               },
-            ],
-          },
-          {
-            title: "Sistema",
-            items: [
               {
-                title: "Configuración",
-                url: "/admin/configuracion",
-                icon: Settings,
+                title: "Propuestas",
+                url: "/admin/proposals",
+                icon: Receipt,
               },
             ],
           },

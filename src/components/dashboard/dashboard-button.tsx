@@ -21,7 +21,7 @@ export default function DashboardButton({ className }: DashboardButtonProps = {}
       className={`flex items-center gap-2 shadow-lg ${className}`}
     >
       <LayoutDashboard className="h-4 w-4" />
-      Go to Dashboard
+      Ir al dashboard
     </Button>
   );
 } 
