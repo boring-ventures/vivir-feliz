@@ -58,9 +58,14 @@ export async function PUT(
       if (!dayOfWeek) continue;
 
       for (const time of times) {
-        const [hours, minutes] = time.split(":");
-        const endHour = parseInt(hours) + 1;
-        const endTime = `${endHour.toString().padStart(2, "0")}:${minutes}`;
+        // Calculate end time (30 minutes later)
+        const [hours, minutes] = time.split(":").map(Number);
+        const startMinutes = hours * 60 + minutes;
+        const endMinutes = startMinutes + 30; // 30-minute slots
+
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        const endTime = `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
 
         timeSlots.push({
           scheduleId: schedule.id,
@@ -74,6 +79,7 @@ export async function PUT(
             "SEGUIMIENTO",
             "TERAPIA",
           ] as AppointmentType[],
+          maxAppointments: 1, // One appointment per 30-minute slot
         });
       }
     }

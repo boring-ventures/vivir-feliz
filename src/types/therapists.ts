@@ -32,6 +32,7 @@ export interface TherapistSchedule {
   createdAt: Date;
   updatedAt: Date;
   timeSlots: TimeSlot[];
+  restPeriods: RestPeriod[];
   blockedSlots: BlockedSlot[];
 }
 
@@ -93,6 +94,16 @@ export interface WeeklyAvailability {
   miercoles: string[];
   jueves: string[];
   viernes: string[];
+}
+
+export interface RestPeriod {
+  id: string;
+  scheduleId: string;
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Re-export DayOfWeek for convenience

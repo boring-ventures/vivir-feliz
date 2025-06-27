@@ -156,6 +156,7 @@ model Schedule {
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
   blockedSlots BlockedSlot[]
+  restPeriods  RestPeriod[]
   therapist    Profile       @relation(fields: [therapistId], references: [id], onDelete: Cascade)
   timeSlots    TimeSlot[]
 
@@ -177,6 +178,20 @@ model TimeSlot {
 
   @@unique([scheduleId, dayOfWeek, startTime])
   @@map("time_slots")
+}
+
+model RestPeriod {
+  id         String    @id @default(cuid())
+  scheduleId String    @map("schedule_id")
+  dayOfWeek  DayOfWeek @map("day_of_week")
+  startTime  String    @map("start_time")
+  endTime    String    @map("end_time")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  schedule   Schedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, dayOfWeek, startTime])
+  @@map("rest_periods")
 }
 
 model BlockedSlot {

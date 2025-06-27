@@ -18,6 +18,19 @@ export type ScheduleFormData = {
     startTime: string;
     endTime: string;
   }>;
+  restPeriods: Array<{
+    day:
+      | "MONDAY"
+      | "TUESDAY"
+      | "WEDNESDAY"
+      | "THURSDAY"
+      | "FRIDAY"
+      | "SATURDAY"
+      | "SUNDAY";
+    enabled: boolean;
+    startTime: string;
+    endTime: string;
+  }>;
 };
 
 export type Schedule = {

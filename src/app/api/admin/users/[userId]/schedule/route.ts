@@ -32,6 +32,26 @@ const scheduleSchema = z.object({
     .refine((schedules) => schedules.some((schedule) => schedule.enabled), {
       message: "At least one day must be selected",
     }),
+  restPeriods: z.array(
+    z.object({
+      day: z.enum([
+        "MONDAY",
+        "TUESDAY",
+        "WEDNESDAY",
+        "THURSDAY",
+        "FRIDAY",
+        "SATURDAY",
+        "SUNDAY",
+      ]),
+      enabled: z.boolean(),
+      startTime: z
+        .string()
+        .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format"),
+      endTime: z
+        .string()
+        .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format"),
+    })
+  ),
 });
 
 // POST: Create schedule for therapist
@@ -134,13 +154,32 @@ export async function POST(
         )
       );
 
-      return { schedule, timeSlots };
+      // Create rest periods for enabled days
+      const enabledRestPeriods = validatedData.restPeriods.filter(
+        (period) => period.enabled
+      );
+
+      const restPeriods = await Promise.all(
+        enabledRestPeriods.map((restPeriod) =>
+          tx.restPeriod.create({
+            data: {
+              scheduleId: schedule.id,
+              dayOfWeek: restPeriod.day,
+              startTime: restPeriod.startTime,
+              endTime: restPeriod.endTime,
+            },
+          })
+        )
+      );
+
+      return { schedule, timeSlots, restPeriods };
     });
 
     return NextResponse.json({
       message: "Schedule created successfully",
       scheduleId: result.schedule.id,
       timeSlots: result.timeSlots.length,
+      restPeriods: result.restPeriods.length,
     });
   } catch (error) {
     console.error("Error creating schedule:", error);
@@ -193,6 +232,9 @@ export async function GET(
       where: { therapistId: userId },
       include: {
         timeSlots: {
+          orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+        },
+        restPeriods: {
           orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
         },
         therapist: {
@@ -283,6 +325,11 @@ export async function PUT(
         where: { scheduleId: schedule.id },
       });
 
+      // Delete existing rest periods
+      await tx.restPeriod.deleteMany({
+        where: { scheduleId: schedule.id },
+      });
+
       // Create new time slots for enabled days
       const enabledDays = validatedData.dailySchedules.filter(
         (day) => day.enabled
@@ -308,13 +355,32 @@ export async function PUT(
         )
       );
 
-      return { schedule, timeSlots };
+      // Create rest periods for enabled days
+      const enabledRestPeriods = validatedData.restPeriods.filter(
+        (period) => period.enabled
+      );
+
+      const restPeriods = await Promise.all(
+        enabledRestPeriods.map((restPeriod) =>
+          tx.restPeriod.create({
+            data: {
+              scheduleId: schedule.id,
+              dayOfWeek: restPeriod.day,
+              startTime: restPeriod.startTime,
+              endTime: restPeriod.endTime,
+            },
+          })
+        )
+      );
+
+      return { schedule, timeSlots, restPeriods };
     });
 
     return NextResponse.json({
       message: "Schedule updated successfully",
       scheduleId: result.schedule.id,
       timeSlots: result.timeSlots.length,
+      restPeriods: result.restPeriods.length,
     });
   } catch (error) {
     console.error("Error updating schedule:", error);

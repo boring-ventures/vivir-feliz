@@ -74,7 +74,7 @@ export default function AdminInterviewRequestsPage() {
   const { data, isLoading, error } = useInterviewRequests({
     page: currentPage,
     limit: pageSize,
-    status: statusFilter,
+    status: statusFilter === "all" ? undefined : statusFilter,
   });
 
   const updateInterviewRequest = useUpdateInterviewRequest();
@@ -159,6 +159,30 @@ export default function AdminInterviewRequestsPage() {
     data?.data?.filter((r) => r.status === "SCHEDULED").length || 0;
   const completedRequests =
     data?.data?.filter((r) => r.status === "COMPLETED").length || 0;
+
+  if (isLoading) {
+    return (
+      <RoleGuard allowedRoles={["ADMIN"]}>
+        <div className="space-y-6 p-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        </div>
+      </RoleGuard>
+    );
+  }
+
+  if (error) {
+    return (
+      <RoleGuard allowedRoles={["ADMIN"]}>
+        <div className="space-y-6 p-6">
+          <div className="text-center py-8 text-red-600">
+            Error al cargar las solicitudes
+          </div>
+        </div>
+      </RoleGuard>
+    );
+  }
 
   return (
     <RoleGuard allowedRoles={["ADMIN"]}>
@@ -259,183 +283,169 @@ export default function AdminInterviewRequestsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              </div>
-            ) : error ? (
-              <div className="text-center py-8 text-red-600">
-                Error al cargar las solicitudes
-              </div>
-            ) : (
-              <>
-                <Table>
-                  <TableHeader>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Niño/a</TableHead>
+                    <TableHead>Padre/Madre</TableHead>
+                    <TableHead>Colegio</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Fecha Solicitud</TableHead>
+                    <TableHead>Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRequests.length === 0 ? (
                     <TableRow>
-                      <TableHead>Niño/a</TableHead>
-                      <TableHead>Padre/Madre</TableHead>
-                      <TableHead>Colegio</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Fecha Solicitud</TableHead>
-                      <TableHead>Acciones</TableHead>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="text-gray-500">
+                          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p className="text-lg font-medium mb-2">
+                            No se encontraron solicitudes
+                          </p>
+                          <p className="text-sm">
+                            {searchTerm
+                              ? "Intenta con otros términos de búsqueda"
+                              : "No hay solicitudes de entrevista disponibles"}
+                          </p>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRequests.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="text-gray-500">
-                            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p className="text-lg font-medium mb-2">
-                              No se encontraron solicitudes
-                            </p>
-                            <p className="text-sm">
-                              {searchTerm
-                                ? "Intenta con otros términos de búsqueda"
-                                : "No hay solicitudes de entrevista disponibles"}
-                            </p>
+                  ) : (
+                    filteredRequests.map((request) => (
+                      <TableRow key={request.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">
+                              {request.childFirstName} {request.childLastName}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {calculateAge(request.childDateOfBirth)} años •{" "}
+                              {request.childGender}
+                            </div>
                           </div>
                         </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredRequests.map((request) => (
-                        <TableRow key={request.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">
-                                {request.childFirstName} {request.childLastName}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {calculateAge(request.childDateOfBirth)} años •{" "}
-                                {request.childGender}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">
-                                {request.parentName}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {request.parentPhone}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
+                        <TableCell>
+                          <div>
                             <div className="font-medium">
-                              {request.schoolName}
+                              {request.parentName}
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(request.status)}>
-                              {getStatusLabel(request.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {format(
-                                new Date(request.createdAt),
-                                "dd/MM/yyyy",
-                                {
-                                  locale: es,
-                                }
+                            <div className="text-sm text-gray-500">
+                              {request.parentPhone}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">
+                            {request.schoolName}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(request.status)}>
+                            {getStatusLabel(request.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {format(new Date(request.createdAt), "dd/MM/yyyy", {
+                              locale: es,
+                            })}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {format(new Date(request.createdAt), "HH:mm", {
+                              locale: es,
+                            })}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleViewDetails(request)}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Ver Detalles
+                              </DropdownMenuItem>
+                              {request.status === "PENDING" && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleStatusUpdate(
+                                        request.id,
+                                        "SCHEDULED"
+                                      )
+                                    }
+                                  >
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    Programar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleStatusUpdate(
+                                        request.id,
+                                        "CANCELLED"
+                                      )
+                                    }
+                                    className="text-red-600 focus:text-red-600"
+                                  >
+                                    <XCircle className="w-4 h-4 mr-2" />
+                                    Cancelar
+                                  </DropdownMenuItem>
+                                </>
                               )}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {format(new Date(request.createdAt), "HH:mm", {
-                                locale: es,
-                              })}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleViewDetails(request)}
-                                >
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  Ver Detalles
-                                </DropdownMenuItem>
-                                {request.status === "PENDING" && (
-                                  <>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        handleStatusUpdate(
-                                          request.id,
-                                          "SCHEDULED"
-                                        )
-                                      }
-                                    >
-                                      <CheckCircle className="w-4 h-4 mr-2" />
-                                      Programar
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        handleStatusUpdate(
-                                          request.id,
-                                          "CANCELLED"
-                                        )
-                                      }
-                                      className="text-red-600 focus:text-red-600"
-                                    >
-                                      <XCircle className="w-4 h-4 mr-2" />
-                                      Cancelar
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-muted-foreground">
-                      Mostrando {(currentPage - 1) * pageSize + 1} a{" "}
-                      {Math.min(
-                        currentPage * pageSize,
-                        data?.pagination?.total || 0
-                      )}{" "}
-                      de {data?.pagination?.total || 0} solicitudes
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setCurrentPage(Math.max(1, currentPage - 1))
-                        }
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Anterior
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setCurrentPage(Math.min(totalPages, currentPage + 1))
-                        }
-                        disabled={currentPage === totalPages}
-                      >
-                        Siguiente
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-muted-foreground">
+                    Mostrando {(currentPage - 1) * pageSize + 1} a{" "}
+                    {Math.min(
+                      currentPage * pageSize,
+                      data?.pagination?.total || 0
+                    )}{" "}
+                    de {data?.pagination?.total || 0} solicitudes
                   </div>
-                )}
-              </>
-            )}
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setCurrentPage(Math.max(1, currentPage - 1))
+                      }
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setCurrentPage(Math.min(totalPages, currentPage + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                    >
+                      Siguiente
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           </CardContent>
         </Card>
 

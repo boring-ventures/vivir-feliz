@@ -12,6 +12,7 @@ export async function GET() {
         schedule: {
           include: {
             timeSlots: true,
+            restPeriods: true,
             blockedSlots: true,
           },
         },

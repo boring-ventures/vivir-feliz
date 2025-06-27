@@ -169,6 +169,26 @@ const scheduleSchema = z.object({
     .refine((schedules) => schedules.some((schedule) => schedule.enabled), {
       message: "Debe seleccionar al menos un día de trabajo",
     }),
+  restPeriods: z.array(
+    z.object({
+      day: z.enum([
+        "MONDAY",
+        "TUESDAY",
+        "WEDNESDAY",
+        "THURSDAY",
+        "FRIDAY",
+        "SATURDAY",
+        "SUNDAY",
+      ]),
+      enabled: z.boolean(),
+      startTime: z
+        .string()
+        .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido"),
+      endTime: z
+        .string()
+        .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido"),
+    })
+  ),
 });
 
 type FormData = z.infer<typeof createUserSchema>;
@@ -190,6 +210,13 @@ type ScheduleData = {
   slotDuration: number;
   breakBetween: number;
   timeSlots: TimeSlot[];
+  restPeriods?: Array<{
+    id: string;
+    scheduleId: string;
+    dayOfWeek: string;
+    startTime: string;
+    endTime: string;
+  }>;
   therapist: {
     id: string;
     firstName: string;
@@ -285,8 +312,18 @@ export default function AdminUsersPage() {
       slotDuration: 60,
       breakBetween: 15,
       dailySchedules: [
-        { day: "MONDAY", enabled: true, startTime: "08:00", endTime: "18:00" },
-        { day: "TUESDAY", enabled: true, startTime: "08:00", endTime: "18:00" },
+        {
+          day: "MONDAY",
+          enabled: true,
+          startTime: "08:00",
+          endTime: "18:00",
+        },
+        {
+          day: "TUESDAY",
+          enabled: true,
+          startTime: "08:00",
+          endTime: "18:00",
+        },
         {
           day: "WEDNESDAY",
           enabled: true,
@@ -299,14 +336,68 @@ export default function AdminUsersPage() {
           startTime: "08:00",
           endTime: "18:00",
         },
-        { day: "FRIDAY", enabled: true, startTime: "08:00", endTime: "18:00" },
+        {
+          day: "FRIDAY",
+          enabled: true,
+          startTime: "08:00",
+          endTime: "18:00",
+        },
         {
           day: "SATURDAY",
           enabled: false,
           startTime: "08:00",
           endTime: "18:00",
         },
-        { day: "SUNDAY", enabled: false, startTime: "08:00", endTime: "18:00" },
+        {
+          day: "SUNDAY",
+          enabled: false,
+          startTime: "08:00",
+          endTime: "18:00",
+        },
+      ],
+      restPeriods: [
+        {
+          day: "MONDAY",
+          enabled: true,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "TUESDAY",
+          enabled: true,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "WEDNESDAY",
+          enabled: true,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "THURSDAY",
+          enabled: true,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "FRIDAY",
+          enabled: true,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "SATURDAY",
+          enabled: false,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "SUNDAY",
+          enabled: false,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
       ],
     },
   });
@@ -321,6 +412,15 @@ export default function AdminUsersPage() {
         },
         {}
       );
+
+      const restPeriodsByDay =
+        existingSchedule.restPeriods?.reduce(
+          (acc: Record<string, any>, period: any) => {
+            acc[period.dayOfWeek] = period;
+            return acc;
+          },
+          {}
+        ) || {};
 
       const dailySchedules = daysOfWeek.map((day) => {
         const timeSlot = timeSlotsByDay[day.value];
@@ -339,10 +439,28 @@ export default function AdminUsersPage() {
         };
       });
 
+      const restPeriods = daysOfWeek.map((day) => {
+        const restPeriod = restPeriodsByDay[day.value];
+        return {
+          day: day.value as
+            | "MONDAY"
+            | "TUESDAY"
+            | "WEDNESDAY"
+            | "THURSDAY"
+            | "FRIDAY"
+            | "SATURDAY"
+            | "SUNDAY",
+          enabled: !!restPeriod,
+          startTime: restPeriod?.startTime || "12:00",
+          endTime: restPeriod?.endTime || "13:00",
+        };
+      });
+
       editScheduleForm.reset({
         slotDuration: existingSchedule.slotDuration,
         breakBetween: existingSchedule.breakBetween,
         dailySchedules,
+        restPeriods,
       });
     }
   }, [existingSchedule, scheduleViewMode, editScheduleForm]);
@@ -373,8 +491,18 @@ export default function AdminUsersPage() {
       slotDuration: 60,
       breakBetween: 15,
       dailySchedules: [
-        { day: "MONDAY", enabled: true, startTime: "08:00", endTime: "18:00" },
-        { day: "TUESDAY", enabled: true, startTime: "08:00", endTime: "18:00" },
+        {
+          day: "MONDAY",
+          enabled: true,
+          startTime: "08:00",
+          endTime: "18:00",
+        },
+        {
+          day: "TUESDAY",
+          enabled: true,
+          startTime: "08:00",
+          endTime: "18:00",
+        },
         {
           day: "WEDNESDAY",
           enabled: true,
@@ -387,14 +515,68 @@ export default function AdminUsersPage() {
           startTime: "08:00",
           endTime: "18:00",
         },
-        { day: "FRIDAY", enabled: true, startTime: "08:00", endTime: "18:00" },
+        {
+          day: "FRIDAY",
+          enabled: true,
+          startTime: "08:00",
+          endTime: "18:00",
+        },
         {
           day: "SATURDAY",
           enabled: false,
           startTime: "08:00",
           endTime: "18:00",
         },
-        { day: "SUNDAY", enabled: false, startTime: "08:00", endTime: "18:00" },
+        {
+          day: "SUNDAY",
+          enabled: false,
+          startTime: "08:00",
+          endTime: "18:00",
+        },
+      ],
+      restPeriods: [
+        {
+          day: "MONDAY",
+          enabled: true,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "TUESDAY",
+          enabled: true,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "WEDNESDAY",
+          enabled: true,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "THURSDAY",
+          enabled: true,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "FRIDAY",
+          enabled: true,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "SATURDAY",
+          enabled: false,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
+        {
+          day: "SUNDAY",
+          enabled: false,
+          startTime: "12:00",
+          endTime: "13:00",
+        },
       ],
     },
   });
@@ -952,10 +1134,11 @@ export default function AdminUsersPage() {
                     <li>• Sábado y Domingo: No disponible</li>
                     <li>• Duración de citas: 60 minutos</li>
                     <li>• Descanso entre citas: 15 minutos</li>
+                    <li>• Tiempo de descanso: 12:00 PM - 1:00 PM</li>
                   </ul>
                   <p className="text-xs text-gray-500 mt-2">
-                    Podrás personalizar horarios específicos para cada día en el
-                    siguiente paso.
+                    Podrás personalizar horarios específicos para cada día,
+                    incluyendo períodos de descanso, en el siguiente paso.
                   </p>
                 </div>
               </div>
@@ -1084,61 +1267,63 @@ export default function AdminUsersPage() {
                           </div>
 
                           {isEnabled && (
-                            <div className="flex items-center space-x-2 flex-1">
-                              <div className="flex items-center space-x-1">
-                                <Label className="text-xs text-gray-600">
-                                  Desde:
-                                </Label>
-                                <Input
-                                  type="time"
-                                  value={daySchedule?.startTime || "08:00"}
-                                  onChange={(e) => {
-                                    const currentSchedules =
-                                      scheduleForm.watch("dailySchedules");
-                                    const updatedSchedules =
-                                      currentSchedules.map((schedule) =>
-                                        schedule.day === day.value
-                                          ? {
-                                              ...schedule,
-                                              startTime: e.target.value,
-                                            }
-                                          : schedule
+                            <div className="space-y-2 flex-1">
+                              <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-1">
+                                  <Label className="text-xs text-gray-600">
+                                    Desde:
+                                  </Label>
+                                  <Input
+                                    type="time"
+                                    value={daySchedule?.startTime || "08:00"}
+                                    onChange={(e) => {
+                                      const currentSchedules =
+                                        scheduleForm.watch("dailySchedules");
+                                      const updatedSchedules =
+                                        currentSchedules.map((schedule) =>
+                                          schedule.day === day.value
+                                            ? {
+                                                ...schedule,
+                                                startTime: e.target.value,
+                                              }
+                                            : schedule
+                                        );
+                                      scheduleForm.setValue(
+                                        "dailySchedules",
+                                        updatedSchedules
                                       );
-                                    scheduleForm.setValue(
-                                      "dailySchedules",
-                                      updatedSchedules
-                                    );
-                                  }}
-                                  className="w-32 text-sm"
-                                />
-                              </div>
+                                    }}
+                                    className="w-32 text-sm"
+                                  />
+                                </div>
 
-                              <div className="flex items-center space-x-1">
-                                <Label className="text-xs text-gray-600">
-                                  Hasta:
-                                </Label>
-                                <Input
-                                  type="time"
-                                  value={daySchedule?.endTime || "18:00"}
-                                  onChange={(e) => {
-                                    const currentSchedules =
-                                      scheduleForm.watch("dailySchedules");
-                                    const updatedSchedules =
-                                      currentSchedules.map((schedule) =>
-                                        schedule.day === day.value
-                                          ? {
-                                              ...schedule,
-                                              endTime: e.target.value,
-                                            }
-                                          : schedule
+                                <div className="flex items-center space-x-1">
+                                  <Label className="text-xs text-gray-600">
+                                    Hasta:
+                                  </Label>
+                                  <Input
+                                    type="time"
+                                    value={daySchedule?.endTime || "18:00"}
+                                    onChange={(e) => {
+                                      const currentSchedules =
+                                        scheduleForm.watch("dailySchedules");
+                                      const updatedSchedules =
+                                        currentSchedules.map((schedule) =>
+                                          schedule.day === day.value
+                                            ? {
+                                                ...schedule,
+                                                endTime: e.target.value,
+                                              }
+                                            : schedule
+                                        );
+                                      scheduleForm.setValue(
+                                        "dailySchedules",
+                                        updatedSchedules
                                       );
-                                    scheduleForm.setValue(
-                                      "dailySchedules",
-                                      updatedSchedules
-                                    );
-                                  }}
-                                  className="w-32 text-sm"
-                                />
+                                    }}
+                                    className="w-32 text-sm"
+                                  />
+                                </div>
                               </div>
                             </div>
                           )}
@@ -1157,6 +1342,149 @@ export default function AdminUsersPage() {
                       scheduleForm.formState.errors.dailySchedules?.message
                     }
                   />
+                </div>
+
+                {/* Rest Periods Configuration */}
+                <div>
+                  <Label className="text-base font-medium">
+                    Períodos de Descanso
+                  </Label>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Configura los períodos de descanso para cada día de la
+                    semana
+                  </p>
+
+                  <div className="space-y-3">
+                    {daysOfWeek.map((day) => {
+                      const restPeriod = scheduleForm
+                        .watch("restPeriods")
+                        .find((r) => r.day === day.value);
+                      const isEnabled = restPeriod?.enabled || false;
+
+                      return (
+                        <div
+                          key={`rest-${day.value}`}
+                          className="flex items-center space-x-4 p-3 border rounded-lg bg-orange-50"
+                        >
+                          <div className="flex items-center space-x-2 min-w-[100px]">
+                            <input
+                              type="checkbox"
+                              checked={isEnabled}
+                              onChange={(e) => {
+                                const currentRestPeriods =
+                                  scheduleForm.watch("restPeriods");
+                                const updatedRestPeriods =
+                                  currentRestPeriods.map((period) =>
+                                    period.day === day.value
+                                      ? {
+                                          ...period,
+                                          enabled: e.target.checked,
+                                        }
+                                      : period
+                                  );
+
+                                // If day doesn't exist, add it
+                                if (
+                                  !currentRestPeriods.find(
+                                    (r) => r.day === day.value
+                                  )
+                                ) {
+                                  updatedRestPeriods.push({
+                                    day: day.value as
+                                      | "MONDAY"
+                                      | "TUESDAY"
+                                      | "WEDNESDAY"
+                                      | "THURSDAY"
+                                      | "FRIDAY"
+                                      | "SATURDAY"
+                                      | "SUNDAY",
+                                    enabled: e.target.checked,
+                                    startTime: "12:00",
+                                    endTime: "13:00",
+                                  });
+                                }
+
+                                scheduleForm.setValue(
+                                  "restPeriods",
+                                  updatedRestPeriods
+                                );
+                              }}
+                              className="rounded border-gray-300"
+                            />
+                            <span className="text-sm font-medium">
+                              {day.label}
+                            </span>
+                          </div>
+
+                          {isEnabled && (
+                            <div className="flex items-center space-x-2">
+                              <div className="flex items-center space-x-1">
+                                <Label className="text-xs text-gray-600">
+                                  Desde:
+                                </Label>
+                                <Input
+                                  type="time"
+                                  value={restPeriod?.startTime || "12:00"}
+                                  onChange={(e) => {
+                                    const currentRestPeriods =
+                                      scheduleForm.watch("restPeriods");
+                                    const updatedRestPeriods =
+                                      currentRestPeriods.map((period) =>
+                                        period.day === day.value
+                                          ? {
+                                              ...period,
+                                              startTime: e.target.value,
+                                            }
+                                          : period
+                                      );
+                                    scheduleForm.setValue(
+                                      "restPeriods",
+                                      updatedRestPeriods
+                                    );
+                                  }}
+                                  className="w-32 text-sm"
+                                />
+                              </div>
+
+                              <div className="flex items-center space-x-1">
+                                <Label className="text-xs text-gray-600">
+                                  Hasta:
+                                </Label>
+                                <Input
+                                  type="time"
+                                  value={restPeriod?.endTime || "13:00"}
+                                  onChange={(e) => {
+                                    const currentRestPeriods =
+                                      scheduleForm.watch("restPeriods");
+                                    const updatedRestPeriods =
+                                      currentRestPeriods.map((period) =>
+                                        period.day === day.value
+                                          ? {
+                                              ...period,
+                                              endTime: e.target.value,
+                                            }
+                                          : period
+                                      );
+                                    scheduleForm.setValue(
+                                      "restPeriods",
+                                      updatedRestPeriods
+                                    );
+                                  }}
+                                  className="w-32 text-sm"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {!isEnabled && (
+                            <div className="flex-1 text-sm text-gray-400">
+                              Sin descanso
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </form>
             )}
@@ -1804,67 +2132,74 @@ export default function AdminUsersPage() {
                                 </div>
 
                                 {isEnabled && (
-                                  <div className="flex items-center space-x-2 flex-1">
-                                    <div className="flex items-center space-x-1">
-                                      <Label className="text-xs text-gray-600">
-                                        Desde:
-                                      </Label>
-                                      <Input
-                                        type="time"
-                                        value={
-                                          daySchedule?.startTime || "08:00"
-                                        }
-                                        onChange={(e) => {
-                                          const currentSchedules =
-                                            editScheduleForm.watch(
-                                              "dailySchedules"
+                                  <div className="space-y-2 flex-1">
+                                    <div className="flex items-center space-x-2">
+                                      <div className="flex items-center space-x-1">
+                                        <Label className="text-xs text-gray-600">
+                                          Desde:
+                                        </Label>
+                                        <Input
+                                          type="time"
+                                          value={
+                                            daySchedule?.startTime || "08:00"
+                                          }
+                                          onChange={(e) => {
+                                            const currentSchedules =
+                                              editScheduleForm.watch(
+                                                "dailySchedules"
+                                              );
+                                            const updatedSchedules =
+                                              currentSchedules.map(
+                                                (schedule) =>
+                                                  schedule.day === day.value
+                                                    ? {
+                                                        ...schedule,
+                                                        startTime:
+                                                          e.target.value,
+                                                      }
+                                                    : schedule
+                                              );
+                                            editScheduleForm.setValue(
+                                              "dailySchedules",
+                                              updatedSchedules
                                             );
-                                          const updatedSchedules =
-                                            currentSchedules.map((schedule) =>
-                                              schedule.day === day.value
-                                                ? {
-                                                    ...schedule,
-                                                    startTime: e.target.value,
-                                                  }
-                                                : schedule
-                                            );
-                                          editScheduleForm.setValue(
-                                            "dailySchedules",
-                                            updatedSchedules
-                                          );
-                                        }}
-                                        className="w-32 text-sm"
-                                      />
-                                    </div>
+                                          }}
+                                          className="w-32 text-sm"
+                                        />
+                                      </div>
 
-                                    <div className="flex items-center space-x-1">
-                                      <Label className="text-xs text-gray-600">
-                                        Hasta:
-                                      </Label>
-                                      <Input
-                                        type="time"
-                                        value={daySchedule?.endTime || "18:00"}
-                                        onChange={(e) => {
-                                          const currentSchedules =
-                                            editScheduleForm.watch(
-                                              "dailySchedules"
+                                      <div className="flex items-center space-x-1">
+                                        <Label className="text-xs text-gray-600">
+                                          Hasta:
+                                        </Label>
+                                        <Input
+                                          type="time"
+                                          value={
+                                            daySchedule?.endTime || "18:00"
+                                          }
+                                          onChange={(e) => {
+                                            const currentSchedules =
+                                              editScheduleForm.watch(
+                                                "dailySchedules"
+                                              );
+                                            const updatedSchedules =
+                                              currentSchedules.map(
+                                                (schedule) =>
+                                                  schedule.day === day.value
+                                                    ? {
+                                                        ...schedule,
+                                                        endTime: e.target.value,
+                                                      }
+                                                    : schedule
+                                              );
+                                            editScheduleForm.setValue(
+                                              "dailySchedules",
+                                              updatedSchedules
                                             );
-                                          const updatedSchedules =
-                                            currentSchedules.map((schedule) =>
-                                              schedule.day === day.value
-                                                ? {
-                                                    ...schedule,
-                                                    endTime: e.target.value,
-                                                  }
-                                                : schedule
-                                            );
-                                          editScheduleForm.setValue(
-                                            "dailySchedules",
-                                            updatedSchedules
-                                          );
-                                        }}
-                                        className="w-32 text-sm"
-                                      />
+                                          }}
+                                          className="w-32 text-sm"
+                                        />
+                                      </div>
                                     </div>
                                   </div>
                                 )}
@@ -1884,6 +2219,132 @@ export default function AdminUsersPage() {
                               ?.message
                           }
                         />
+                      </div>
+
+                      {/* Rest Periods Configuration for Edit Form */}
+                      <div>
+                        <Label className="text-base font-medium">
+                          Períodos de Descanso
+                        </Label>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Configura los períodos de descanso para cada día de la
+                          semana
+                        </p>
+
+                        <div className="space-y-3">
+                          {daysOfWeek.map((day) => {
+                            const restPeriod = editScheduleForm
+                              .watch("restPeriods")
+                              .find((r) => r.day === day.value);
+                            const isEnabled = restPeriod?.enabled || false;
+
+                            return (
+                              <div
+                                key={`edit-rest-${day.value}`}
+                                className="flex items-center space-x-4 p-3 border rounded-lg bg-orange-50"
+                              >
+                                <div className="flex items-center space-x-2 min-w-[100px]">
+                                  <input
+                                    type="checkbox"
+                                    checked={isEnabled}
+                                    onChange={(e) => {
+                                      const currentRestPeriods =
+                                        editScheduleForm.watch("restPeriods");
+                                      const updatedRestPeriods =
+                                        currentRestPeriods.map((period) =>
+                                          period.day === day.value
+                                            ? {
+                                                ...period,
+                                                enabled: e.target.checked,
+                                              }
+                                            : period
+                                        );
+
+                                      editScheduleForm.setValue(
+                                        "restPeriods",
+                                        updatedRestPeriods
+                                      );
+                                    }}
+                                    className="rounded border-gray-300"
+                                  />
+                                  <span className="text-sm font-medium">
+                                    {day.label}
+                                  </span>
+                                </div>
+
+                                {isEnabled && (
+                                  <div className="flex items-center space-x-2">
+                                    <div className="flex items-center space-x-1">
+                                      <Label className="text-xs text-gray-600">
+                                        Desde:
+                                      </Label>
+                                      <Input
+                                        type="time"
+                                        value={restPeriod?.startTime || "12:00"}
+                                        onChange={(e) => {
+                                          const currentRestPeriods =
+                                            editScheduleForm.watch(
+                                              "restPeriods"
+                                            );
+                                          const updatedRestPeriods =
+                                            currentRestPeriods.map((period) =>
+                                              period.day === day.value
+                                                ? {
+                                                    ...period,
+                                                    startTime: e.target.value,
+                                                  }
+                                                : period
+                                            );
+                                          editScheduleForm.setValue(
+                                            "restPeriods",
+                                            updatedRestPeriods
+                                          );
+                                        }}
+                                        className="w-32 text-sm"
+                                      />
+                                    </div>
+
+                                    <div className="flex items-center space-x-1">
+                                      <Label className="text-xs text-gray-600">
+                                        Hasta:
+                                      </Label>
+                                      <Input
+                                        type="time"
+                                        value={restPeriod?.endTime || "13:00"}
+                                        onChange={(e) => {
+                                          const currentRestPeriods =
+                                            editScheduleForm.watch(
+                                              "restPeriods"
+                                            );
+                                          const updatedRestPeriods =
+                                            currentRestPeriods.map((period) =>
+                                              period.day === day.value
+                                                ? {
+                                                    ...period,
+                                                    endTime: e.target.value,
+                                                  }
+                                                : period
+                                            );
+                                          editScheduleForm.setValue(
+                                            "restPeriods",
+                                            updatedRestPeriods
+                                          );
+                                        }}
+                                        className="w-32 text-sm"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+
+                                {!isEnabled && (
+                                  <div className="flex-1 text-sm text-gray-400">
+                                    Sin descanso
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </>
                   )}
