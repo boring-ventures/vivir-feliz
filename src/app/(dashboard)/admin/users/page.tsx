@@ -415,7 +415,25 @@ export default function AdminUsersPage() {
 
       const restPeriodsByDay =
         existingSchedule.restPeriods?.reduce(
-          (acc: Record<string, any>, period: any) => {
+          (
+            acc: Record<
+              string,
+              {
+                id: string;
+                scheduleId: string;
+                dayOfWeek: string;
+                startTime: string;
+                endTime: string;
+              }
+            >,
+            period: {
+              id: string;
+              scheduleId: string;
+              dayOfWeek: string;
+              startTime: string;
+              endTime: string;
+            }
+          ) => {
             acc[period.dayOfWeek] = period;
             return acc;
           },

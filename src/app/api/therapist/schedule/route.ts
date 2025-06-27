@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
-import { z } from "zod";
 
 export async function GET() {
   try {

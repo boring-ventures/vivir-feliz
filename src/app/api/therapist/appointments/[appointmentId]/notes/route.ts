@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { appointmentId: string } }
+  { params }: { params: Promise<{ appointmentId: string }> }
 ) {
   try {
     const supabase = createServerComponentClient({ cookies });
@@ -17,7 +17,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { appointmentId } = params;
+    const { appointmentId } = await params;
     const body = await request.json();
     const { sessionNotes, homework, nextSessionPlan, status } = body;
 

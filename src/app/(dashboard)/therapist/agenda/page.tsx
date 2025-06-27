@@ -6,21 +6,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/use-toast";
 import {
-  User,
-  Bell,
   ChevronLeft,
   ChevronRight,
   Clock,
   Save,
+  Bell,
+  User,
 } from "lucide-react";
-import { useAuth } from "@/providers/auth-provider";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   useTherapistSchedule,
   useUpdateTherapistSchedule,
 } from "@/hooks/use-therapist-schedule";
 import { useTherapistAppointments } from "@/hooks/use-therapist-appointments";
-import { toast } from "@/components/ui/use-toast";
 
 type DayConfig = {
   enabled: boolean;
@@ -43,7 +43,7 @@ type WeekScheduleConfig = {
 export default function TherapistAgendaPage() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [configurationMode, setConfigurationMode] = useState(false);
-  const { user, profile, isLoading: authLoading } = useAuth();
+  const { profile, isLoading: authLoading } = useCurrentUser();
 
   // Initialize current week to Monday
   const getMonday = (date: Date) => {
@@ -57,8 +57,10 @@ export default function TherapistAgendaPage() {
 
   // Fetch schedule and appointments
   const { data: schedule, isLoading: scheduleLoading } = useTherapistSchedule();
-  const { data: appointments, isLoading: appointmentsLoading } =
-    useTherapistAppointments(profile?.id || null, mondayDate);
+  const { data: appointments } = useTherapistAppointments(
+    profile?.id || null,
+    mondayDate
+  );
   const updateSchedule = useUpdateTherapistSchedule();
 
   // Schedule configuration state
@@ -326,7 +328,7 @@ export default function TherapistAgendaPage() {
   const updateScheduleConfig = (
     day: keyof WeekScheduleConfig,
     field: keyof DayConfig,
-    value: any
+    value: string | boolean
   ) => {
     setScheduleConfig((prev) => ({
       ...prev,
@@ -364,10 +366,32 @@ export default function TherapistAgendaPage() {
         slotDuration: 60,
         breakBetween: 15,
         dailySchedules: Object.entries(scheduleConfig).map(([day, config]) => ({
-          day: day.toUpperCase() as any,
+          day: day.toUpperCase() as
+            | "MONDAY"
+            | "TUESDAY"
+            | "WEDNESDAY"
+            | "THURSDAY"
+            | "FRIDAY"
+            | "SATURDAY"
+            | "SUNDAY",
           enabled: config.enabled,
           startTime: config.startTime,
           endTime: config.endTime,
+        })),
+        restPeriods: Object.entries(scheduleConfig).map(([day, config]) => ({
+          day: day.toUpperCase() as
+            | "MONDAY"
+            | "TUESDAY"
+            | "WEDNESDAY"
+            | "THURSDAY"
+            | "FRIDAY"
+            | "SATURDAY"
+            | "SUNDAY",
+          enabled: Boolean(
+            config.enabled && config.breakStartTime && config.breakEndTime
+          ),
+          startTime: config.breakStartTime || "12:00",
+          endTime: config.breakEndTime || "13:00",
         })),
       };
 
@@ -377,7 +401,7 @@ export default function TherapistAgendaPage() {
         title: "Éxito",
         description: "Horario actualizado correctamente",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Error al actualizar el horario",
