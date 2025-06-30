@@ -166,10 +166,8 @@ export default function TherapistsPage() {
     therapistInfo?: TherapistProfile;
   } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [selectedTherapistForCalendar, setSelectedTherapistForCalendar] =
-    useState<TherapistProfile | null>(null);
   const [showLegend, setShowLegend] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>("calendario");
 
   // Fetch therapists data
   const { data: therapists = [], isLoading, error } = useTherapists();
@@ -474,10 +472,12 @@ export default function TherapistsPage() {
 
   // Open calendar for editing
   const openCalendar = (therapist: TherapistProfile) => {
-    setSelectedTherapistForCalendar(therapist);
+    // Set the selected therapist to show only their schedule
+    setSelectedTherapist(therapist.id);
+    // Switch to calendar tab
+    setActiveTab("calendario");
     const currentAvailability = getTherapistAvailability(therapist);
     setEditableAvailability(currentAvailability);
-    setIsCalendarOpen(true);
   };
 
   // Toggle availability for a time slot
@@ -590,17 +590,15 @@ export default function TherapistsPage() {
 
   // Save availability changes
   const saveAvailabilityChanges = async () => {
-    if (!selectedTherapistForCalendar) return;
+    if (!selectedTherapist || selectedTherapist === "todos") return;
 
     try {
       await updateScheduleMutation.mutateAsync({
-        therapistId: selectedTherapistForCalendar.id,
+        therapistId: selectedTherapist,
         availability: editableAvailability,
       });
-      setIsCalendarOpen(false);
     } catch (error) {
       console.error("Error saving schedule:", error);
-      // TODO: Show error toast
     }
   };
 
@@ -875,7 +873,12 @@ export default function TherapistsPage() {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="calendario" className="w-full">
+      <Tabs
+        defaultValue="calendario"
+        className="w-full"
+        value={activeTab}
+        onValueChange={setActiveTab}
+      >
         <TabsList className="mb-4">
           <TabsTrigger value="calendario">Calendario</TabsTrigger>
           <TabsTrigger value="lista">Lista de Terapeutas</TabsTrigger>
@@ -1177,297 +1180,6 @@ export default function TherapistsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Calendar Modal */}
-      {isCalendarOpen && selectedTherapistForCalendar && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-7xl mx-4 max-h-[95vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="p-6 border-b bg-white">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Agenda de Disponibilidad
-                  </h2>
-                  <p className="text-gray-600 mt-1">
-                    {getFullName(selectedTherapistForCalendar)} -{" "}
-                    {getSpecialtyDisplay(
-                      selectedTherapistForCalendar.specialty
-                    )}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsCalendarOpen(false)}
-                  className="h-8 w-8"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Instructions */}
-            <div className="p-4 bg-blue-50 border-b border-blue-100">
-              <div className="flex items-center mb-2">
-                <Info className="h-5 w-5 text-blue-600 mr-2" />
-                <h3 className="font-medium text-blue-800">
-                  Cómo configurar la disponibilidad
-                </h3>
-              </div>
-              <p className="text-sm text-blue-700 mb-3">
-                Haz clic en los espacios del calendario para marcar o desmarcar
-                horarios disponibles. También puedes usar las plantillas rápidas
-                para configurar horarios comunes.
-              </p>
-
-              <div className="flex flex-wrap gap-4 text-sm">
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-white border border-gray-300 mr-2"></div>
-                  <span>No disponible</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-green-500 mr-2"></div>
-                  <span>Disponible</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-blue-100 border-l-2 border-blue-500 mr-2"></div>
-                  <span>Cita programada (no editable)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Navigation Controls */}
-            <div className="p-4 border-b bg-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Semana anterior
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Hoy
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Semana siguiente
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    13 - 17 Enero 2025
-                  </h3>
-                </div>
-
-                {/* Quick Templates */}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                    onClick={applyMorningTemplate}
-                  >
-                    <Clock className="h-4 w-4 mr-2" />
-                    Mañanas (8-12)
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                    onClick={applyAfternoonTemplate}
-                  >
-                    <Sun className="h-4 w-4 mr-2" />
-                    Tardes (14-18)
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
-                    onClick={applyFullDayTemplate}
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Día Completo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                    onClick={clearAllAvailability}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Limpiar
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Calendar Grid */}
-            <div className="flex-1 overflow-auto">
-              <div className="min-w-full">
-                {/* Days Header */}
-                <div className="sticky top-0 z-10 h-12 border-b bg-white flex">
-                  <div className="w-20 border-r bg-gray-50"></div>
-                  {[
-                    { day: "LUN", date: "13", full: "Lunes" },
-                    { day: "MAR", date: "14", full: "Martes" },
-                    { day: "MIÉ", date: "15", full: "Miércoles" },
-                    { day: "JUE", date: "16", full: "Jueves" },
-                    { day: "VIE", date: "17", full: "Viernes" },
-                  ].map((dayInfo, dayIndex) => (
-                    <div
-                      key={dayIndex}
-                      className="flex-1 border-r border-gray-200 flex flex-col items-center justify-center"
-                    >
-                      <span className="text-xs text-gray-600 font-medium">
-                        {dayInfo.day}
-                      </span>
-                      <span className="text-lg font-bold text-gray-900">
-                        {dayInfo.date}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Time Grid */}
-                <div>
-                  {horarios.length > 0 ? (
-                    horarios.map((timeSlot) => (
-                      <div
-                        key={timeSlot}
-                        className="flex border-b border-gray-100"
-                      >
-                        {/* Time Column */}
-                        <div className="w-20 border-r border-gray-200 p-2 bg-gray-50 flex items-center justify-center">
-                          <span className="text-xs text-gray-600 font-medium">
-                            {timeSlot}
-                          </span>
-                        </div>
-
-                        {/* Day Columns */}
-                        {diasSemana.map((dayName) => {
-                          const appointment = getAppointmentForSlot(
-                            selectedTherapistForCalendar.id,
-                            dayName,
-                            timeSlot
-                          );
-                          const isAvailable =
-                            editableAvailability[
-                              dayName as keyof WeeklyAvailability
-                            ]?.includes(timeSlot);
-
-                          return (
-                            <div
-                              key={`${dayName}-${timeSlot}`}
-                              className={`flex-1 h-14 border-r border-gray-200 relative ${
-                                appointment
-                                  ? "cursor-not-allowed"
-                                  : "cursor-pointer hover:bg-gray-50"
-                              }`}
-                              onClick={() => {
-                                if (!appointment) {
-                                  toggleAvailability(dayName, timeSlot);
-                                }
-                              }}
-                            >
-                              {/* Existing Appointment */}
-                              {appointment && (
-                                <div className="absolute inset-0 m-1 rounded overflow-hidden bg-blue-100 border-l-4 border-blue-500 flex flex-col p-1">
-                                  <span className="text-xs font-medium truncate">
-                                    {appointment.patientName}
-                                  </span>
-                                  <span className="text-xs text-gray-600 truncate">
-                                    {appointment.type}
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* Available Slot */}
-                              {!appointment && isAvailable && (
-                                <div className="absolute inset-0 m-1 bg-green-500 rounded-sm opacity-80 flex items-center justify-center">
-                                  <span className="text-white text-xs font-medium">
-                                    Disponible
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* Hover Effect */}
-                              {!appointment && (
-                                <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity">
-                                  <div className="absolute inset-1 border-2 border-blue-400 rounded-sm border-dashed"></div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-8 text-center text-gray-500">
-                      <p className="mb-2">No hay horarios configurados aún</p>
-                      <p className="text-sm">
-                        Use las plantillas de arriba para configurar horarios
-                        rápidamente
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t bg-gray-50">
-              <div className="flex items-center justify-between">
-                {/* Statistics */}
-                <div className="flex gap-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded"></div>
-                    <span className="text-sm text-gray-700">
-                      <strong>
-                        {Object.values(editableAvailability).reduce(
-                          (total, dayHours) => total + dayHours.length,
-                          0
-                        )}
-                      </strong>{" "}
-                      horas disponibles
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                    <span className="text-sm text-gray-700">
-                      <strong>
-                        {selectedTherapistForCalendar.appointments.length}
-                      </strong>{" "}
-                      citas programadas
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsCalendarOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={saveAvailabilityChanges}
-                    disabled={updateScheduleMutation.isPending}
-                  >
-                    {updateScheduleMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Guardar Cambios
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Appointment Details Modal */}
       {isModalOpen &&
