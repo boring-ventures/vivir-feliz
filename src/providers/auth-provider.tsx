@@ -6,6 +6,7 @@ import type { User, Session } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import type { Profile } from "@/types/profile";
 import { getSiteUrl } from "@/lib/utils";
+import { authClient } from "@/lib/supabase/client";
 
 type AuthContextType = {
   user: User | null;
@@ -131,7 +132,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Get the site URL from the environment or current location
       const siteUrl = getSiteUrl();
 
-      const { data, error } = await supabase.auth.signUp({
+      // Use the clean auth client without middleware
+      const { data, error } = await authClient.auth.signUp({
         email,
         password,
         options: {
@@ -143,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
+        console.error("Sign up error:", error);
         return {
           success: false,
           user: null,
@@ -152,6 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
+      console.log("Sign up successful:", data);
       return {
         success: true,
         user: data.user,
@@ -160,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error: null,
       };
     } catch (error) {
+      console.error("Sign up exception:", error);
       return {
         success: false,
         user: null,

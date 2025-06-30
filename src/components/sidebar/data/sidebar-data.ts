@@ -105,23 +105,13 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
               },
               {
                 title: "Mis Pacientes",
-                url: "/therapist/pacientes",
+                url: "/therapist/patients",
                 icon: Users,
               },
               {
                 title: "Análisis de Consulta",
-                url: "/therapist/analisis",
+                url: "/therapist/analysis",
                 icon: BookOpen,
-              },
-              {
-                title: "Sesiones",
-                url: "/therapist/sesiones",
-                icon: ClipboardList,
-              },
-              {
-                title: "Reportes",
-                url: "/therapist/reportes",
-                icon: FileText,
               },
             ],
           },

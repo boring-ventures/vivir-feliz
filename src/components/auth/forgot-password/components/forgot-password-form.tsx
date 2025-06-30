@@ -22,8 +22,8 @@ import { getSiteUrl } from "@/lib/utils";
 const formSchema = z.object({
   email: z
     .string()
-    .min(1, { message: "Please enter your email" })
-    .email({ message: "Invalid email address" }),
+    .min(1, { message: "Por favor ingresa tu email" })
+    .email({ message: "Dirección de email inválida" }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -63,14 +63,15 @@ export function ForgotPasswordForm({
 
       setIsSuccess(true);
       toast({
-        title: "Check your email",
-        description: "We've sent you a password reset link.",
+        title: "Revisa tu email",
+        description:
+          "Te hemos enviado un enlace de restablecimiento de contraseña.",
       });
     } catch (error) {
       console.error("Reset password error:", error);
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: "Algo salió mal. Inténtalo de nuevo.",
         variant: "destructive",
       });
     } finally {
@@ -82,10 +83,10 @@ export function ForgotPasswordForm({
     <div className={cn("grid gap-6", className)} {...props}>
       {isSuccess ? (
         <div className="text-center">
-          <h3 className="mb-1 text-lg font-medium">Check your email</h3>
+          <h3 className="mb-1 text-lg font-medium">Revisa tu email</h3>
           <p className="text-sm text-muted-foreground">
-            We&apos;ve sent a password reset link to your email. Please check
-            your inbox and follow the instructions.
+            Hemos enviado un enlace de restablecimiento a tu email. Por favor
+            revisa tu bandeja de entrada y sigue las instrucciones.
           </p>
         </div>
       ) : (
@@ -98,14 +99,14 @@ export function ForgotPasswordForm({
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} />
+                    <Input placeholder="nombre@ejemplo.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Sending..." : "Send reset link"}
+              {isLoading ? "Enviando..." : "Enviar enlace de restablecimiento"}
             </Button>
           </form>
         </Form>

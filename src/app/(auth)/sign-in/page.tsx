@@ -27,16 +27,7 @@ export default function SignInPage() {
             >
               ¿Olvidaste tu contraseña?
             </Link>
-            <div className="text-sm text-gray-600">
-              ¿No tienes cuenta?{" "}
-            <Link
-                href="/sign-up"
-                className="text-blue-600 hover:text-blue-700 underline font-medium"
-            >
-                Registrarse como padre/madre
-            </Link>
-            </div>
-        </div>
+          </div>
         </CardContent>
       </Card>
     </AuthLayout>

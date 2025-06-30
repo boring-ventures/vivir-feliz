@@ -80,11 +80,9 @@ export function useAuth() {
         throw error;
       }
 
-      // For email confirmation sign-ups, we won't get a session immediately
+      // For email confirmation, we won't get a session immediately
       // The user needs to verify their email first
-      // Note: Profile creation is handled in two places:
-      // 1. On the client during signup (in sign-up-form.tsx) with user-provided data
-      // 2. As a fallback in auth/callback route if the client-side creation failed
+      // Note: Profile creation is handled in the auth/callback route
 
       return {
         success: true,

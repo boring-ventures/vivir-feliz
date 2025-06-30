@@ -328,20 +328,12 @@ export default function LandingPage() {
             </p>
             <div className="flex justify-center space-x-4 mt-2">
               {!isLoading && !user && (
-                <>
-                  <Link
-                    href="/sign-in"
-                    className="text-blue-400 hover:text-blue-300 text-sm inline-block"
-                  >
-                    Iniciar Sesión
-                  </Link>
-                  <Link
-                    href="/sign-up"
-                    className="text-blue-400 hover:text-blue-300 text-sm inline-block"
-                  >
-                    Registrarse
-                  </Link>
-                </>
+                <Link
+                  href="/sign-in"
+                  className="text-blue-400 hover:text-blue-300 text-sm inline-block"
+                >
+                  Iniciar Sesión
+                </Link>
               )}
               {!isLoading && user && (
                 <Link

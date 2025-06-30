@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import {
   ChevronLeft,
@@ -14,36 +15,128 @@ import {
   Save,
   Bell,
   User,
+  Info,
+  Loader2,
+  Sun,
+  Trash2,
+  Calendar,
+  X,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
-  useTherapistSchedule,
+  useTherapists,
   useUpdateTherapistSchedule,
-} from "@/hooks/use-therapist-schedule";
-import { useTherapistAppointments } from "@/hooks/use-therapist-appointments";
+} from "@/hooks/useTherapists";
+import {
+  TherapistProfile,
+  WeeklyAvailability,
+  DayOfWeek,
+  TherapistAppointment,
+} from "@/types/therapists";
+import { SpecialtyType } from "@prisma/client";
 
-type DayConfig = {
-  enabled: boolean;
-  startTime: string;
-  endTime: string;
-  breakStartTime: string;
-  breakEndTime: string;
+// Utility functions
+const getSpecialtyDisplay = (specialty: SpecialtyType | null): string => {
+  const specialtyMap: Record<SpecialtyType, string> = {
+    SPEECH_THERAPIST: "Fonoaudiología",
+    OCCUPATIONAL_THERAPIST: "Terapia Ocupacional",
+    PSYCHOPEDAGOGUE: "Psicopedagogía",
+    ASD_THERAPIST: "Especialista TEA",
+    NEUROPSYCHOLOGIST: "Neuropsicología",
+    COORDINATOR: "Coordinación",
+  };
+  return specialty ? specialtyMap[specialty] : "Sin especialidad";
 };
 
-type WeekScheduleConfig = {
-  monday: DayConfig;
-  tuesday: DayConfig;
-  wednesday: DayConfig;
-  thursday: DayConfig;
-  friday: DayConfig;
-  saturday: DayConfig;
-  sunday: DayConfig;
+const getFullName = (therapist: TherapistProfile): string => {
+  return (
+    `${therapist.firstName || ""} ${therapist.lastName || ""}`.trim() ||
+    "Sin nombre"
+  );
 };
+
+// Day mapping
+const dayMapping: Record<string, DayOfWeek> = {
+  lunes: "MONDAY",
+  martes: "TUESDAY",
+  miercoles: "WEDNESDAY",
+  jueves: "THURSDAY",
+  viernes: "FRIDAY",
+  sabado: "SATURDAY",
+  domingo: "SUNDAY",
+};
+
+const reverseDayMapping: Record<DayOfWeek, string> = {
+  MONDAY: "lunes",
+  TUESDAY: "martes",
+  WEDNESDAY: "miercoles",
+  THURSDAY: "jueves",
+  FRIDAY: "viernes",
+  SATURDAY: "sabado",
+  SUNDAY: "domingo",
+};
+
+// Time slots and days
+const diasSemana = [
+  "lunes",
+  "martes",
+  "miercoles",
+  "jueves",
+  "viernes",
+  "sabado",
+];
+const diasSemanaDisplay = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+];
 
 export default function TherapistAgendaPage() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [configurationMode, setConfigurationMode] = useState(false);
+  const [showLegend, setShowLegend] = useState(true);
+  const [selectedAppointment, setSelectedAppointment] = useState<{
+    id: string;
+    startTime: string;
+    endTime?: string;
+    patientName?: string;
+    type?: string;
+    status?: string;
+    date?: string;
+    parentPhone?: string;
+  } | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const { profile, isLoading: authLoading } = useCurrentUser();
+
+  // Fetch therapists data (to get current therapist's data)
+  const { data: therapists = [], isLoading, error } = useTherapists();
+  const updateScheduleMutation = useUpdateTherapistSchedule();
+
+  // Find current therapist's profile
+  const currentTherapist = useMemo(() => {
+    if (!profile?.id || !therapists.length) return null;
+    return therapists.find((t) => t.id === profile.id) || null;
+  }, [profile?.id, therapists]);
+
+  // Helper function to convert time string to minutes
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
+  // State for editable availability
+  const [editableAvailability, setEditableAvailability] =
+    useState<WeeklyAvailability>({
+      lunes: [],
+      martes: [],
+      miercoles: [],
+      jueves: [],
+      viernes: [],
+    });
 
   // Initialize current week to Monday
   const getMonday = (date: Date) => {
@@ -53,297 +146,386 @@ export default function TherapistAgendaPage() {
     return new Date(d.setDate(diff));
   };
 
-  const [mondayDate] = useState(() => getMonday(new Date()));
+  const mondayDate = getMonday(currentWeek);
 
-  // Fetch schedule and appointments
-  const { data: schedule, isLoading: scheduleLoading } = useTherapistSchedule();
-  const { data: appointments } = useTherapistAppointments(
-    profile?.id || null,
-    mondayDate
-  );
-  const updateSchedule = useUpdateTherapistSchedule();
+  // Generate dynamic time slots based on therapist's actual schedule
+  const getAvailableTimeSlots = (): string[] => {
+    if (!currentTherapist) return [];
 
-  // Schedule configuration state
-  const [scheduleConfig, setScheduleConfig] = useState<WeekScheduleConfig>({
-    monday: {
-      enabled: true,
-      startTime: "09:00",
-      endTime: "17:00",
-      breakStartTime: "12:00",
-      breakEndTime: "14:00",
-    },
-    tuesday: {
-      enabled: true,
-      startTime: "09:00",
-      endTime: "17:00",
-      breakStartTime: "12:00",
-      breakEndTime: "14:00",
-    },
-    wednesday: {
-      enabled: true,
-      startTime: "09:00",
-      endTime: "17:00",
-      breakStartTime: "12:00",
-      breakEndTime: "14:00",
-    },
-    thursday: {
-      enabled: true,
-      startTime: "09:00",
-      endTime: "17:00",
-      breakStartTime: "12:00",
-      breakEndTime: "14:00",
-    },
-    friday: {
-      enabled: true,
-      startTime: "09:00",
-      endTime: "17:00",
-      breakStartTime: "12:00",
-      breakEndTime: "14:00",
-    },
-    saturday: {
-      enabled: false,
-      startTime: "09:00",
-      endTime: "13:00",
-      breakStartTime: "",
-      breakEndTime: "",
-    },
-    sunday: {
-      enabled: false,
-      startTime: "09:00",
-      endTime: "17:00",
-      breakStartTime: "",
-      breakEndTime: "",
-    },
-  });
+    const allTimeSlots = new Set<string>();
 
-  // Initialize schedule config from loaded schedule
-  useEffect(() => {
-    if (schedule && schedule.timeSlots) {
-      const newConfig: WeekScheduleConfig = {
-        monday: {
-          enabled: false,
-          startTime: "09:00",
-          endTime: "17:00",
-          breakStartTime: "12:00",
-          breakEndTime: "14:00",
-        },
-        tuesday: {
-          enabled: false,
-          startTime: "09:00",
-          endTime: "17:00",
-          breakStartTime: "12:00",
-          breakEndTime: "14:00",
-        },
-        wednesday: {
-          enabled: false,
-          startTime: "09:00",
-          endTime: "17:00",
-          breakStartTime: "12:00",
-          breakEndTime: "14:00",
-        },
-        thursday: {
-          enabled: false,
-          startTime: "09:00",
-          endTime: "17:00",
-          breakStartTime: "12:00",
-          breakEndTime: "14:00",
-        },
-        friday: {
-          enabled: false,
-          startTime: "09:00",
-          endTime: "17:00",
-          breakStartTime: "12:00",
-          breakEndTime: "14:00",
-        },
-        saturday: {
-          enabled: false,
-          startTime: "09:00",
-          endTime: "13:00",
-          breakStartTime: "",
-          breakEndTime: "",
-        },
-        sunday: {
-          enabled: false,
-          startTime: "09:00",
-          endTime: "17:00",
-          breakStartTime: "",
-          breakEndTime: "",
-        },
-      };
+    // Collect all time intervals from therapist's schedule
+    if (currentTherapist.schedule?.timeSlots) {
+      currentTherapist.schedule.timeSlots.forEach((slot) => {
+        // Generate all 30-minute intervals between startTime and endTime
+        const startMinutes = timeToMinutes(slot.startTime);
+        const endMinutes = timeToMinutes(slot.endTime);
 
-      const dayMap: { [key: string]: keyof WeekScheduleConfig } = {
-        MONDAY: "monday",
-        TUESDAY: "tuesday",
-        WEDNESDAY: "wednesday",
-        THURSDAY: "thursday",
-        FRIDAY: "friday",
-        SATURDAY: "saturday",
-        SUNDAY: "sunday",
-      };
-
-      schedule.timeSlots.forEach((slot) => {
-        const dayKey = dayMap[slot.dayOfWeek];
-        if (dayKey) {
-          newConfig[dayKey] = {
-            enabled: true,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            breakStartTime: "12:00",
-            breakEndTime: "14:00",
-          };
+        for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
+          const hours = Math.floor(minutes / 60);
+          const mins = minutes % 60;
+          const timeSlot = `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+          allTimeSlots.add(timeSlot);
         }
       });
-
-      setScheduleConfig(newConfig);
     }
-  }, [schedule]);
 
-  const formatWeekRange = (date: Date) => {
-    const startOfWeek = getMonday(date);
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 5); // Monday to Saturday
+    // Also include rest period times to ensure they're visible
+    if (currentTherapist.schedule?.restPeriods) {
+      currentTherapist.schedule.restPeriods.forEach((period) => {
+        const startMinutes = timeToMinutes(period.startTime);
+        const endMinutes = timeToMinutes(period.endTime);
 
-    const startDay = startOfWeek.getDate();
-    const endDay = endOfWeek.getDate();
-    const month = startOfWeek
-      .toLocaleDateString("es-ES", { month: "long" })
-      .toUpperCase();
-    const year = startOfWeek.getFullYear();
+        for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
+          const hours = Math.floor(minutes / 60);
+          const mins = minutes % 60;
+          const timeSlot = `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+          allTimeSlots.add(timeSlot);
+        }
+      });
+    }
 
-    return `${month} ${startDay}-${endDay}, ${year}`;
+    // Also include appointment times
+    currentTherapist.appointments.forEach((appointment) => {
+      allTimeSlots.add(appointment.startTime);
+      const startMinutes = timeToMinutes(appointment.startTime);
+      const endMinutes = timeToMinutes(appointment.endTime);
+
+      for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        const timeSlot = `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+        allTimeSlots.add(timeSlot);
+      }
+    });
+
+    // Convert to sorted array
+    const sortedSlots = Array.from(allTimeSlots).sort((a, b) => {
+      return timeToMinutes(a) - timeToMinutes(b);
+    });
+
+    return sortedSlots;
   };
 
+  // Get the dynamic time slots
+  const horarios = getAvailableTimeSlots();
+
+  // Convert database schedule to weekly availability format
+  const getTherapistAvailability = (
+    therapist: TherapistProfile
+  ): WeeklyAvailability => {
+    const availability: WeeklyAvailability = {
+      lunes: [],
+      martes: [],
+      miercoles: [],
+      jueves: [],
+      viernes: [],
+    };
+
+    if (therapist.schedule?.timeSlots) {
+      therapist.schedule.timeSlots.forEach((slot) => {
+        const dayName = reverseDayMapping[slot.dayOfWeek];
+        if (dayName && availability[dayName as keyof WeeklyAvailability]) {
+          availability[dayName as keyof WeeklyAvailability].push(
+            slot.startTime
+          );
+        }
+      });
+    }
+
+    return availability;
+  };
+
+  // Check if a time slot is blocked
+  const isTimeSlotBlocked = (
+    therapist: TherapistProfile,
+    day: string,
+    time: string
+  ): boolean => {
+    if (!therapist.schedule?.blockedSlots) return false;
+
+    const dayOfWeek = dayMapping[day];
+    if (!dayOfWeek) return false;
+
+    const dayIndex = diasSemana.indexOf(day);
+    if (dayIndex === -1) return false;
+
+    const targetDate = new Date(mondayDate);
+    targetDate.setDate(mondayDate.getDate() + dayIndex);
+
+    const timeMinutes = timeToMinutes(time);
+
+    return therapist.schedule.blockedSlots.some((blockedSlot) => {
+      const blockedDate = new Date(blockedSlot.date);
+      const isSameDate =
+        blockedDate.toDateString() === targetDate.toDateString();
+
+      if (!isSameDate) return false;
+
+      const blockedStartMinutes = timeToMinutes(blockedSlot.startTime);
+      const blockedEndMinutes = timeToMinutes(blockedSlot.endTime);
+
+      return (
+        timeMinutes >= blockedStartMinutes && timeMinutes < blockedEndMinutes
+      );
+    });
+  };
+
+  // Helper function to check if a time slot is during a rest period
+  const isRestPeriod = (
+    therapist: TherapistProfile,
+    day: string,
+    time: string
+  ): boolean => {
+    if (!therapist.schedule?.restPeriods) return false;
+
+    const dayOfWeek = dayMapping[day];
+    if (!dayOfWeek) return false;
+
+    return therapist.schedule.restPeriods.some((period) => {
+      if (period.dayOfWeek !== dayOfWeek) return false;
+
+      const timeMinutes = timeToMinutes(time);
+      const startMinutes = timeToMinutes(period.startTime);
+      const endMinutes = timeToMinutes(period.endTime);
+
+      return timeMinutes >= startMinutes && timeMinutes < endMinutes;
+    });
+  };
+
+  // Check if therapist is available at specific time
+  const isTherapistAvailable = (
+    therapist: TherapistProfile,
+    day: string,
+    time: string
+  ): boolean => {
+    if (!therapist.schedule?.timeSlots) return false;
+
+    const dayOfWeek = dayMapping[day];
+    if (!dayOfWeek) return false;
+
+    const timeMinutes = timeToMinutes(time);
+
+    return therapist.schedule.timeSlots.some((slot) => {
+      if (slot.dayOfWeek !== dayOfWeek || !slot.isAvailable) return false;
+
+      const slotStartMinutes = timeToMinutes(slot.startTime);
+      const slotEndMinutes = timeToMinutes(slot.endTime);
+
+      return timeMinutes >= slotStartMinutes && timeMinutes < slotEndMinutes;
+    });
+  };
+
+  // Get appointment for specific time slot
+  const getAppointmentForSlot = (day: string, time: string) => {
+    if (!currentTherapist) return null;
+
+    const dayIndex = diasSemana.indexOf(day);
+    if (dayIndex === -1) return null;
+
+    const targetDate = new Date(mondayDate);
+    targetDate.setDate(mondayDate.getDate() + dayIndex);
+
+    const timeMinutes = timeToMinutes(time);
+
+    return currentTherapist.appointments.find((appointment) => {
+      const appointmentDate = new Date(appointment.date);
+      const appointmentStartMinutes = timeToMinutes(appointment.startTime);
+      const appointmentEndMinutes = timeToMinutes(appointment.endTime);
+
+      const isSameDate =
+        appointmentDate.toDateString() === targetDate.toDateString();
+
+      const timeOverlaps =
+        timeMinutes >= appointmentStartMinutes &&
+        timeMinutes < appointmentEndMinutes;
+
+      return isSameDate && timeOverlaps;
+    });
+  };
+
+  // Open appointment modal
+  const openAppointmentModal = (appointment: TherapistAppointment) => {
+    setSelectedAppointment({
+      id: appointment.id,
+      startTime: appointment.startTime,
+      endTime: appointment.endTime,
+      patientName: appointment.patientName,
+      type: appointment.type,
+      status: appointment.status,
+      date: appointment.date.toISOString(),
+      parentPhone: appointment.parentPhone,
+    });
+    setIsModalOpen(true);
+  };
+
+  // Toggle availability for a time slot
+  const toggleAvailability = (day: string, time: string) => {
+    setEditableAvailability((prev) => {
+      const dayAvailability = [
+        ...(prev[day as keyof WeeklyAvailability] || []),
+      ];
+      const index = dayAvailability.indexOf(time);
+
+      if (index >= 0) {
+        dayAvailability.splice(index, 1);
+      } else {
+        dayAvailability.push(time);
+        dayAvailability.sort();
+      }
+
+      return {
+        ...prev,
+        [day]: dayAvailability,
+      };
+    });
+  };
+
+  // Template functions
+  const applyMorningTemplate = () => {
+    const morningHours = [
+      "08:00",
+      "08:30",
+      "09:00",
+      "09:30",
+      "10:00",
+      "10:30",
+      "11:00",
+      "11:30",
+      "12:00",
+    ];
+    const newAvailability = {} as WeeklyAvailability;
+
+    diasSemana.slice(0, 5).forEach((day) => {
+      // Only weekdays for morning template
+      newAvailability[day as keyof WeeklyAvailability] = [...morningHours];
+    });
+
+    setEditableAvailability(newAvailability);
+  };
+
+  const applyAfternoonTemplate = () => {
+    const afternoonHours = [
+      "14:00",
+      "14:30",
+      "15:00",
+      "15:30",
+      "16:00",
+      "16:30",
+      "17:00",
+      "17:30",
+      "18:00",
+    ];
+    const newAvailability = {} as WeeklyAvailability;
+
+    diasSemana.slice(0, 5).forEach((day) => {
+      // Only weekdays for afternoon template
+      newAvailability[day as keyof WeeklyAvailability] = [...afternoonHours];
+    });
+
+    setEditableAvailability(newAvailability);
+  };
+
+  const applyFullDayTemplate = () => {
+    const fullDayHours = [
+      "08:00",
+      "08:30",
+      "09:00",
+      "09:30",
+      "10:00",
+      "10:30",
+      "11:00",
+      "11:30",
+      "12:00",
+      "12:30",
+      "13:00",
+      "13:30",
+      "14:00",
+      "14:30",
+      "15:00",
+      "15:30",
+      "16:00",
+      "16:30",
+      "17:00",
+      "17:30",
+      "18:00",
+    ];
+    const newAvailability = {} as WeeklyAvailability;
+
+    diasSemana.slice(0, 5).forEach((day) => {
+      // Only weekdays for full day template
+      newAvailability[day as keyof WeeklyAvailability] = [...fullDayHours];
+    });
+
+    setEditableAvailability(newAvailability);
+  };
+
+  const clearAllAvailability = () => {
+    const emptyAvailability = {} as WeeklyAvailability;
+
+    diasSemana.forEach((day) => {
+      emptyAvailability[day as keyof WeeklyAvailability] = [];
+    });
+
+    setEditableAvailability(emptyAvailability);
+  };
+
+  // Save availability changes
+  const saveAvailabilityChanges = async () => {
+    if (!currentTherapist) return;
+
+    try {
+      await updateScheduleMutation.mutateAsync({
+        therapistId: currentTherapist.id,
+        availability: editableAvailability,
+      });
+
+      toast({
+        title: "Éxito",
+        description: "Horario actualizado correctamente",
+      });
+    } catch (error) {
+      console.error("Error saving schedule:", error);
+      toast({
+        title: "Error",
+        description: "Error al actualizar el horario",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Navigation functions
   const previousWeek = () => {
-    const newDate = new Date(currentWeek);
-    newDate.setDate(newDate.getDate() - 7);
-    setCurrentWeek(newDate);
+    const newWeek = new Date(currentWeek);
+    newWeek.setDate(newWeek.getDate() - 7);
+    setCurrentWeek(newWeek);
   };
 
   const nextWeek = () => {
-    const newDate = new Date(currentWeek);
-    newDate.setDate(newDate.getDate() + 7);
-    setCurrentWeek(newDate);
+    const newWeek = new Date(currentWeek);
+    newWeek.setDate(newWeek.getDate() + 7);
+    setCurrentWeek(newWeek);
+  };
+
+  const formatWeekRange = (date: Date) => {
+    const monday = getMonday(date);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    return `${monday.getDate()} - ${sunday.getDate()} ${sunday.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}`;
   };
 
   const getDayOfWeek = (offset: number) => {
-    const date = getMonday(currentWeek);
+    const date = new Date(mondayDate);
     date.setDate(date.getDate() + offset);
     return date.getDate();
   };
 
-  const timeSlots = [
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "11:00",
-    "11:30",
-    "12:00",
-    "12:30",
-    "14:00",
-    "14:30",
-    "15:00",
-    "15:30",
-    "16:00",
-    "16:30",
-    "17:00",
-    "17:30",
-  ];
-
-  const getAppointment = (time: string, dayIndex: number) => {
-    if (!appointments) return null;
-
-    const targetDate = getMonday(currentWeek);
-    targetDate.setDate(targetDate.getDate() + dayIndex);
-    const dateStr = targetDate.toISOString().split("T")[0];
-
-    return appointments.find(
-      (apt) => apt.date.split("T")[0] === dateStr && apt.startTime === time
-    );
-  };
-
-  const getAppointmentColor = (type: string, status: string) => {
-    if (status === "SCHEDULED")
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    if (status === "CANCELLED") return "bg-red-100 text-red-800 border-red-200";
-
-    switch (type) {
-      case "CONSULTA":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "ENTREVISTA":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "SEGUIMIENTO":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "TERAPIA":
-        return "bg-indigo-100 text-indigo-800 border-indigo-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const isWorkingTime = (time: string, dayIndex: number) => {
-    const days = [
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-      "sunday",
-    ];
-    const day = days[dayIndex] as keyof WeekScheduleConfig;
-    const config = scheduleConfig[day];
-
-    if (!config.enabled) return false;
-
-    const [hour, minute] = time.split(":").map(Number);
-    const timeMinutes = hour * 60 + minute;
-
-    const [startHour, startMinute] = config.startTime.split(":").map(Number);
-    const startMinutes = startHour * 60 + startMinute;
-
-    const [endHour, endMinute] = config.endTime.split(":").map(Number);
-    const endMinutes = endHour * 60 + endMinute;
-
-    // Check if it's break time
-    if (config.breakStartTime && config.breakEndTime) {
-      const [breakStartHour, breakStartMinute] = config.breakStartTime
-        .split(":")
-        .map(Number);
-      const breakStartMinutes = breakStartHour * 60 + breakStartMinute;
-
-      const [breakEndHour, breakEndMinute] = config.breakEndTime
-        .split(":")
-        .map(Number);
-      const breakEndMinutes = breakEndHour * 60 + breakEndMinute;
-
-      if (timeMinutes >= breakStartMinutes && timeMinutes < breakEndMinutes) {
-        return false;
-      }
-    }
-
-    return timeMinutes >= startMinutes && timeMinutes < endMinutes;
-  };
-
-  const updateScheduleConfig = (
-    day: keyof WeekScheduleConfig,
-    field: keyof DayConfig,
-    value: string | boolean
-  ) => {
-    setScheduleConfig((prev) => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value,
-      },
-    }));
-  };
-
   const getNextAppointment = () => {
-    if (!appointments) return null;
+    if (!currentTherapist?.appointments) return null;
 
     const now = new Date();
-    const upcomingAppointments = appointments
+    const upcomingAppointments = currentTherapist.appointments
       .filter(
         (apt) =>
           new Date(apt.date + "T" + apt.startTime) > now &&
@@ -358,64 +540,38 @@ export default function TherapistAgendaPage() {
     return upcomingAppointments[0] || null;
   };
 
-  const handleSaveSchedule = async () => {
-    if (!profile?.id) return;
-
-    try {
-      const scheduleData = {
-        slotDuration: 60,
-        breakBetween: 15,
-        dailySchedules: Object.entries(scheduleConfig).map(([day, config]) => ({
-          day: day.toUpperCase() as
-            | "MONDAY"
-            | "TUESDAY"
-            | "WEDNESDAY"
-            | "THURSDAY"
-            | "FRIDAY"
-            | "SATURDAY"
-            | "SUNDAY",
-          enabled: config.enabled,
-          startTime: config.startTime,
-          endTime: config.endTime,
-        })),
-        restPeriods: Object.entries(scheduleConfig).map(([day, config]) => ({
-          day: day.toUpperCase() as
-            | "MONDAY"
-            | "TUESDAY"
-            | "WEDNESDAY"
-            | "THURSDAY"
-            | "FRIDAY"
-            | "SATURDAY"
-            | "SUNDAY",
-          enabled: Boolean(
-            config.enabled && config.breakStartTime && config.breakEndTime
-          ),
-          startTime: config.breakStartTime || "12:00",
-          endTime: config.breakEndTime || "13:00",
-        })),
-      };
-
-      await updateSchedule.mutateAsync(scheduleData);
-
-      toast({
-        title: "Éxito",
-        description: "Horario actualizado correctamente",
-      });
-    } catch {
-      toast({
-        title: "Error",
-        description: "Error al actualizar el horario",
-        variant: "destructive",
-      });
+  // Initialize editable availability when currentTherapist changes
+  useState(() => {
+    if (currentTherapist) {
+      const currentAvailability = getTherapistAvailability(currentTherapist);
+      setEditableAvailability(currentAvailability);
     }
-  };
+  });
 
   const nextAppointment = getNextAppointment();
 
-  if (authLoading || scheduleLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        Cargando...
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Cargando...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">
+            Error al cargar datos
+          </h2>
+          <p className="text-gray-600">
+            Por favor, intenta recargar la página.
+          </p>
+        </div>
       </div>
     );
   }
@@ -428,33 +584,23 @@ export default function TherapistAgendaPage() {
     );
   }
 
-  const getSpecialtyName = (specialty: string) => {
-    const specialtyMap = {
-      SPEECH_THERAPIST: "Fonoaudiología",
-      OCCUPATIONAL_THERAPIST: "Terapia Ocupacional",
-      PSYCHOPEDAGOGUE: "Psicopedagogía",
-      ASD_THERAPIST: "Especialista en TEA/Autismo",
-      NEUROPSYCHOLOGIST: "Neuropsicología",
-      COORDINATOR: "Coordinador",
-    };
-    return specialtyMap[specialty as keyof typeof specialtyMap] || specialty;
-  };
-
-  const getDayName = (dayKey: string) => {
-    const dayNames = {
-      monday: "lunes",
-      tuesday: "martes",
-      wednesday: "miércoles",
-      thursday: "jueves",
-      friday: "viernes",
-      saturday: "sábado",
-      sunday: "domingo",
-    };
-    return dayNames[dayKey as keyof typeof dayNames] || dayKey;
-  };
+  if (!currentTherapist) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold text-gray-600 mb-2">
+            Perfil de terapeuta no encontrado
+          </h2>
+          <p className="text-gray-600">
+            No se pudo cargar tu información de terapeuta.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50">
       {/* Main Content */}
       <main className="w-full">
         {/* Header */}
@@ -462,11 +608,13 @@ export default function TherapistAgendaPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-xl font-semibold">Mi Agenda</h1>
-              {profile.specialty && (
+              {currentTherapist.specialty && (
                 <div className="flex items-center space-x-2 mt-1">
                   <span className="text-sm text-gray-600">
                     Especialidad:{" "}
-                    <strong>{getSpecialtyName(profile.specialty)}</strong>
+                    <strong>
+                      {getSpecialtyDisplay(currentTherapist.specialty)}
+                    </strong>
                   </span>
                 </div>
               )}
@@ -533,11 +681,13 @@ export default function TherapistAgendaPage() {
               </div>
               <Button
                 className="bg-blue-600 hover:bg-blue-700"
-                onClick={handleSaveSchedule}
-                disabled={updateSchedule.isPending}
+                onClick={saveAvailabilityChanges}
+                disabled={updateScheduleMutation.isPending}
               >
                 <Save className="h-4 w-4 mr-2" />
-                {updateSchedule.isPending ? "Guardando..." : "Guardar Cambios"}
+                {updateScheduleMutation.isPending
+                  ? "Guardando..."
+                  : "Guardar Cambios"}
               </Button>
             </div>
           </div>
@@ -549,98 +699,95 @@ export default function TherapistAgendaPage() {
                 <h3 className="text-lg font-semibold mb-4">
                   Configuración de Horarios de Trabajo
                 </h3>
-                <div className="space-y-4">
-                  {Object.entries(scheduleConfig).map(([day, config]) => (
-                    <div
-                      key={day}
-                      className="flex flex-wrap items-center gap-4 p-4 border rounded-lg"
-                    >
-                      <div className="min-w-24">
-                        <Switch
-                          checked={config.enabled}
-                          onCheckedChange={(checked) =>
-                            updateScheduleConfig(
-                              day as keyof WeekScheduleConfig,
-                              "enabled",
-                              checked
-                            )
-                          }
-                        />
-                        <Label className="capitalize font-medium ml-2">
-                          {getDayName(day)}
-                        </Label>
-                      </div>
 
-                      {config.enabled && (
-                        <>
-                          <div className="flex items-center space-x-2">
-                            <Label className="text-sm min-w-12">Inicio:</Label>
-                            <Input
-                              type="time"
-                              value={config.startTime}
-                              onChange={(e) =>
-                                updateScheduleConfig(
-                                  day as keyof WeekScheduleConfig,
-                                  "startTime",
-                                  e.target.value
-                                )
-                              }
-                              className="w-32"
-                            />
-                          </div>
+                {/* Quick Templates */}
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                    onClick={applyMorningTemplate}
+                  >
+                    <Clock className="h-4 w-4 mr-2" />
+                    Mañanas (8-12)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                    onClick={applyAfternoonTemplate}
+                  >
+                    <Sun className="h-4 w-4 mr-2" />
+                    Tardes (14-18)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
+                    onClick={applyFullDayTemplate}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Día Completo
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                    onClick={clearAllAvailability}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpiar
+                  </Button>
+                </div>
 
-                          <div className="flex items-center space-x-2">
-                            <Label className="text-sm min-w-8">Fin:</Label>
-                            <Input
-                              type="time"
-                              value={config.endTime}
-                              onChange={(e) =>
-                                updateScheduleConfig(
-                                  day as keyof WeekScheduleConfig,
-                                  "endTime",
-                                  e.target.value
-                                )
-                              }
-                              className="w-32"
-                            />
-                          </div>
+                <p className="text-sm text-blue-700 mb-3">
+                  Haz clic en los espacios del calendario para marcar o
+                  desmarcar horarios disponibles. También puedes usar las
+                  plantillas rápidas para configurar horarios comunes.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-                          <div className="flex items-center space-x-2">
-                            <Label className="text-sm min-w-16">
-                              Descanso:
-                            </Label>
-                            <Input
-                              type="time"
-                              value={config.breakStartTime}
-                              onChange={(e) =>
-                                updateScheduleConfig(
-                                  day as keyof WeekScheduleConfig,
-                                  "breakStartTime",
-                                  e.target.value
-                                )
-                              }
-                              className="w-32"
-                              placeholder="Inicio"
-                            />
-                            <span className="text-sm">-</span>
-                            <Input
-                              type="time"
-                              value={config.breakEndTime}
-                              onChange={(e) =>
-                                updateScheduleConfig(
-                                  day as keyof WeekScheduleConfig,
-                                  "breakEndTime",
-                                  e.target.value
-                                )
-                              }
-                              className="w-32"
-                              placeholder="Fin"
-                            />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
+          {/* Legend */}
+          {showLegend && (
+            <Card className="mb-4">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium text-blue-800 flex items-center">
+                    <Info className="h-4 w-4 mr-2" />
+                    Leyenda del Calendario
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-blue-600 hover:text-blue-800"
+                    onClick={() => setShowLegend(false)}
+                  >
+                    Ocultar
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-green-50 border border-dashed border-green-300 mr-2"></div>
+                    <span className="text-sm">Disponible</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-blue-100 border-l-2 border-blue-500 mr-2"></div>
+                    <span className="text-sm">Cita programada</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-orange-50 border border-dashed border-orange-300 mr-2"></div>
+                    <span className="text-sm">Descanso</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-red-50 border border-dashed border-red-300 mr-2"></div>
+                    <span className="text-sm">Bloqueado</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 bg-gray-50 mr-2"></div>
+                    <span className="text-sm">No disponible</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -650,86 +797,134 @@ export default function TherapistAgendaPage() {
           <Card className="mb-6">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full border-collapse">
                   <thead>
-                    <tr className="border-b bg-gray-50">
-                      <th className="p-4 text-left font-medium text-gray-600 w-20">
-                        Hora
-                      </th>
-                      <th className="p-4 text-center font-medium text-gray-600 min-w-32">
-                        <div>L{getDayOfWeek(0)}</div>
-                        <div className="text-xs text-gray-500">Lunes</div>
-                      </th>
-                      <th className="p-4 text-center font-medium text-gray-600 min-w-32">
-                        <div>M{getDayOfWeek(1)}</div>
-                        <div className="text-xs text-gray-500">Martes</div>
-                      </th>
-                      <th className="p-4 text-center font-medium text-gray-600 min-w-32">
-                        <div>M{getDayOfWeek(2)}</div>
-                        <div className="text-xs text-gray-500">Miércoles</div>
-                      </th>
-                      <th className="p-4 text-center font-medium text-gray-600 min-w-32">
-                        <div>J{getDayOfWeek(3)}</div>
-                        <div className="text-xs text-gray-500">Jueves</div>
-                      </th>
-                      <th className="p-4 text-center font-medium text-gray-600 min-w-32">
-                        <div>V{getDayOfWeek(4)}</div>
-                        <div className="text-xs text-gray-500">Viernes</div>
-                      </th>
-                      <th className="p-4 text-center font-medium text-gray-600 min-w-32">
-                        <div>S{getDayOfWeek(5)}</div>
-                        <div className="text-xs text-gray-500">Sábado</div>
-                      </th>
+                    <tr>
+                      <th className="border p-2 bg-gray-50 w-20">Hora</th>
+                      {diasSemanaDisplay.map((dia, index) => (
+                        <th key={dia} className="border p-2 bg-gray-50">
+                          <div>{dia}</div>
+                          <div className="text-xs text-gray-500">
+                            {getDayOfWeek(index)}
+                          </div>
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {timeSlots.map((time) => (
-                      <tr key={time} className="border-b hover:bg-gray-50">
-                        <td className="p-4 font-medium text-gray-600 border-r">
-                          {time}
+                    {horarios.map((hora) => (
+                      <tr key={hora}>
+                        <td className="border p-2 text-center font-medium bg-gray-50">
+                          {hora}
                         </td>
-                        {[0, 1, 2, 3, 4, 5].map((dayIndex) => {
-                          const appointment = getAppointment(time, dayIndex);
-                          const isWorking = isWorkingTime(time, dayIndex);
+                        {diasSemana.map((dia) => {
+                          const appointment = getAppointmentForSlot(dia, hora);
+                          const isAvailable =
+                            editableAvailability[
+                              dia as keyof WeeklyAvailability
+                            ]?.includes(hora);
+                          const isBlocked = isTimeSlotBlocked(
+                            currentTherapist,
+                            dia,
+                            hora
+                          );
+                          const isRest = isRestPeriod(
+                            currentTherapist,
+                            dia,
+                            hora
+                          );
+                          const isWorkingTime = isTherapistAvailable(
+                            currentTherapist,
+                            dia,
+                            hora
+                          );
 
                           return (
                             <td
-                              key={dayIndex}
-                              className="p-2 border-r relative h-16"
+                              key={`${dia}-${hora}`}
+                              className="border p-0 h-16"
                             >
                               {appointment ? (
                                 // Scheduled appointment
                                 <div
-                                  className={`p-2 rounded-md border text-xs font-medium cursor-pointer hover:shadow-md transition-shadow ${getAppointmentColor(
-                                    appointment.type,
-                                    appointment.status
-                                  )}`}
+                                  className="h-full p-1 rounded-md flex flex-col justify-between cursor-pointer hover:opacity-80"
+                                  style={{
+                                    backgroundColor: "#4f46e520",
+                                    borderLeft: "3px solid #4f46e5",
+                                  }}
+                                  onClick={() =>
+                                    openAppointmentModal(appointment)
+                                  }
                                 >
-                                  <div className="font-semibold">
-                                    {appointment.patientName || "Desconocido"}
+                                  <div className="font-medium text-sm truncate">
+                                    {appointment.patientName}
                                   </div>
-                                  <div className="capitalize">
-                                    {appointment.type.toLowerCase()}
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs">
+                                      {appointment.type}
+                                    </span>
+                                    <Badge
+                                      variant={
+                                        appointment.status === "CONFIRMED"
+                                          ? "default"
+                                          : "outline"
+                                      }
+                                      className="text-xs"
+                                    >
+                                      {appointment.status === "CONFIRMED"
+                                        ? "Confirmada"
+                                        : "Pendiente"}
+                                    </Badge>
                                   </div>
-                                  {appointment.status === "SCHEDULED" && (
-                                    <div className="text-xs mt-1">
-                                      ⏳ Pendiente
+                                </div>
+                              ) : configurationMode ? (
+                                // Configuration mode - clickable availability
+                                <div
+                                  className={`h-full cursor-pointer flex items-center justify-center transition-colors ${
+                                    appointment
+                                      ? "cursor-not-allowed"
+                                      : "hover:bg-gray-50"
+                                  }`}
+                                  onClick={() => {
+                                    if (!appointment) {
+                                      toggleAvailability(dia, hora);
+                                    }
+                                  }}
+                                >
+                                  {isAvailable && (
+                                    <div className="w-full h-full bg-green-500 flex items-center justify-center">
+                                      <span className="text-white text-xs font-medium">
+                                        Disponible
+                                      </span>
+                                    </div>
+                                  )}
+                                  {!isAvailable && (
+                                    <div className="w-full h-full border-2 border-dashed border-blue-400 flex items-center justify-center opacity-0 hover:opacity-100">
+                                      <span className="text-blue-600 text-xs">
+                                        Click para activar
+                                      </span>
                                     </div>
                                   )}
                                 </div>
-                              ) : isWorking ? (
+                              ) : isBlocked ? (
+                                // Blocked time slot
+                                <div className="h-full bg-red-50 border border-dashed border-red-200 text-red-600 text-xs flex items-center justify-center">
+                                  <span>Bloqueado</span>
+                                </div>
+                              ) : isRest ? (
+                                // Rest period
+                                <div className="h-full bg-orange-50 border border-dashed border-orange-200 text-orange-600 text-xs flex items-center justify-center">
+                                  <span>Descanso</span>
+                                </div>
+                              ) : isWorkingTime ? (
                                 // Available time slot
-                                <div className="h-full w-full hover:bg-blue-50 rounded-md cursor-pointer flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                  <span className="text-xs text-blue-600">
-                                    Disponible
-                                  </span>
+                                <div className="h-full bg-green-50 border border-dashed border-green-200 text-green-600 text-xs flex items-center justify-center">
+                                  Disponible
                                 </div>
                               ) : (
                                 // Unavailable time slot
-                                <div className="h-full w-full bg-gray-100 rounded-md flex items-center justify-center">
-                                  <span className="text-xs text-gray-400">
-                                    No disponible
-                                  </span>
+                                <div className="h-full bg-gray-50 text-gray-400 text-xs flex items-center justify-center">
+                                  No disponible
                                 </div>
                               )}
                             </td>
@@ -742,43 +937,87 @@ export default function TherapistAgendaPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      </main>
 
-          {/* Legend */}
-          <div className="mt-6">
-            <h3 className="font-semibold mb-3">Leyenda</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-blue-100 border border-blue-200 rounded"></div>
-                <span className="text-sm">Consulta</span>
+      {/* Appointment Details Modal */}
+      {isModalOpen && selectedAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Detalles de la Cita</h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setIsModalOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Paciente</p>
+                  <p className="font-medium">
+                    {selectedAppointment.patientName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Tipo de Cita</p>
+                  <p className="font-medium">{selectedAppointment.type}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Fecha</p>
+                  <p className="font-medium">
+                    {selectedAppointment.date
+                      ? new Date(selectedAppointment.date).toLocaleDateString()
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Hora</p>
+                  <p className="font-medium">
+                    {selectedAppointment.startTime} -{" "}
+                    {selectedAppointment.endTime}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Estado</p>
+                  <Badge
+                    variant={
+                      selectedAppointment.status === "CONFIRMED"
+                        ? "default"
+                        : "outline"
+                    }
+                    className={
+                      selectedAppointment.status === "CONFIRMED"
+                        ? "bg-green-100 text-green-800 hover:bg-green-200"
+                        : ""
+                    }
+                  >
+                    {selectedAppointment.status === "CONFIRMED"
+                      ? "Confirmada"
+                      : "Pendiente"}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Contacto</p>
+                  <p className="font-medium">
+                    {selectedAppointment.parentPhone}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
-                <span className="text-sm">Entrevista</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-purple-100 border border-purple-200 rounded"></div>
-                <span className="text-sm">Seguimiento</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-indigo-100 border border-indigo-200 rounded"></div>
-                <span className="text-sm">Terapia</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-yellow-100 border border-yellow-200 rounded"></div>
-                <span className="text-sm">Pendiente confirmación</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-blue-50 border border-blue-100 rounded"></div>
-                <span className="text-sm">Disponible</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-gray-100 rounded"></div>
-                <span className="text-sm">No disponible</span>
+
+              <div className="pt-4 border-t flex justify-end gap-3">
+                <Button variant="outline">Editar Cita</Button>
+                <Button>Ver Expediente</Button>
               </div>
             </div>
           </div>
         </div>
-      </main>
+      )}
     </div>
   );
 }

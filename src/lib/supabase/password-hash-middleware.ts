@@ -17,15 +17,17 @@ export const applyPasswordHashMiddleware = (supabase: SupabaseClient) => {
     const url = input instanceof Request ? input.url : input.toString();
     const isSupabaseAuthEndpoint =
       url.includes("/auth/v1") &&
-      (url.includes("/signup") ||
-        url.includes("/token") ||
-        url.includes("/user"));
+      (url.includes("/token") || url.includes("/user"));
+
+    // Exclude signup from password hashing to avoid interfering with email verification
+    const isSignupEndpoint = url.includes("/signup");
 
     // Check if this is a password-related operation
     const body = init?.body ? JSON.parse(init.body.toString()) : null;
     const hasPassword = body && "password" in body;
 
-    if (isSupabaseAuthEndpoint && hasPassword) {
+    // Only add the header for non-signup operations to avoid interfering with email verification
+    if (isSupabaseAuthEndpoint && hasPassword && !isSignupEndpoint) {
       // Add the custom header to indicate password is pre-hashed
       init = {
         ...init,

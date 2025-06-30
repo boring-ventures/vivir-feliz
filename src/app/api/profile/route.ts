@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
           avatarUrl,
           acceptWhatsApp: acceptWhatsApp || false,
           active: true,
-          role: role || "PARENT", // Default to PARENT role for sign-ups
+          role: role || "PARENT", // Default to PARENT role
         },
       });
 

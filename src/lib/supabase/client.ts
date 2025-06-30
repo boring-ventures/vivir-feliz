@@ -19,3 +19,12 @@ const baseClient = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Apply password hash middleware to handle client-side hashed passwords
 export const supabase = applyPasswordHashMiddleware(baseClient);
+
+// Create a clean auth client without middleware
+export const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    storageKey: "app-token",
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  },
+});
