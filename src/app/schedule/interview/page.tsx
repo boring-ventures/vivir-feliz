@@ -84,9 +84,9 @@ export default function ScheduleInterviewPage() {
     };
 
     try {
-      await createInterviewRequest.mutateAsync(submitData);
+      const result = await createInterviewRequest.mutateAsync(submitData);
 
-      // Store data in sessionStorage for success page
+      // Store data in sessionStorage for schedule selection page
       sessionStorage.setItem(
         "interviewData",
         JSON.stringify({
@@ -96,8 +96,11 @@ export default function ScheduleInterviewPage() {
         })
       );
 
-      // Redirect to success page
-      router.push("/schedule/interview/success");
+      // Store the request ID for appointment booking
+      sessionStorage.setItem("interviewData_requestId", result.data.id);
+
+      // Redirect to schedule selection page
+      router.push("/schedule/select-time?type=interview");
     } catch (error) {
       // Error is handled by the hook's onError callback
       console.error("Error submitting interview request:", error);

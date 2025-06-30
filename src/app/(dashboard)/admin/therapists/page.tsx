@@ -17,10 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Clock,
-  Sun,
-  Trash2,
-  Save,
   X,
   Info,
   Loader2,
@@ -30,10 +26,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  useTherapists,
-  useUpdateTherapistSchedule,
-} from "@/hooks/useTherapists";
+import { useTherapists } from "@/hooks/useTherapists";
 import {
   TherapistProfile,
   WeeklyAvailability,
@@ -171,23 +164,12 @@ export default function TherapistsPage() {
 
   // Fetch therapists data
   const { data: therapists = [], isLoading, error } = useTherapists();
-  const updateScheduleMutation = useUpdateTherapistSchedule();
 
   // Helper function to convert time string to minutes
   const timeToMinutes = (time: string): number => {
     const [hours, minutes] = time.split(":").map(Number);
     return hours * 60 + minutes;
   };
-
-  // State for editable availability
-  const [editableAvailability, setEditableAvailability] =
-    useState<WeeklyAvailability>({
-      lunes: [],
-      martes: [],
-      miercoles: [],
-      jueves: [],
-      viernes: [],
-    });
 
   // Generate dynamic time slots based on therapists' actual schedules
   const getAvailableTimeSlots = (): string[] => {
@@ -476,130 +458,6 @@ export default function TherapistsPage() {
     setSelectedTherapist(therapist.id);
     // Switch to calendar tab
     setActiveTab("calendario");
-    const currentAvailability = getTherapistAvailability(therapist);
-    setEditableAvailability(currentAvailability);
-  };
-
-  // Toggle availability for a time slot
-  const toggleAvailability = (day: string, time: string) => {
-    setEditableAvailability((prev) => {
-      const dayAvailability = [
-        ...(prev[day as keyof WeeklyAvailability] || []),
-      ];
-      const index = dayAvailability.indexOf(time);
-
-      if (index >= 0) {
-        dayAvailability.splice(index, 1);
-      } else {
-        dayAvailability.push(time);
-        dayAvailability.sort();
-      }
-
-      return {
-        ...prev,
-        [day]: dayAvailability,
-      };
-    });
-  };
-
-  // Template functions
-  const applyMorningTemplate = () => {
-    const morningHours = [
-      "08:00",
-      "08:30",
-      "09:00",
-      "09:30",
-      "10:00",
-      "10:30",
-      "11:00",
-      "11:30",
-      "12:00",
-    ];
-    const newAvailability = {} as WeeklyAvailability;
-
-    diasSemana.forEach((day) => {
-      newAvailability[day as keyof WeeklyAvailability] = [...morningHours];
-    });
-
-    setEditableAvailability(newAvailability);
-  };
-
-  const applyAfternoonTemplate = () => {
-    const afternoonHours = [
-      "14:00",
-      "14:30",
-      "15:00",
-      "15:30",
-      "16:00",
-      "16:30",
-      "17:00",
-      "17:30",
-      "18:00",
-    ];
-    const newAvailability = {} as WeeklyAvailability;
-
-    diasSemana.forEach((day) => {
-      newAvailability[day as keyof WeeklyAvailability] = [...afternoonHours];
-    });
-
-    setEditableAvailability(newAvailability);
-  };
-
-  const applyFullDayTemplate = () => {
-    const fullDayHours = [
-      "08:00",
-      "08:30",
-      "09:00",
-      "09:30",
-      "10:00",
-      "10:30",
-      "11:00",
-      "11:30",
-      "12:00",
-      "12:30",
-      "13:00",
-      "13:30",
-      "14:00",
-      "14:30",
-      "15:00",
-      "15:30",
-      "16:00",
-      "16:30",
-      "17:00",
-      "17:30",
-      "18:00",
-    ];
-    const newAvailability = {} as WeeklyAvailability;
-
-    diasSemana.forEach((day) => {
-      newAvailability[day as keyof WeeklyAvailability] = [...fullDayHours];
-    });
-
-    setEditableAvailability(newAvailability);
-  };
-
-  const clearAllAvailability = () => {
-    const emptyAvailability = {} as WeeklyAvailability;
-
-    diasSemana.forEach((day) => {
-      emptyAvailability[day as keyof WeeklyAvailability] = [];
-    });
-
-    setEditableAvailability(emptyAvailability);
-  };
-
-  // Save availability changes
-  const saveAvailabilityChanges = async () => {
-    if (!selectedTherapist || selectedTherapist === "todos") return;
-
-    try {
-      await updateScheduleMutation.mutateAsync({
-        therapistId: selectedTherapist,
-        availability: editableAvailability,
-      });
-    } catch (error) {
-      console.error("Error saving schedule:", error);
-    }
   };
 
   // Calculate statistics

@@ -1,73 +1,86 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "@/components/ui/use-toast";
 
-export type TherapistAppointment = {
+export interface TherapistAppointment {
   id: string;
-  therapistId: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  type: "CONSULTA" | "ENTREVISTA" | "SEGUIMIENTO" | "TERAPIA";
-  patientName: string | null;
+  appointmentId: string;
+  patientName: string;
   patientAge: number | null;
-  parentName: string | null;
-  parentPhone: string | null;
-  parentEmail: string | null;
-  notes: string | null;
-  price: number | null;
-  status:
-    | "SCHEDULED"
-    | "CONFIRMED"
-    | "IN_PROGRESS"
-    | "COMPLETED"
-    | "CANCELLED"
-    | "NO_SHOW"
-    | "RESCHEDULED";
-  createdAt: string;
-  updatedAt: string;
-  patient?: {
+  parentName: string;
+  parentPhone: string;
+  parentEmail: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  type: "CONSULTA" | "ENTREVISTA";
+  status: "SCHEDULED" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+  notes: string;
+  priority: "alta" | "media" | "baja";
+  therapist: {
     id: string;
     firstName: string;
     lastName: string;
-  } | null;
-};
+    specialty: string | null;
+  };
+  createdAt: string;
+  // Analysis-specific fields
+  analysisStatus: "pendiente" | "completado";
+  analysisDate: string | null;
+  diagnosis: string | null;
+  recommendations: string | null;
+  sentToAdmin: boolean;
+}
 
-// Hook to fetch therapist appointments for a specific week
+export interface TherapistAppointmentsResponse {
+  appointments: TherapistAppointment[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+  stats: {
+    scheduled: number;
+    completed: number;
+    highPriority: number;
+    consultations: number;
+    interviews: number;
+  };
+}
+
+interface FetchAppointmentsParams {
+  status?: "all" | "scheduled" | "completed";
+  page?: number;
+  limit?: number;
+}
+
+// Fetch therapist appointments
 export const useTherapistAppointments = (
-  therapistId: string | null,
-  weekStartDate: Date
+  params: FetchAppointmentsParams = {}
 ) => {
-  return useQuery({
-    queryKey: [
-      "therapist-appointments",
-      therapistId,
-      weekStartDate.toISOString().split("T")[0],
-    ],
-    queryFn: async (): Promise<TherapistAppointment[]> => {
-      if (!therapistId) return [];
+  return useQuery<TherapistAppointmentsResponse>({
+    queryKey: ["therapist-appointments", params],
+    queryFn: async () => {
+      const searchParams = new URLSearchParams();
 
-      const weekEnd = new Date(weekStartDate);
-      weekEnd.setDate(weekEnd.getDate() + 6); // Get the full week
+      if (params.status) searchParams.append("status", params.status);
+      if (params.page) searchParams.append("page", params.page.toString());
+      if (params.limit) searchParams.append("limit", params.limit.toString());
 
-      const params = new URLSearchParams({
-        startDate: weekStartDate.toISOString().split("T")[0],
-        endDate: weekEnd.toISOString().split("T")[0],
-      });
-
-      const response = await fetch(`/api/therapist/appointments?${params}`);
+      const response = await fetch(
+        `/api/therapist/appointments?${searchParams}`
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch appointments");
       }
 
-      const data = await response.json();
-      return data.appointments || [];
+      return response.json();
     },
-    enabled: !!therapistId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 };
 
-// Hook to update appointment status
+// Update appointment status (for completing analysis)
 export const useUpdateAppointmentStatus = () => {
   const queryClient = useQueryClient();
 
@@ -75,11 +88,13 @@ export const useUpdateAppointmentStatus = () => {
     mutationFn: async ({
       appointmentId,
       status,
-      notes,
+      sessionNotes,
+      homework,
     }: {
       appointmentId: string;
-      status: string;
-      notes?: string;
+      status: "COMPLETED" | "CANCELLED";
+      sessionNotes?: string;
+      homework?: string;
     }) => {
       const response = await fetch(
         `/api/therapist/appointments/${appointmentId}`,
@@ -88,148 +103,52 @@ export const useUpdateAppointmentStatus = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ status, notes }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update appointment");
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      // Invalidate all appointment queries
-      queryClient.invalidateQueries({ queryKey: ["therapist-appointments"] });
-
-      toast({
-        title: "Success",
-        description: "Appointment updated successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-};
-
-// Hook to add session notes
-export const useAddSessionNotes = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      appointmentId,
-      sessionNotes,
-      homework,
-      nextSessionPlan,
-    }: {
-      appointmentId: string;
-      sessionNotes: string;
-      homework?: string;
-      nextSessionPlan?: string;
-    }) => {
-      const response = await fetch(
-        `/api/therapist/appointments/${appointmentId}/notes`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
           body: JSON.stringify({
+            status,
             sessionNotes,
             homework,
-            nextSessionPlan,
-            status: "COMPLETED",
           }),
         }
       );
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to add session notes");
+        throw new Error("Failed to update appointment");
       }
 
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate and refetch appointments
       queryClient.invalidateQueries({ queryKey: ["therapist-appointments"] });
-
-      toast({
-        title: "Success",
-        description: "Session notes saved successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
     },
   });
 };
 
-// Hook to reschedule appointment
-export const useRescheduleAppointment = () => {
+// Send analysis to admin
+export const useSendAnalysisToAdmin = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      appointmentId,
-      newDate,
-      newStartTime,
-      newEndTime,
-      reason,
-    }: {
-      appointmentId: string;
-      newDate: string;
-      newStartTime: string;
-      newEndTime: string;
-      reason?: string;
-    }) => {
+    mutationFn: async (appointmentId: string) => {
       const response = await fetch(
-        `/api/therapist/appointments/${appointmentId}/reschedule`,
+        `/api/therapist/appointments/${appointmentId}/send-to-admin`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            newDate,
-            newStartTime,
-            newEndTime,
-            reason,
-          }),
         }
       );
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to reschedule appointment");
+        throw new Error("Failed to send analysis to admin");
       }
 
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate and refetch appointments
       queryClient.invalidateQueries({ queryKey: ["therapist-appointments"] });
-
-      toast({
-        title: "Success",
-        description: "Appointment rescheduled successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
     },
   });
 };

@@ -2,10 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -46,13 +44,6 @@ const getSpecialtyDisplay = (specialty: SpecialtyType | null): string => {
     COORDINATOR: "Coordinación",
   };
   return specialty ? specialtyMap[specialty] : "Sin especialidad";
-};
-
-const getFullName = (therapist: TherapistProfile): string => {
-  return (
-    `${therapist.firstName || ""} ${therapist.lastName || ""}`.trim() ||
-    "Sin nombre"
-  );
 };
 
 // Day mapping

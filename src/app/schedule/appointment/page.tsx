@@ -407,9 +407,9 @@ export default function ScheduleAppointmentPage() {
     };
 
     try {
-      await createConsultationRequest.mutateAsync(formData);
+      const result = await createConsultationRequest.mutateAsync(formData);
 
-      // Store data in sessionStorage for success page
+      // Store data in sessionStorage for schedule selection page
       sessionStorage.setItem(
         "consultaData",
         JSON.stringify({
@@ -444,8 +444,11 @@ export default function ScheduleAppointmentPage() {
         })
       );
 
-      // Redirect to success page
-      router.push("/schedule/appointment/success");
+      // Store the request ID for appointment booking
+      sessionStorage.setItem("consultaData_requestId", result.id);
+
+      // Redirect to schedule selection page
+      router.push("/schedule/select-time?type=consultation");
     } catch (error) {
       console.error("Error submitting consultation request:", error);
     }

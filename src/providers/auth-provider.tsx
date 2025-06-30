@@ -64,6 +64,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Helper function to check if current path should not auto-redirect
+  const shouldNotAutoRedirect = (pathname: string) => {
+    const noRedirectPaths = [
+      "/reset-password",
+      "/forgot-password",
+      "/verify-email",
+      "/magic-link",
+      "/sign-in",
+      "/sign-up",
+    ];
+    return noRedirectPaths.some((path) => pathname.startsWith(path));
+  };
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -95,17 +108,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === "SIGNED_OUT") {
         router.push("/sign-in");
       } else if (event === "SIGNED_IN" && session) {
-        // Only redirect to dashboard if we're not already there
-        if (
-          typeof window !== "undefined" &&
-          !window.location.pathname.startsWith("/dashboard")
-        ) {
-          router.push("/dashboard");
+        // Only redirect to dashboard if we're not on auth pages or already on dashboard
+        if (typeof window !== "undefined") {
+          const currentPath = window.location.pathname;
+
+          // Don't redirect if user is on auth pages (like reset-password)
+          if (
+            !currentPath.startsWith("/dashboard") &&
+            !shouldNotAutoRedirect(currentPath)
+          ) {
+            router.push("/dashboard");
+          }
         }
       } else if (event === "TOKEN_REFRESHED" && session) {
         // User is authenticated, ensure they have access to dashboard
-        if (typeof window !== "undefined" && window.location.pathname === "/") {
-          router.push("/dashboard");
+        if (typeof window !== "undefined") {
+          const currentPath = window.location.pathname;
+          if (currentPath === "/") {
+            router.push("/dashboard");
+          }
         }
       }
     });

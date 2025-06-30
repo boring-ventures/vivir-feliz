@@ -42,6 +42,17 @@ function isCorrectRoleForPath(role: string, pathname: string): boolean {
   return false;
 }
 
+// Helper function to check if a path is an auth flow that should not redirect authenticated users
+function isAuthFlowPath(pathname: string): boolean {
+  const authFlowPaths = [
+    "/reset-password",
+    "/forgot-password",
+    "/verify-email",
+    "/magic-link",
+  ];
+  return authFlowPaths.some((path) => pathname.startsWith(path));
+}
+
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
@@ -63,8 +74,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If there's a session and the user is trying to access auth routes
-  if (session && (req.nextUrl.pathname.startsWith("/sign-in") || false)) {
+  // If there's a session and the user is trying to access sign-in (but not other auth flows)
+  if (
+    session &&
+    req.nextUrl.pathname.startsWith("/sign-in") &&
+    !isAuthFlowPath(req.nextUrl.pathname)
+  ) {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = "/dashboard";
     return NextResponse.redirect(redirectUrl);

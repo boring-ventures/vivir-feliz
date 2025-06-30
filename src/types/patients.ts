@@ -264,3 +264,103 @@ export const SPECIALTY_LABELS: Record<SpecialtyType, string> = {
   NEUROPSYCHOLOGIST: "Neuropsicología",
   COORDINATOR: "Coordinación",
 };
+
+// Patient types for therapist views
+export interface PatientWithSessions {
+  id: number;
+  nombre: string;
+  edad: number;
+  genero: string;
+  fechaInicio: string;
+  sesiones: { completadas: number; totales: number };
+  diagnostico: string;
+  proximaCita: string;
+  progreso: number;
+  estado: string;
+  estadoColor: string;
+  padre: string;
+  telefono: string;
+  email: string;
+  colegio: string;
+  observaciones: string;
+  objetivos: PatientObjective[];
+  comentarios: PatientComment[];
+  documentos: PatientDocument[];
+}
+
+export interface PatientEvaluation {
+  id: number;
+  nombre: string;
+  edad: number;
+  genero: string;
+  fechaConsulta: string;
+  estado: string;
+  estadoColor: string;
+  tipo: string;
+  padre?: string;
+  telefono?: string;
+  email?: string;
+  colegio?: string;
+  diagnostico?: string;
+  fechaInicio?: string;
+  sesiones?: { completadas: number; totales: number };
+  proximaCita?: string;
+  progreso?: number;
+  observaciones?: string;
+  objetivos?: PatientObjective[];
+  comentarios?: PatientComment[];
+  documentos?: PatientDocument[];
+}
+
+export interface PatientObjective {
+  id: number;
+  titulo: string;
+  progreso: number;
+  estado: string;
+}
+
+export interface PatientComment {
+  id: number;
+  fecha: string;
+  sesion: number;
+  comentario: string;
+  paraPadre: string;
+}
+
+export interface PatientDocument {
+  id: number;
+  titulo: string;
+  tipo: string;
+  fecha: string;
+  archivo: string;
+}
+
+// Request data types
+export interface ConsultationRequestData {
+  id: string;
+  childName: string;
+  childGender: string;
+  childDateOfBirth: string;
+  motherName?: string;
+  motherPhone?: string;
+  motherEmail?: string;
+  fatherName?: string;
+  fatherPhone?: string;
+  fatherEmail?: string;
+  status: string;
+}
+
+export interface InterviewRequestData {
+  id: string;
+  childFirstName: string;
+  childLastName: string;
+  childDateOfBirth: string;
+  childGender: string;
+  parentName: string;
+  parentPhone: string;
+  parentEmail: string;
+  schoolName: string;
+  derivationDescription: string;
+  derivationFileUrl?: string;
+  status: string;
+}

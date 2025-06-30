@@ -5,7 +5,6 @@ import {
   FileText,
   CreditCard,
   UserCog,
-  ClipboardList,
   Heart,
   BookOpen,
   UserPlus,

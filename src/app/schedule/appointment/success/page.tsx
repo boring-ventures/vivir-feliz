@@ -27,6 +27,14 @@ interface ConsultationData {
   otroViveCon?: string;
   domicilio: string;
 
+  // Optional appointment data (added when scheduled)
+  appointmentId?: string;
+  fecha?: string;
+  hora?: string;
+  therapist?: {
+    name: string;
+  };
+
   // Parents data
   madre: {
     nombre: string;
@@ -74,12 +82,19 @@ export default function ConsultationSuccessPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const storedData = sessionStorage.getItem("consultaData");
-    if (storedData) {
-      setData(JSON.parse(storedData));
+    // Try to get appointment details first (new flow)
+    const appointmentDetails = sessionStorage.getItem("appointmentDetails");
+    if (appointmentDetails) {
+      setData(JSON.parse(appointmentDetails));
     } else {
-      // If no data found, redirect to home
-      router.push("/");
+      // Fall back to old flow for backward compatibility
+      const storedData = sessionStorage.getItem("consultaData");
+      if (storedData) {
+        setData(JSON.parse(storedData));
+      } else {
+        // If no data found, redirect to home
+        router.push("/");
+      }
     }
   }, [router]);
 
@@ -186,21 +201,89 @@ export default function ConsultationSuccessPage() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            ¡Solicitud de Consulta Enviada!
+            {data.appointmentId
+              ? "¡Cita Agendada Exitosamente!"
+              : "¡Solicitud de Consulta Enviada!"}
           </h1>
           <p className="text-lg text-gray-600 mb-4">
-            Hemos recibido tu solicitud de consulta exitosamente.
+            {data.appointmentId
+              ? "Tu consulta ha sido agendada y confirmada."
+              : "Hemos recibido tu solicitud de consulta exitosamente."}
           </p>
           <div className="flex justify-center space-x-4">
-            <Badge variant="secondary" className="text-sm">
-              <Calendar className="h-4 w-4 mr-1" />
-              Procesándose
-            </Badge>
-            <Badge variant="outline" className="text-sm">
-              Costo: Bs. {data.costo}
-            </Badge>
+            {data.appointmentId ? (
+              <>
+                <Badge variant="default" className="text-sm bg-green-600">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Agendada
+                </Badge>
+                <Badge variant="outline" className="text-sm">
+                  ID: {data.appointmentId}
+                </Badge>
+              </>
+            ) : (
+              <>
+                <Badge variant="secondary" className="text-sm">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Procesándose
+                </Badge>
+                <Badge variant="outline" className="text-sm">
+                  Costo: Bs. {data.costo}
+                </Badge>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Appointment Details Card (if scheduled) */}
+        {data.appointmentId && data.fecha && data.hora && data.therapist && (
+          <Card className="mb-6 border-green-200 bg-green-50">
+            <CardHeader>
+              <CardTitle className="flex items-center text-green-800">
+                <Calendar className="h-5 w-5 mr-2" />
+                Detalles de la Cita
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-green-700">
+                    Fecha y Hora
+                  </p>
+                  <p className="text-lg text-green-900">
+                    {new Date(data.fecha).toLocaleDateString("es-ES", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                  <p className="text-lg font-semibold text-green-900">
+                    {data.hora} hrs
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-green-700">
+                    Terapeuta Asignado
+                  </p>
+                  <p className="text-lg text-green-900">
+                    {data.therapist.name}
+                  </p>
+                  <p className="text-sm text-green-600">
+                    Especialista en Terapia Infantil
+                  </p>
+                </div>
+              </div>
+              <div className="p-4 bg-white rounded-md border border-green-200">
+                <p className="text-sm text-green-700">
+                  <strong>Importante:</strong> Te contactaremos 24 horas antes
+                  de tu cita para confirmar la asistencia. Si necesitas
+                  reprogramar, contacta con nosotros al menos 48 horas antes.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -467,4 +550,3 @@ export default function ConsultationSuccessPage() {
     </div>
   );
 }
- 

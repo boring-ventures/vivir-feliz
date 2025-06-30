@@ -47,11 +47,20 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
+import type {
+  PatientWithSessions,
+  PatientEvaluation,
+  PatientComment,
+  PatientDocument,
+  PatientObjective,
+} from "@/types/patients";
 
 export default function TerapeutaPacientesPage() {
   const [filtro, setFiltro] = useState("activos");
   const [busqueda, setBusqueda] = useState("");
-  const [selectedPaciente, setSelectedPaciente] = useState<any>(null);
+  const [selectedPaciente, setSelectedPaciente] = useState<
+    PatientWithSessions | PatientEvaluation | null
+  >(null);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<
     "expediente" | "comentario" | "documento" | "objetivos"
@@ -274,7 +283,7 @@ export default function TerapeutaPacientesPage() {
   );
 
   const handleOpenModal = (
-    paciente: any,
+    paciente: PatientWithSessions | PatientEvaluation,
     type: "expediente" | "comentario" | "documento" | "objetivos"
   ) => {
     setSelectedPaciente(paciente);
@@ -676,8 +685,8 @@ export default function TerapeutaPacientesPage() {
                           Sesiones
                         </label>
                         <p className="text-sm">
-                          {selectedPaciente.sesiones.completadas}/
-                          {selectedPaciente.sesiones.totales}
+                          {selectedPaciente.sesiones?.completadas || 0}/
+                          {selectedPaciente.sesiones?.totales || 0}
                         </p>
                       </div>
                       <div>
@@ -736,43 +745,46 @@ export default function TerapeutaPacientesPage() {
                     </Button>
                   </div>
 
-                  {selectedPaciente.comentarios.length > 0 ? (
+                  {selectedPaciente.comentarios &&
+                  selectedPaciente.comentarios.length > 0 ? (
                     <div className="space-y-3">
-                      {selectedPaciente.comentarios.map((comentario: any) => (
-                        <Card key={comentario.id}>
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex items-center space-x-2">
-                                <Calendar className="h-4 w-4 text-gray-500" />
-                                <span className="text-sm font-medium">
-                                  Sesión {comentario.sesion}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  {comentario.fecha}
-                                </span>
+                      {selectedPaciente.comentarios.map(
+                        (comentario: PatientComment) => (
+                          <Card key={comentario.id}>
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex items-center space-x-2">
+                                  <Calendar className="h-4 w-4 text-gray-500" />
+                                  <span className="text-sm font-medium">
+                                    Sesión {comentario.sesion}
+                                  </span>
+                                  <span className="text-sm text-gray-500">
+                                    {comentario.fecha}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="text-xs font-medium text-gray-600">
-                                  Comentario de sesión:
-                                </label>
-                                <p className="text-sm">
-                                  {comentario.comentario}
-                                </p>
+                              <div className="space-y-2">
+                                <div>
+                                  <label className="text-xs font-medium text-gray-600">
+                                    Comentario de sesión:
+                                  </label>
+                                  <p className="text-sm">
+                                    {comentario.comentario}
+                                  </p>
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium text-gray-600">
+                                    Mensaje para el padre:
+                                  </label>
+                                  <p className="text-sm text-blue-700">
+                                    {comentario.paraPadre}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <label className="text-xs font-medium text-gray-600">
-                                  Mensaje para el padre:
-                                </label>
-                                <p className="text-sm text-blue-700">
-                                  {comentario.paraPadre}
-                                </p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                            </CardContent>
+                          </Card>
+                        )
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
@@ -796,31 +808,34 @@ export default function TerapeutaPacientesPage() {
                     </Button>
                   </div>
 
-                  {selectedPaciente.documentos.length > 0 ? (
+                  {selectedPaciente.documentos &&
+                  selectedPaciente.documentos.length > 0 ? (
                     <div className="space-y-3">
-                      {selectedPaciente.documentos.map((documento: any) => (
-                        <Card key={documento.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <FileText className="h-8 w-8 text-blue-600" />
-                                <div>
-                                  <p className="font-medium">
-                                    {documento.titulo}
-                                  </p>
-                                  <p className="text-sm text-gray-600">
-                                    {documento.tipo} • {documento.fecha}
-                                  </p>
+                      {selectedPaciente.documentos.map(
+                        (documento: PatientDocument) => (
+                          <Card key={documento.id}>
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <FileText className="h-8 w-8 text-blue-600" />
+                                  <div>
+                                    <p className="font-medium">
+                                      {documento.titulo}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      {documento.tipo} • {documento.fecha}
+                                    </p>
+                                  </div>
                                 </div>
+                                <Button variant="outline" size="sm">
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  Ver
+                                </Button>
                               </div>
-                              <Button variant="outline" size="sm">
-                                <Eye className="h-4 w-4 mr-1" />
-                                Ver
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                            </CardContent>
+                          </Card>
+                        )
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
@@ -844,42 +859,45 @@ export default function TerapeutaPacientesPage() {
                     </Button>
                   </div>
 
-                  {selectedPaciente.objetivos.length > 0 ? (
+                  {selectedPaciente.objetivos &&
+                  selectedPaciente.objetivos.length > 0 ? (
                     <div className="space-y-3">
-                      {selectedPaciente.objetivos.map((objetivo: any) => (
-                        <Card key={objetivo.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-2">
-                                {getEstadoIcon(objetivo.estado)}
-                                <span className="font-medium">
-                                  {objetivo.titulo}
-                                </span>
+                      {selectedPaciente.objetivos.map(
+                        (objetivo: PatientObjective) => (
+                          <Card key={objetivo.id}>
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                  {getEstadoIcon(objetivo.estado)}
+                                  <span className="font-medium">
+                                    {objetivo.titulo}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Badge
+                                    className={getEstadoColor(objetivo.estado)}
+                                  >
+                                    {objetivo.estado}
+                                  </Badge>
+                                  <Button variant="ghost" size="sm">
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <Badge
-                                  className={getEstadoColor(objetivo.estado)}
-                                >
-                                  {objetivo.estado}
-                                </Badge>
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span>Progreso</span>
+                                  <span>{objetivo.progreso}%</span>
+                                </div>
+                                <Progress
+                                  value={objetivo.progreso}
+                                  className="h-2"
+                                />
                               </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Progreso</span>
-                                <span>{objetivo.progreso}%</span>
-                              </div>
-                              <Progress
-                                value={objetivo.progreso}
-                                className="h-2"
-                              />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                            </CardContent>
+                          </Card>
+                        )
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
@@ -1089,45 +1107,48 @@ export default function TerapeutaPacientesPage() {
                 {/* Lista de objetivos existentes */}
                 <div>
                   <h4 className="font-semibold mb-3">Objetivos Actuales</h4>
-                  {selectedPaciente.objetivos.length > 0 ? (
+                  {selectedPaciente.objetivos &&
+                  selectedPaciente.objetivos.length > 0 ? (
                     <div className="space-y-3">
-                      {selectedPaciente.objetivos.map((objetivo: any) => (
-                        <Card key={objetivo.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-2">
-                                {getEstadoIcon(objetivo.estado)}
-                                <span className="font-medium">
-                                  {objetivo.titulo}
-                                </span>
+                      {selectedPaciente.objetivos.map(
+                        (objetivo: PatientObjective) => (
+                          <Card key={objetivo.id}>
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                  {getEstadoIcon(objetivo.estado)}
+                                  <span className="font-medium">
+                                    {objetivo.titulo}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Badge
+                                    className={getEstadoColor(objetivo.estado)}
+                                  >
+                                    {objetivo.estado}
+                                  </Badge>
+                                  <Button variant="ghost" size="sm">
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm">
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <Badge
-                                  className={getEstadoColor(objetivo.estado)}
-                                >
-                                  {objetivo.estado}
-                                </Badge>
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="sm">
-                                  <Trash2 className="h-4 w-4 text-red-500" />
-                                </Button>
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span>Progreso</span>
+                                  <span>{objetivo.progreso}%</span>
+                                </div>
+                                <Progress
+                                  value={objetivo.progreso}
+                                  className="h-2"
+                                />
                               </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Progreso</span>
-                                <span>{objetivo.progreso}%</span>
-                              </div>
-                              <Progress
-                                value={objetivo.progreso}
-                                className="h-2"
-                              />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                            </CardContent>
+                          </Card>
+                        )
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
