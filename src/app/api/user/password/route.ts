@@ -17,11 +17,41 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { newPassword } = await request.json();
+    const { currentPassword, newPassword } = await request.json();
 
-    // Update the password using Supabase Auth API
+    if (!currentPassword || !newPassword) {
+      return NextResponse.json(
+        { error: "Current and new password are required" },
+        { status: 400 }
+      );
+    }
+
+    // Get user email from session
+    const userEmail = session.user.email;
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: "User email not found in session" },
+        { status: 400 }
+      );
+    }
+
+    // Verify current password by attempting sign-in with hashed password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: userEmail,
+      password: currentPassword, // This is already hashed by the client
+    });
+
+    if (signInError) {
+      console.error("Current password verification failed:", signInError);
+      return NextResponse.json(
+        { error: "Current password is incorrect" },
+        { status: 401 }
+      );
+    }
+
+    // Update the password with the new hashed password
     const { error } = await supabase.auth.updateUser({
-      password: newPassword,
+      password: newPassword, // This is already hashed by the client
     });
 
     if (error) {

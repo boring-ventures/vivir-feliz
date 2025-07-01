@@ -26,7 +26,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { PasswordInput } from "@/components/utils/password-input";
 import { PasswordStrengthIndicator } from "@/components/utils/password-strength-indicator";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
-import { hashPassword } from "@/lib/auth/password-crypto";
+import { saltAndHashPassword } from "@/lib/auth/password-crypto";
+import { useAuth } from "@/providers/auth-provider";
 
 // Password validation schema
 const passwordFormSchema = z
@@ -60,6 +61,7 @@ export function PasswordDialog({ open, onOpenChange }: PasswordDialogProps) {
   const [password, setPassword] = useState("");
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
@@ -79,9 +81,21 @@ export function PasswordDialog({ open, onOpenChange }: PasswordDialogProps) {
     try {
       setIsSubmitting(true);
 
-      // Get current user's password hash to send to API
-      const hashedCurrentPassword = await hashPassword(data.currentPassword);
-      const hashedNewPassword = await hashPassword(data.newPassword);
+      // Get user email for salt
+      const userEmail = user?.email;
+      if (!userEmail) {
+        throw new Error("Email del usuario no encontrado.");
+      }
+
+      // Hash passwords with email as salt (same as sign-in)
+      const hashedCurrentPassword = await saltAndHashPassword(
+        data.currentPassword,
+        userEmail
+      );
+      const hashedNewPassword = await saltAndHashPassword(
+        data.newPassword,
+        userEmail
+      );
 
       // Call API to update password
       const response = await fetch("/api/user/password", {
