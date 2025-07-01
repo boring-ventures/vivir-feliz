@@ -10,6 +10,9 @@ export async function POST(request: NextRequest) {
       appointmentTime,
       therapistId,
       requestId, // ID of the consultation or interview request
+      paymentConfirmed, // For consultations
+      receiptImageName, // For consultations
+      referenceNumber, // For consultations
     } = body;
 
     // Validate required fields
@@ -22,6 +25,14 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // For consultations, payment confirmation is required
+    if (appointmentType === "CONSULTATION" && !paymentConfirmed) {
+      return NextResponse.json(
+        { error: "Payment confirmation is required for consultations" },
         { status: 400 }
       );
     }
@@ -94,6 +105,8 @@ export async function POST(request: NextRequest) {
 
     // Prepare appointment data based on request type
     let appointmentData;
+    const appointmentPrice = appointmentType === "CONSULTATION" ? 250.0 : 300.0;
+
     if (appointmentType === "CONSULTATION") {
       const consultationRequest = requestData as {
         childName: string;
@@ -124,7 +137,8 @@ export async function POST(request: NextRequest) {
           consultationRequest.motherEmail ||
           consultationRequest.fatherEmail ||
           "",
-        notes: `Consulta inicial agendada`,
+        price: appointmentPrice,
+        notes: `Consulta inicial agendada - Pago confirmado`,
       };
     } else {
       const interviewRequest = requestData as {
@@ -145,37 +159,64 @@ export async function POST(request: NextRequest) {
         parentName: interviewRequest.parentName,
         parentPhone: interviewRequest.parentPhone,
         parentEmail: interviewRequest.parentEmail,
+        price: appointmentPrice,
         notes: `Entrevista con derivación escolar agendada`,
       };
     }
 
-    // Create the appointment
-    const appointment = await prisma.appointment.create({
-      data: appointmentData,
-      include: {
-        therapist: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
+    // Create the appointment and payment record in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the appointment
+      const appointment = await tx.appointment.create({
+        data: appointmentData,
+        include: {
+          therapist: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
           },
         },
-      },
+      });
+
+      // Create payment record for consultations
+      if (appointmentType === "CONSULTATION") {
+        const paymentData = {
+          appointmentId: appointment.id,
+          consultationRequestId: requestId,
+          amount: appointmentPrice,
+          paymentDate: new Date(),
+          paymentMethod: "QR_TRANSFER" as const,
+          status: "COMPLETED" as const,
+          notes: "Pago confirmado por el usuario al agendar la cita",
+          ...(referenceNumber && { referenceNumber }),
+          ...(receiptImageName && { receiptImageUrl: receiptImageName }),
+        };
+
+        await tx.payment.create({
+          data: paymentData,
+        });
+      }
+
+      // Update the request status to indicate it has been scheduled
+      if (appointmentType === "CONSULTATION") {
+        await tx.consultationRequest.update({
+          where: { id: requestId },
+          data: { status: "SCHEDULED" },
+        });
+      } else {
+        await tx.interviewRequest.update({
+          where: { id: requestId },
+          data: { status: "SCHEDULED" },
+        });
+      }
+
+      return appointment;
     });
 
-    // Update the request status to indicate it has been scheduled
-    if (appointmentType === "CONSULTATION") {
-      await prisma.consultationRequest.update({
-        where: { id: requestId },
-        data: { status: "SCHEDULED" },
-      });
-    } else {
-      await prisma.interviewRequest.update({
-        where: { id: requestId },
-        data: { status: "SCHEDULED" },
-      });
-    }
+    const appointment = result;
 
     // Generate appointment ID
     const appointmentId = `${appointmentType === "CONSULTATION" ? "CON" : "INT"}-${appointment.id}-${Date.now().toString().slice(-6)}`;

@@ -14,6 +14,9 @@ import {
   School,
   Users,
   FileText,
+  AlertTriangle,
+  FileCheck,
+  Clock,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -34,6 +37,12 @@ interface ConsultationData {
   therapist?: {
     name: string;
   };
+
+  // Payment data (added when payment is confirmed)
+  paymentConfirmed?: boolean;
+  receiptFile?: string;
+  referenceNumber?: string;
+  paymentDate?: string;
 
   // Parents data
   madre: {
@@ -285,6 +294,73 @@ export default function ConsultationSuccessPage() {
           </Card>
         )}
 
+        {/* Payment Confirmation Card (if payment was confirmed) */}
+        {data.paymentConfirmed && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="flex items-center text-blue-800">
+                <CheckCircle className="h-5 w-5 mr-2" />
+                Confirmación de Pago
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-blue-700">
+                    Estado del Pago
+                  </p>
+                  <Badge className="bg-green-600 text-white">
+                    ✓ Pago Confirmado
+                  </Badge>
+                  <p className="text-sm text-blue-600 mt-1">
+                    Tu pago ha sido recibido y confirmado
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-700">
+                    Monto Pagado
+                  </p>
+                  <p className="text-lg font-semibold text-blue-900">Bs. 250</p>
+                  <p className="text-sm text-blue-600">Consulta Inicial</p>
+                </div>
+              </div>
+              {data.referenceNumber && (
+                <div>
+                  <p className="text-sm font-medium text-blue-700">
+                    Número de Referencia
+                  </p>
+                  <p className="text-sm text-blue-900 font-mono">
+                    {data.referenceNumber}
+                  </p>
+                </div>
+              )}
+              {data.paymentDate && (
+                <div>
+                  <p className="text-sm font-medium text-blue-700">
+                    Fecha de Pago
+                  </p>
+                  <p className="text-sm text-blue-900">
+                    {new Date(data.paymentDate).toLocaleDateString("es-ES", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              )}
+              <div className="p-4 bg-white rounded-md border border-blue-200">
+                <p className="text-sm text-blue-700">
+                  <strong>Comprobante:</strong> Hemos registrado tu comprobante
+                  de pago. En caso de necesitar una factura o recibo oficial,
+                  contacta con nosotros después de tu cita.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Child Information */}
@@ -514,10 +590,86 @@ export default function ConsultationSuccessPage() {
           </CardContent>
         </Card>
 
+        {/* Medical Form Action Card - Only show for consultations with appointments */}
+        {data.appointmentId && data.paymentConfirmed && (
+          <Card className="mt-6 border-purple-200 bg-purple-50">
+            <CardHeader>
+              <CardTitle className="flex items-center text-purple-800">
+                <FileText className="h-5 w-5 mr-2" />
+                Formulario Pre-Consulta Requerido
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-amber-100 border border-amber-300 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800 mb-2">
+                      ⚠️ IMPORTANTE
+                    </p>
+                    <p className="text-amber-700 text-sm">
+                      Antes de su consulta, debe completar un formulario médico
+                      detallado con información sobre su hijo/a. Este formulario
+                      incluye información médica detallada que el terapeuta
+                      necesitará para la evaluación.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2 text-purple-700">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="text-sm">
+                    Debe completar TODOS los datos del formulario
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-purple-700">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="text-sm">
+                    El formulario incluye información médica detallada
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-purple-700">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="text-sm">
+                    Guarde este ID para continuar más tarde si es necesario
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-purple-700">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="text-sm">
+                    El terapeuta necesitará esta información para la evaluación
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <Link href={`/schedule/medical-form/${data.appointmentId}`}>
+                  <Button className="w-full bg-purple-600 hover:bg-purple-700 text-lg py-3">
+                    <FileCheck className="h-5 w-5 mr-2" />
+                    INICIAR FORMULARIO
+                  </Button>
+                </Link>
+
+                <p className="text-center text-xs text-purple-600 mt-2">
+                  Su ID de formulario es:{" "}
+                  <span className="font-mono font-bold">
+                    {data.appointmentId}
+                  </span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Next Steps */}
         <Card className="mt-6 bg-blue-50 border-blue-200">
           <CardHeader>
-            <CardTitle className="text-blue-800">Próximos Pasos</CardTitle>
+            <CardTitle className="flex items-center text-blue-800">
+              <Clock className="h-5 w-5 mr-2" />
+              Próximos Pasos
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-blue-700">
             <div className="space-y-2">

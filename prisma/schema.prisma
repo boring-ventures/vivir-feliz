@@ -104,22 +104,32 @@ model TreatmentProposal {
 }
 
 model Payment {
-  id              String            @id @default(cuid())
-  proposalId      String            @map("proposal_id")
-  amount          Decimal           @db.Decimal(10, 2)
-  paymentDate     DateTime          @map("payment_date")
-  paymentMethod   String            @map("payment_method")
-  referenceNumber String?           @map("reference_number")
-  status          PaymentStatus     @default(PENDING)
-  confirmedBy     String?           @map("confirmed_by")
-  confirmedAt     DateTime?         @map("confirmed_at")
-  notes           String?
-  receipt         String?
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
-  proposal        TreatmentProposal @relation(fields: [proposalId], references: [id])
+  id                    String            @id @default(cuid())
+  proposalId            String?           @map("proposal_id")
+  appointmentId         String?           @map("appointment_id")
+  consultationRequestId String?           @map("consultation_request_id")
+  interviewRequestId    String?           @map("interview_request_id")
+  amount                Decimal           @db.Decimal(10, 2)
+  paymentDate           DateTime          @map("payment_date")
+  paymentMethod         String            @map("payment_method")
+  referenceNumber       String?           @map("reference_number")
+  receiptImageUrl       String?           @map("receipt_image_url")
+  status                PaymentStatus     @default(PENDING)
+  confirmedBy           String?           @map("confirmed_by")
+  confirmedAt           DateTime?         @map("confirmed_at")
+  notes                 String?
+  receipt               String?
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  proposal              TreatmentProposal? @relation(fields: [proposalId], references: [id])
+  appointment           Appointment?       @relation(fields: [appointmentId], references: [id])
+  consultationRequest   ConsultationRequest? @relation(fields: [consultationRequestId], references: [id])
+  interviewRequest      InterviewRequest?  @relation(fields: [interviewRequestId], references: [id])
 
   @@index([proposalId])
+  @@index([appointmentId])
+  @@index([consultationRequestId])
+  @@index([interviewRequestId])
   @@index([status])
   @@map("payments")
 }
@@ -240,6 +250,8 @@ model Appointment {
   proposal           TreatmentProposal? @relation(fields: [proposalId], references: [id])
   therapist          Profile            @relation("TherapistAppointments", fields: [therapistId], references: [id])
   medicalRecords     MedicalRecord[]
+  medicalForm        MedicalForm?
+  payments           Payment[]
 
   @@index([therapistId])
   @@index([patientId])
@@ -247,6 +259,124 @@ model Appointment {
   @@index([date])
   @@index([status])
   @@map("appointments")
+}
+
+model MedicalForm {
+  id                       String    @id @default(cuid())
+  appointmentId            String    @unique @map("appointment_id")
+  
+  // Basic Information
+  childName                String    @map("child_name")
+  childBirthDate           DateTime  @map("child_birth_date")
+  childAgeYears            String?   @map("child_age_years")
+  childAgeMonths           String?   @map("child_age_months")
+  
+  // Perinatal History
+  pregnancyType            String?   @map("pregnancy_type")
+  prematureWeeks           String?   @map("premature_weeks")
+  postTermWeeks            String?   @map("post_term_weeks")
+  pregnancyComplications   String?   @map("pregnancy_complications")
+  deliveryType             String?   @map("delivery_type")
+  cesareanReason           String?   @map("cesarean_reason")
+  birthWeight              String?   @map("birth_weight")
+  birthHeight              String?   @map("birth_height")
+  
+  // Birth Complications
+  deliveryComplications    String?   @map("delivery_complications")
+  complicationDetails      String?   @map("complication_details")
+  specialCare              String[]  @map("special_care")
+  hospitalizationDays      String?   @map("hospitalization_days")
+  hospitalizationReason    String?   @map("hospitalization_reason")
+  
+  // Medical History
+  importantIllnesses       String[]  @map("important_illnesses")
+  otherIllness             String?   @map("other_illness")
+  hospitalizations         Json      @map("hospitalizations") // Array of {motivo, edad}
+  previousSurgeries        String?   @map("previous_surgeries")
+  surgeryDetails           String?   @map("surgery_details")
+  surgeryAge               String?   @map("surgery_age")
+  
+  // Medications and Allergies
+  takesMedications         String?   @map("takes_medications")
+  medications              Json      @map("medications") // Array of {nombre, dosis, motivo}
+  foodAllergies            String[]  @map("food_allergies")
+  otherFoodAllergy         String?   @map("other_food_allergy")
+  medicationAllergies      String[]  @map("medication_allergies")
+  otherMedicationAllergy   String?   @map("other_medication_allergy")
+  otherAllergies           String[]  @map("other_allergies")
+  otherAllergyDescription  String?   @map("other_allergy_description")
+  
+  // Motor Development
+  headControlAge           String?   @map("head_control_age")
+  sittingAge               String?   @map("sitting_age")
+  crawlingAge              String?   @map("crawling_age")
+  walkingAge               String?   @map("walking_age")
+  climbsStairs             Boolean   @default(false) @map("climbs_stairs")
+  balanceDifficulties      String?   @map("balance_difficulties")
+  balanceDifficultyDetails String?   @map("balance_difficulty_details")
+  fineMotorSkills          String[]  @map("fine_motor_skills")
+  blockTowers              String?   @map("block_towers")
+  fineMotorDifficulties    String?   @map("fine_motor_difficulties")
+  fineMotorDifficultyDetails String? @map("fine_motor_difficulty_details")
+  
+  // Language and Cognition
+  firstWordsAge            String?   @map("first_words_age")
+  twoWordPhrasesAge        String?   @map("two_word_phrases_age")
+  completeSentences        Boolean   @default(false) @map("complete_sentences")
+  currentCommunication     String[]  @map("current_communication")
+  otherCommunication       String?   @map("other_communication")
+  comprehension            String?   @map("comprehension")
+  followsSimpleInstructions Boolean   @default(false) @map("follows_simple_instructions")
+  followsComplexInstructions Boolean  @default(false) @map("follows_complex_instructions")
+  respondsToName           Boolean   @default(false) @map("responds_to_name")
+  cognitiveDevelopment     String[]  @map("cognitive_development")
+  learningDifficulties     String?   @map("learning_difficulties")
+  
+  // Social and Emotional Development
+  interactsWithChildren    String?   @map("interacts_with_children")
+  interactionDetails       String?   @map("interaction_details")
+  sharesToys               Boolean   @default(false) @map("shares_toys")
+  expressesEmotions        Boolean   @default(false) @map("expresses_emotions")
+  tantrums                 String?   @map("tantrums")
+  tantrumFrequency         String?   @map("tantrum_frequency")
+  adaptsToChanges          String?   @map("adapts_to_changes")
+  repetitiveBehaviors      String?   @map("repetitive_behaviors")
+  behaviorDetails          String?   @map("behavior_details")
+  feedingHabits            String[]  @map("feeding_habits")
+  usesUtensils             Boolean   @default(false) @map("uses_utensils")
+  sleepHabits              String[]  @map("sleep_habits")
+  daytimeToiletControl     String?   @map("daytime_toilet_control")
+  nighttimeToiletControl   String?   @map("nighttime_toilet_control")
+  usesDiapers              Boolean   @default(false) @map("uses_diapers")
+  diaperAge                String?   @map("diaper_age")
+  
+  // Family Information
+  livesWithWhom            String?   @map("lives_with_whom")
+  hasSiblings              String?   @map("has_siblings")
+  numberOfSiblings         String?   @map("number_of_siblings")
+  siblingsAges             String?   @map("siblings_ages")
+  familyEnvironment        String?   @map("family_environment")
+  recentChanges            String?   @map("recent_changes")
+  typesOfChanges           String[]  @map("types_of_changes")
+  otherChange              String?   @map("other_change")
+  changeDetails            String?   @map("change_details")
+  familyHistory            String?   @map("family_history")
+  familyHistoryDetails     String?   @map("family_history_details")
+  
+  // System fields
+  status                   MedicalFormStatus @default(DRAFT) @map("status")
+  submittedAt              DateTime? @map("submitted_at")
+  reviewedAt               DateTime? @map("reviewed_at")
+  reviewedBy               String?   @map("reviewed_by")
+  notes                    String?   @map("notes")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  appointment              Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@map("medical_forms")
 }
 
 model InterviewRequest {
@@ -269,6 +399,7 @@ model InterviewRequest {
   createdAt             DateTime              @default(now()) @map("created_at")
   updatedAt             DateTime              @updatedAt @map("updated_at")
   assignedTherapist     Profile?              @relation("TherapistInterviewRequests", fields: [assignedTherapistId], references: [id])
+  payments              Payment[]
 
   @@index([status])
   @@index([parentEmail])
@@ -327,6 +458,7 @@ model ConsultationRequest {
   // Relations
   children              ConsultationChild[]
   assignedTherapist     Profile?                  @relation("TherapistConsultationRequests", fields: [assignedTherapistId], references: [id])
+  payments              Payment[]
 
   @@index([status])
   @@index([childName])
@@ -421,4 +553,11 @@ enum ConsultationRequestStatus {
   SCHEDULED
   COMPLETED
   CANCELLED
+}
+
+enum MedicalFormStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWED
+  APPROVED
 }

@@ -223,6 +223,33 @@ function SelectTimePageContent() {
 
   const handleConfirm = async () => {
     if (selectedDate && selectedTime && selectedTherapist && requestId) {
+      // For appointments (consultations), redirect to payment page
+      if (type === "consultation") {
+        // Store pending appointment details for payment page
+        const pendingAppointment = {
+          ...requestData,
+          fecha: selectedDate,
+          hora: selectedTime,
+          tipo: type,
+          therapist: selectedTherapist,
+          requestId,
+          appointmentType,
+          appointmentDate: selectedDate,
+          appointmentTime: selectedTime,
+          therapistId: selectedTherapist.id,
+        };
+
+        sessionStorage.setItem(
+          "pendingAppointment",
+          JSON.stringify(pendingAppointment)
+        );
+
+        // Redirect to payment page
+        router.push("/schedule/payment");
+        return;
+      }
+
+      // For interviews, continue with direct booking (no payment required)
       try {
         const result = await bookAppointment.mutateAsync({
           appointmentType,
@@ -249,17 +276,13 @@ function SelectTimePageContent() {
         );
 
         // Mark this request as scheduled and clear original data
-        const dataKey = type === "interview" ? "interviewData" : "consultaData";
+        const dataKey = "interviewData";
         sessionStorage.setItem(`${dataKey}_scheduled`, "true");
         sessionStorage.removeItem(dataKey);
         sessionStorage.removeItem(`${dataKey}_requestId`);
 
         // Redirect to success page
-        const successPath =
-          type === "interview"
-            ? "/schedule/interview/success"
-            : "/schedule/appointment/success";
-        router.push(successPath);
+        router.push("/schedule/interview/success");
       } catch (error) {
         console.error("Error booking appointment:", error);
       }
@@ -559,7 +582,9 @@ function SelectTimePageContent() {
                   </>
                 ) : (
                   <>
-                    Confirmar Cita
+                    {type === "consultation"
+                      ? "Continuar a Pago"
+                      : "Confirmar Cita"}
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </>
                 )}

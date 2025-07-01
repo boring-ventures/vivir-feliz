@@ -121,6 +121,14 @@ export default function TherapistAnalysisPage() {
                 <p className="text-gray-600 mt-1">
                   Gestiona y analiza las consultas y entrevistas programadas
                 </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>💡 Nuevo:</strong> Las consultas ahora incluyen
+                    formularios médicos detallados completados por los padres,
+                    proporcionando información completa sobre desarrollo,
+                    historia médica y contexto familiar.
+                  </p>
+                </div>
               </div>
             </div>
           </header>
@@ -358,6 +366,14 @@ export default function TherapistAnalysisPage() {
                                     ? "CONSULTA"
                                     : "ENTREVISTA"}
                                 </Badge>
+                                {appointment.type === "CONSULTA" && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs bg-green-100 text-green-800"
+                                  >
+                                    📋 Formulario médico
+                                  </Badge>
+                                )}
                                 <Badge
                                   className={`text-xs ${getPrioridadColor(appointment.priority)}`}
                                 >
@@ -409,7 +425,7 @@ export default function TherapistAnalysisPage() {
                                   <span className="font-medium text-gray-900">
                                     Estado:
                                   </span>
-                                  <p className="mt-1">
+                                  <div className="mt-1">
                                     <Badge
                                       variant="outline"
                                       className="text-xs"
@@ -422,7 +438,7 @@ export default function TherapistAnalysisPage() {
                                             ? "COMPLETADA"
                                             : appointment.status}
                                     </Badge>
-                                  </p>
+                                  </div>
                                   {appointment.analysisDate && (
                                     <p className="text-xs text-gray-500 mt-1">
                                       Análisis:{" "}
@@ -471,7 +487,7 @@ export default function TherapistAnalysisPage() {
                             <div className="ml-6 flex-shrink-0">
                               {appointment.status !== "COMPLETED" && (
                                 <Link
-                                  href={`/therapist/evaluation/${appointment.id}`}
+                                  href={`/therapist/analysis/${appointment.id}`}
                                 >
                                   <Button className="bg-blue-600 hover:bg-blue-700 text-white group-hover:shadow-md transition-all">
                                     Iniciar Análisis
@@ -483,7 +499,7 @@ export default function TherapistAnalysisPage() {
                               {appointment.status === "COMPLETED" && (
                                 <div className="flex gap-2">
                                   <Link
-                                    href={`/therapist/evaluation/${appointment.id}`}
+                                    href={`/therapist/analysis/${appointment.id}`}
                                   >
                                     <Button
                                       variant="outline"
