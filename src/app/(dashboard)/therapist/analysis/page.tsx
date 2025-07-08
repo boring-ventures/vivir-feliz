@@ -17,6 +17,7 @@ import {
   CalendarDays,
   Clock4,
   UserCheck,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -497,35 +498,49 @@ export default function TherapistAnalysisPage() {
                               )}
 
                               {appointment.status === "COMPLETED" && (
-                                <div className="flex gap-2">
-                                  <Link
-                                    href={`/therapist/analysis/${appointment.id}`}
-                                  >
-                                    <Button
-                                      variant="outline"
-                                      className="border-gray-200 hover:border-gray-300"
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex gap-2">
+                                    <Link
+                                      href={`/therapist/analysis/${appointment.id}`}
                                     >
-                                      Ver Análisis
-                                    </Button>
-                                  </Link>
-                                  {!appointment.sentToAdmin && (
-                                    <Button
-                                      className="bg-green-600 hover:bg-green-700 text-white"
-                                      onClick={() =>
-                                        handleEnviarAdmin(appointment.id)
-                                      }
-                                      disabled={sendAnalysisToAdmin.isPending}
-                                    >
-                                      {sendAnalysisToAdmin.isPending ? (
-                                        <Loader className="h-4 w-4 mr-2" />
-                                      ) : (
-                                        <>
-                                          Enviar a Admin
-                                          <ArrowRight className="h-4 w-4 ml-2" />
-                                        </>
-                                      )}
-                                    </Button>
-                                  )}
+                                      <Button
+                                        variant="outline"
+                                        className="border-gray-200 hover:border-gray-300"
+                                      >
+                                        Ver Análisis
+                                      </Button>
+                                    </Link>
+                                    {!appointment.sentToAdmin && (
+                                      <>
+                                        <Link
+                                          href={`/therapist/analysis/${appointment.id}/proposal`}
+                                        >
+                                          <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+                                            <FileText className="h-4 w-4 mr-2" />
+                                            Generar Propuesta Técnica
+                                          </Button>
+                                        </Link>
+                                        <Button
+                                          className="bg-green-600 hover:bg-green-700 text-white"
+                                          onClick={() =>
+                                            handleEnviarAdmin(appointment.id)
+                                          }
+                                          disabled={
+                                            sendAnalysisToAdmin.isPending
+                                          }
+                                        >
+                                          {sendAnalysisToAdmin.isPending ? (
+                                            <Loader className="h-4 w-4 mr-2" />
+                                          ) : (
+                                            <>
+                                              Enviar a Admin
+                                              <ArrowRight className="h-4 w-4 ml-2" />
+                                            </>
+                                          )}
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               )}
                             </div>

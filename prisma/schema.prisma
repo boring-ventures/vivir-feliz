@@ -252,6 +252,7 @@ model Appointment {
   medicalRecords     MedicalRecord[]
   medicalForm        MedicalForm?
   payments           Payment[]
+  analysis           Analysis?
 
   @@index([therapistId])
   @@index([patientId])
@@ -482,6 +483,49 @@ model ConsultationChild {
   @@map("consultation_children")
 }
 
+model Analysis {
+  id                      String            @id @default(cuid())
+  appointmentId           String            @unique @map("appointment_id")
+  
+  // Clinical Observation
+  presentation            String[]          @map("presentation")
+  disposition             String[]          @map("disposition")
+  eyeContact              String[]          @map("eye_contact")
+  activityLevel           String[]          @map("activity_level")
+  sensoryEvaluation       String?           @map("sensory_evaluation")
+  generalBehavior         String?           @map("general_behavior")
+  
+  // Professional Analysis
+  psychologicalAnalysis   String?           @map("psychological_analysis")
+  cognitiveArea           String?           @map("cognitive_area")
+  learningArea            String?           @map("learning_area")
+  schoolPerformance       String?           @map("school_performance")
+  languageAnalysis        String?           @map("language_analysis")
+  motorAnalysis           String?           @map("motor_analysis")
+  additionalInformation   String?           @map("additional_information")
+  generalObservations     String?           @map("general_observations")
+  diagnosticHypothesis    String?           @map("diagnostic_hypothesis")
+  
+  // Recommendations and Treatment Plan
+  recommendations         String?           @map("recommendations")
+  treatmentPlan           String?           @map("treatment_plan")
+  followUpNeeded          Boolean           @default(false) @map("follow_up_needed")
+  
+  // System fields
+  status                  AnalysisStatus    @default(DRAFT)
+  completedAt             DateTime?         @map("completed_at")
+  sentToAdminAt           DateTime?         @map("sent_to_admin_at")
+  createdAt               DateTime          @default(now()) @map("created_at")
+  updatedAt               DateTime          @updatedAt @map("updated_at")
+  
+  // Relations
+  appointment             Appointment       @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@index([status])
+  @@map("analyses")
+}
+
 enum UserRole {
   ADMIN
   PARENT
@@ -555,9 +599,14 @@ enum ConsultationRequestStatus {
   CANCELLED
 }
 
+enum AnalysisStatus {
+  DRAFT
+  COMPLETED
+  SENT_TO_ADMIN
+}
+
 enum MedicalFormStatus {
   DRAFT
   SUBMITTED
   REVIEWED
-  APPROVED
 }

@@ -115,20 +115,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Don't redirect if user is on auth pages (like reset-password)
           if (
             !currentPath.startsWith("/dashboard") &&
-            !shouldNotAutoRedirect(currentPath)
+            !shouldNotAutoRedirect(currentPath) &&
+            currentPath === "/" // Only redirect from home page, let middleware handle dashboard routing
           ) {
             router.push("/dashboard");
           }
         }
-      } else if (event === "TOKEN_REFRESHED" && session) {
-        // User is authenticated, ensure they have access to dashboard
-        if (typeof window !== "undefined") {
-          const currentPath = window.location.pathname;
-          if (currentPath === "/") {
-            router.push("/dashboard");
-          }
-        }
       }
+      // Remove TOKEN_REFRESHED redirect to prevent conflicts with middleware
     });
 
     return () => {

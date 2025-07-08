@@ -340,7 +340,25 @@ export default function MedicalFormPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Unwrap the async params
-  const { id: appointmentId } = use(params);
+  const { id: rawAppointmentId } = use(params);
+
+  // Extract the actual appointment ID from formats like "CON-{id}-{timestamp}" or "INT-{id}-{timestamp}"
+  const appointmentId = (() => {
+    if (
+      rawAppointmentId.startsWith("CON-") ||
+      rawAppointmentId.startsWith("INT-")
+    ) {
+      const parts = rawAppointmentId.split("-");
+      if (parts.length === 3) {
+        // Format: CON-{id}-{timestamp} -> return just {id}
+        return parts[1];
+      } else if (parts.length === 2) {
+        // Format: CON-{id} -> return just {id}
+        return parts[1];
+      }
+    }
+    return rawAppointmentId;
+  })();
 
   const totalSteps = 9;
 

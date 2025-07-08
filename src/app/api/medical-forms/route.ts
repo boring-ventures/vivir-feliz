@@ -5,14 +5,32 @@ import { MedicalFormStatus } from "@prisma/client";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { appointmentId, formData } = body;
+    const { appointmentId: rawAppointmentId, formData } = body;
 
-    if (!appointmentId || !formData) {
+    if (!rawAppointmentId || !formData) {
       return NextResponse.json(
         { error: "ID de cita y datos del formulario requeridos" },
         { status: 400 }
       );
     }
+
+    // Extract the actual appointment ID from formats like "CON-{id}-{timestamp}" or "INT-{id}-{timestamp}"
+    const appointmentId = (() => {
+      if (
+        rawAppointmentId.startsWith("CON-") ||
+        rawAppointmentId.startsWith("INT-")
+      ) {
+        const parts = rawAppointmentId.split("-");
+        if (parts.length === 3) {
+          // Format: CON-{id}-{timestamp} -> return just {id}
+          return parts[1];
+        } else if (parts.length === 2) {
+          // Format: CON-{id} -> return just {id}
+          return parts[1];
+        }
+      }
+      return rawAppointmentId;
+    })();
 
     // Verify that the appointment exists
     const appointment = await prisma.appointment.findUnique({

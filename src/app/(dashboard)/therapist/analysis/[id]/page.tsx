@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader } from "@/components/ui/loader";
@@ -16,56 +17,132 @@ import {
   Eye,
   Brain,
   CheckCircle,
-  ArrowRight,
   FileText,
-  Heart,
   Activity,
   MessageCircle,
   Users,
   Baby,
   Stethoscope,
   AlertTriangle,
+  Send,
+  Sparkles,
+  Edit,
+  AlertCircle,
+  XCircle,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
 import { useMedicalFormAnalysis } from "@/hooks/use-medical-form-analysis";
+import {
+  useAnalysis,
+  useSaveAnalysis,
+  useAutoPopulateAnalysis,
+  type AnalysisData,
+} from "@/hooks/use-analysis";
+import MedicalFormModal from "@/components/therapist/medical-form-modal";
 
 export default function TherapistAnalysisDetailPage() {
   const params = useParams();
   const router = useRouter();
   const appointmentId = params.id as string;
 
-  // Use the hook for fetching analysis data
+  // Hooks for data fetching and mutations
   const {
     data: analysisData,
     isLoading: loading,
     error,
   } = useMedicalFormAnalysis(appointmentId);
 
-  const [evaluacionEnviada, setEvaluacionEnviada] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { data: existingAnalysis, isLoading: analysisLoading } =
+    useAnalysis(appointmentId);
 
-  const [formData, setFormData] = useState({
+  const saveAnalysisMutation = useSaveAnalysis();
+  const autoPopulateAnalysis = useAutoPopulateAnalysis();
+
+  const [formData, setFormData] = useState<Partial<AnalysisData>>({
     // Observación Clínica
-    presentacion: [] as string[],
-    disposicion: [] as string[],
-    contactoOcular: [] as string[],
-    nivelActividad: [] as string[],
-    evaluacionSensorial: "",
-    comportamientoGeneral: "",
+    presentation: [],
+    disposition: [],
+    eyeContact: [],
+    activityLevel: [],
+    sensoryEvaluation: "",
+    generalBehavior: "",
 
     // Análisis Profesional
-    analisisPsicologico: "",
-    areaCognitiva: "",
-    areaAprendizaje: "",
-    desempenoEscolar: "",
-    analisisLenguaje: "",
-    analisisMotor: "",
-    informacionAdicional: "",
-    observacionesGenerales: "",
-    hipotesisDiagnostica: "",
+    psychologicalAnalysis: "",
+    cognitiveArea: "",
+    learningArea: "",
+    schoolPerformance: "",
+    languageAnalysis: "",
+    motorAnalysis: "",
+    additionalInformation: "",
+    generalObservations: "",
+    diagnosticHypothesis: "",
+
+    // Recommendations
+    recommendations: "",
+    treatmentPlan: "",
+    followUpNeeded: false,
+
+    status: "DRAFT",
   });
+
+  const [saving, setSaving] = useState(false);
+  const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
+  const [isMedicalFormModalOpen, setIsMedicalFormModalOpen] = useState(false);
+
+  const handleAutoPopulate = useCallback(() => {
+    if (!analysisData?.medicalForm) {
+      toast({
+        title: "No disponible",
+        description: "No hay formulario médico disponible para auto-completar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const autoData = autoPopulateAnalysis(analysisData.medicalForm);
+    setFormData((prev) => ({
+      ...prev,
+      ...autoData,
+    }));
+    setHasAutoPopulated(true);
+
+    toast({
+      title: "Análisis auto-completado",
+      description:
+        "Los campos se han completado basándose en el formulario médico",
+    });
+  }, [analysisData?.medicalForm, autoPopulateAnalysis]);
+
+  // Load existing analysis data if available
+  useEffect(() => {
+    if (existingAnalysis && !analysisLoading) {
+      setFormData({
+        ...existingAnalysis,
+        eyeContact: existingAnalysis.eyeContact || [],
+        // Map database field names to form field names
+        presentation: existingAnalysis.presentation || [],
+        disposition: existingAnalysis.disposition || [],
+        activityLevel: existingAnalysis.activityLevel || [],
+      });
+    } else if (
+      analysisData?.medicalForm &&
+      !hasAutoPopulated &&
+      !existingAnalysis
+    ) {
+      // Auto-populate if no existing analysis and medical form exists
+      handleAutoPopulate();
+    }
+  }, [
+    existingAnalysis,
+    analysisLoading,
+    analysisData,
+    hasAutoPopulated,
+    handleAutoPopulate,
+  ]);
 
   // Show error toast if there's an error
   if (error) {
@@ -91,7 +168,7 @@ export default function TherapistAnalysisDetailPage() {
     }));
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -101,16 +178,163 @@ export default function TherapistAnalysisDetailPage() {
   const guardarBorrador = async () => {
     setSaving(true);
     try {
-      // Here you would save to database
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulation
+      await saveAnalysisMutation.mutateAsync({
+        ...formData,
+        appointmentId,
+        status: "DRAFT",
+      });
+
       toast({
         title: "Borrador guardado",
         description: "La evaluación ha sido guardada como borrador",
       });
-    } catch {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudo guardar el borrador",
+        description:
+          error instanceof Error
+            ? error.message
+            : "No se pudo guardar el borrador",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Validation function to check if all required fields are filled
+  const validateForm = () => {
+    // First, check if medical form is complete
+    if (!analysisData?.medicalForm) {
+      toast({
+        title: "Formulario médico faltante",
+        description:
+          "No se encontró el formulario médico para esta cita. Es necesario completar el formulario médico antes de finalizar el análisis.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    const medicalForm = analysisData.medicalForm;
+
+    // Check if medical form has essential fields completed
+    const requiredMedicalFields = [
+      "childName",
+      "childBirthDate",
+      "pregnancyType",
+      "deliveryType",
+      "currentCommunication",
+      "comprehension",
+    ];
+
+    const missingMedicalFields = requiredMedicalFields.filter(
+      (field) => !medicalForm[field as keyof typeof medicalForm]
+    );
+
+    if (missingMedicalFields.length > 0 || medicalForm.status === "DRAFT") {
+      toast({
+        title: "Formulario médico incompleto",
+        description:
+          "El formulario médico debe estar completamente lleno y revisado antes de finalizar el análisis. Por favor, complete el formulario médico primero.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Then check analysis form completion
+    const requiredFields = [
+      "psychologicalAnalysis",
+      "cognitiveArea",
+      "languageAnalysis",
+      "motorAnalysis",
+      "diagnosticHypothesis",
+      "recommendations",
+      "treatmentPlan",
+    ];
+
+    const missingFields = requiredFields.filter(
+      (field) =>
+        !formData[field as keyof typeof formData] ||
+        (formData[field as keyof typeof formData] as string).trim() === ""
+    );
+
+    // Check if at least one array field has values
+    const arrayFields = [
+      "presentation",
+      "disposition",
+      "eyeContact",
+      "activityLevel",
+    ];
+    const hasArrayValues = arrayFields.some(
+      (field) =>
+        (formData[field as keyof typeof formData] as string[])?.length > 0
+    );
+
+    if (missingFields.length > 0 || !hasArrayValues) {
+      const fieldNames: Record<string, string> = {
+        psychologicalAnalysis: "Análisis Psicológico",
+        cognitiveArea: "Área Cognitiva",
+        languageAnalysis: "Análisis del Lenguaje",
+        motorAnalysis: "Análisis Motor",
+        diagnosticHypothesis: "Hipótesis Diagnóstica",
+        recommendations: "Recomendaciones",
+        treatmentPlan: "Plan de Tratamiento",
+      };
+
+      const missingFieldNames = missingFields
+        .map((field) => fieldNames[field])
+        .join(", ");
+      const observationMessage = !hasArrayValues
+        ? "Debe completar al menos una observación clínica (Presentación, Disposición, Contacto Visual o Nivel de Actividad)"
+        : "";
+
+      const message = [
+        missingFields.length > 0
+          ? `Campos requeridos: ${missingFieldNames}`
+          : "",
+        observationMessage,
+      ]
+        .filter(Boolean)
+        .join(". ");
+
+      toast({
+        title: "Análisis incompleto",
+        description: message,
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const completarAnalisis = async () => {
+    // Validate form before proceeding
+    if (!validateForm()) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await saveAnalysisMutation.mutateAsync({
+        ...formData,
+        appointmentId,
+        status: "COMPLETED",
+      });
+
+      toast({
+        title: "Análisis completado",
+        description: "Redirigiendo a la generación de propuesta técnica...",
+      });
+
+      // Redirect to proposal form
+      router.push(`/therapist/analysis/${appointmentId}/proposal`);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "No se pudo completar el análisis",
         variant: "destructive",
       });
     } finally {
@@ -119,21 +343,33 @@ export default function TherapistAnalysisDetailPage() {
   };
 
   const enviarAAdmin = async () => {
+    setSaving(true);
     try {
-      // Here you would send to admin
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulation
-      setEvaluacionEnviada(true);
+      await saveAnalysisMutation.mutateAsync({
+        ...formData,
+        appointmentId,
+        status: "SENT_TO_ADMIN",
+      });
+
       toast({
-        title: "Evaluación enviada",
+        title: "Análisis enviado",
         description:
           "La evaluación ha sido enviada al administrador exitosamente",
       });
-    } catch {
+
+      // Redirect back to analysis list
+      router.push("/therapist/analysis");
+    } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudo enviar la evaluación",
+        description:
+          error instanceof Error
+            ? error.message
+            : "No se pudo enviar la evaluación",
         variant: "destructive",
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -141,19 +377,7 @@ export default function TherapistAnalysisDetailPage() {
     return new Date(dateString).toLocaleDateString("es-ES");
   };
 
-  const calculateAge = (birthDate: string) => {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    const years = today.getFullYear() - birth.getFullYear();
-    const months = today.getMonth() - birth.getMonth();
-
-    if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
-      return `${years - 1} años`;
-    }
-    return `${years} años`;
-  };
-
-  if (loading) {
+  if (loading || analysisLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -227,23 +451,42 @@ export default function TherapistAnalysisDetailPage() {
                     </Badge>
                   </>
                 )}
+                {formData.status && (
+                  <>
+                    <span>•</span>
+                    <Badge
+                      variant="secondary"
+                      className={
+                        formData.status === "SENT_TO_ADMIN"
+                          ? "bg-green-100 text-green-800"
+                          : formData.status === "COMPLETED"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                      }
+                    >
+                      {formData.status === "SENT_TO_ADMIN"
+                        ? "ENVIADO"
+                        : formData.status === "COMPLETED"
+                          ? "COMPLETADO"
+                          : "BORRADOR"}
+                    </Badge>
+                  </>
+                )}
               </div>
             </div>
           </div>
+
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={guardarBorrador}
-              disabled={saving}
-            >
-              {saving ? (
-                <Loader className="h-4 w-4 mr-1" />
-              ) : (
-                <Save className="h-4 w-4 mr-1" />
-              )}
-              Guardar
-            </Button>
+            {medicalForm && !hasAutoPopulated && !existingAnalysis && (
+              <Button
+                variant="outline"
+                onClick={handleAutoPopulate}
+                className="border-purple-200 text-purple-700 hover:bg-purple-50"
+              >
+                <Sparkles className="h-4 w-4 mr-1" />
+                Auto-completar
+              </Button>
+            )}
             <Button variant="outline" size="sm">
               <Printer className="h-4 w-4 mr-1" />
               Imprimir
@@ -253,643 +496,767 @@ export default function TherapistAnalysisDetailPage() {
       </header>
 
       {/* Content */}
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Medical Form Data - Left Sidebar */}
-          {medicalForm && (
-            <div className="lg:col-span-1">
-              <Card className="border-0 shadow-sm sticky top-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center text-lg">
-                    <FileText className="h-5 w-5 mr-2 text-blue-600" />
-                    Información del Paciente
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Tabs defaultValue="basic" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="basic" className="text-xs">
-                        Básico
-                      </TabsTrigger>
-                      <TabsTrigger value="development" className="text-xs">
-                        Desarrollo
-                      </TabsTrigger>
-                    </TabsList>
+      <div className="p-6 space-y-6">
+        {/* Medical Form Section - Top */}
+        {medicalForm ? (
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between text-lg font-medium">
+                <div className="flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-green-600" />
+                  Formulario Médico
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsMedicalFormModalOpen(true)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Ver Completo
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsMedicalFormModalOpen(true)}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Editar
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {/* Summary View */}
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid grid-cols-3 w-full">
+                  <TabsTrigger value="basic">Básico</TabsTrigger>
+                  <TabsTrigger value="development">Desarrollo</TabsTrigger>
+                  <TabsTrigger value="family">Familia</TabsTrigger>
+                </TabsList>
 
-                    <TabsContent value="basic" className="space-y-4 mt-4">
-                      {/* Basic Info */}
-                      <div className="bg-blue-50 rounded-lg p-3">
-                        <div className="flex items-center mb-2">
-                          <Baby className="h-4 w-4 mr-2 text-blue-600" />
-                          <span className="font-medium text-sm">
-                            Información Básica
-                          </span>
-                        </div>
-                        <div className="text-xs space-y-1">
-                          <p>
-                            <strong>Nombre:</strong>{" "}
-                            {medicalForm.basicInfo.childName}
-                          </p>
-                          <p>
-                            <strong>Nacimiento:</strong>{" "}
-                            {formatDate(medicalForm.basicInfo.childBirthDate)}
-                          </p>
-                          <p>
-                            <strong>Edad:</strong>{" "}
-                            {calculateAge(medicalForm.basicInfo.childBirthDate)}
-                          </p>
-                        </div>
+                <TabsContent value="basic" className="space-y-3 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-800 mb-3 flex items-center">
+                        <Baby className="h-4 w-4 mr-2" />
+                        Información Básica
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <p>
+                          <strong>Nombre:</strong>{" "}
+                          {medicalForm.basicInfo.childName}
+                        </p>
+                        <p>
+                          <strong>Fecha Nac.:</strong>{" "}
+                          {formatDate(medicalForm.basicInfo.childBirthDate)}
+                        </p>
+                        <p>
+                          <strong>Edad:</strong>{" "}
+                          {medicalForm.basicInfo.childAgeYears} años{" "}
+                          {medicalForm.basicInfo.childAgeMonths} meses
+                        </p>
                       </div>
-
-                      {/* Perinatal History */}
-                      <div className="bg-pink-50 rounded-lg p-3">
-                        <div className="flex items-center mb-2">
-                          <Heart className="h-4 w-4 mr-2 text-pink-600" />
-                          <span className="font-medium text-sm">
-                            Historia Perinatal
-                          </span>
-                        </div>
-                        <div className="text-xs space-y-1">
+                    </div>
+                    <div className="bg-red-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-red-800 mb-3 flex items-center">
+                        <Stethoscope className="h-4 w-4 mr-2" />
+                        Historial Médico
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        {(medicalForm.medicalHistory?.importantIllnesses
+                          ?.length ?? 0) > 0 && (
                           <p>
-                            <strong>Embarazo:</strong>{" "}
-                            {medicalForm.perinatalHistory.pregnancyType ||
-                              "No especificado"}
-                          </p>
-                          <p>
-                            <strong>Tipo de parto:</strong>{" "}
-                            {medicalForm.perinatalHistory.deliveryType ||
-                              "No especificado"}
-                          </p>
-                          <p>
-                            <strong>Peso al nacer:</strong>{" "}
-                            {medicalForm.perinatalHistory.birthWeight ||
-                              "No especificado"}{" "}
-                            kg
-                          </p>
-                          {medicalForm.perinatalHistory
-                            .pregnancyComplications && (
-                            <p>
-                              <strong>Complicaciones:</strong>{" "}
-                              {
-                                medicalForm.perinatalHistory
-                                  .pregnancyComplications
-                              }
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Medical History */}
-                      <div className="bg-teal-50 rounded-lg p-3">
-                        <div className="flex items-center mb-2">
-                          <Stethoscope className="h-4 w-4 mr-2 text-teal-600" />
-                          <span className="font-medium text-sm">
-                            Historia Médica
-                          </span>
-                        </div>
-                        <div className="text-xs space-y-1">
-                          {medicalForm.medicalHistory.importantIllnesses &&
-                            medicalForm.medicalHistory.importantIllnesses
-                              .length > 0 && (
-                              <p>
-                                <strong>Enfermedades:</strong>{" "}
-                                {medicalForm.medicalHistory.importantIllnesses.join(
-                                  ", "
-                                )}
-                              </p>
+                            <strong>Enfermedades:</strong>{" "}
+                            {medicalForm.medicalHistory?.importantIllnesses?.join(
+                              ", "
                             )}
-                          {medicalForm.medicationsAllergies.takesMedications ===
-                            "si" && (
-                            <p>
-                              <strong>Medicamentos:</strong> Sí
-                            </p>
-                          )}
-                          {medicalForm.medicationsAllergies.foodAllergies &&
-                            medicalForm.medicationsAllergies.foodAllergies
-                              .length > 0 && (
-                              <p>
-                                <strong>Alergias:</strong>{" "}
-                                {medicalForm.medicationsAllergies.foodAllergies.join(
-                                  ", "
-                                )}
-                              </p>
+                          </p>
+                        )}
+                        {(medicalForm.medicationsAllergies?.foodAllergies
+                          ?.length ?? 0) > 0 && (
+                          <p>
+                            <strong>Alergias:</strong>{" "}
+                            {medicalForm.medicationsAllergies?.foodAllergies?.join(
+                              ", "
                             )}
-                        </div>
+                          </p>
+                        )}
                       </div>
-                    </TabsContent>
+                    </div>
+                  </div>
+                </TabsContent>
 
-                    <TabsContent value="development" className="space-y-4 mt-4">
-                      {/* Motor Development */}
-                      <div className="bg-green-50 rounded-lg p-3">
-                        <div className="flex items-center mb-2">
-                          <Activity className="h-4 w-4 mr-2 text-green-600" />
-                          <span className="font-medium text-sm">
-                            Desarrollo Motor
-                          </span>
-                        </div>
-                        <div className="text-xs space-y-1">
-                          <p>
-                            <strong>Caminó:</strong>{" "}
-                            {medicalForm.motorDevelopment.walkingAge ||
-                              "No especificado"}
-                          </p>
-                          <p>
-                            <strong>Sentarse:</strong>{" "}
-                            {medicalForm.motorDevelopment.sittingAge ||
-                              "No especificado"}
-                          </p>
-                          <p>
-                            <strong>Gateo:</strong>{" "}
-                            {medicalForm.motorDevelopment.crawlingAge ||
-                              "No especificado"}
-                          </p>
-                          {medicalForm.motorDevelopment.balanceDifficulties && (
-                            <p>
-                              <strong>Dificultades equilibrio:</strong>{" "}
-                              {medicalForm.motorDevelopment.balanceDifficulties}
-                            </p>
-                          )}
-                        </div>
+                <TabsContent value="development" className="space-y-3 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-green-800 mb-3 flex items-center">
+                        <Activity className="h-4 w-4 mr-2" />
+                        Desarrollo Motor
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <p>
+                          <strong>Control cabeza:</strong>{" "}
+                          {medicalForm.motorDevelopment?.headControlAge ||
+                            "No especificado"}
+                        </p>
+                        <p>
+                          <strong>Sentado sin apoyo:</strong>{" "}
+                          {medicalForm.motorDevelopment?.sittingAge ||
+                            "No especificado"}
+                        </p>
+                        <p>
+                          <strong>Gateo:</strong>{" "}
+                          {medicalForm.motorDevelopment?.crawlingAge ||
+                            "No especificado"}
+                        </p>
                       </div>
+                    </div>
+                    <div className="bg-indigo-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-indigo-800 mb-3 flex items-center">
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Lenguaje y Cognición
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <p>
+                          <strong>Primeras palabras:</strong>{" "}
+                          {medicalForm.languageCognition?.firstWordsAge ||
+                            "No especificado"}
+                        </p>
+                        <p>
+                          <strong>Frases 2 palabras:</strong>{" "}
+                          {medicalForm.languageCognition?.twoWordPhrasesAge ||
+                            "No especificado"}
+                        </p>
+                        <p>
+                          <strong>Comprensión:</strong>{" "}
+                          {medicalForm.languageCognition?.comprehension ||
+                            "No especificado"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
 
-                      {/* Language Development */}
-                      <div className="bg-indigo-50 rounded-lg p-3">
-                        <div className="flex items-center mb-2">
-                          <MessageCircle className="h-4 w-4 mr-2 text-indigo-600" />
-                          <span className="font-medium text-sm">
-                            Lenguaje y Cognición
-                          </span>
-                        </div>
-                        <div className="text-xs space-y-1">
-                          <p>
-                            <strong>Primeras palabras:</strong>{" "}
-                            {medicalForm.languageCognition.firstWordsAge ||
-                              "No especificado"}
-                          </p>
-                          <p>
-                            <strong>Frases 2 palabras:</strong>{" "}
-                            {medicalForm.languageCognition.twoWordPhrasesAge ||
-                              "No especificado"}
-                          </p>
-                          <p>
-                            <strong>Comprensión:</strong>{" "}
-                            {medicalForm.languageCognition.comprehension ||
-                              "No especificado"}
-                          </p>
-                          {medicalForm.languageCognition
-                            .learningDifficulties && (
-                            <p>
-                              <strong>Dificultades:</strong>{" "}
-                              {
-                                medicalForm.languageCognition
-                                  .learningDifficulties
+                <TabsContent value="family" className="space-y-3 mt-4">
+                  <div className="bg-purple-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-purple-800 mb-3 flex items-center">
+                      <Users className="h-4 w-4 mr-2" />
+                      Información Familiar
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <p>
+                        <strong>Vive con:</strong>{" "}
+                        {medicalForm.familyInfo?.livesWithWhom ||
+                          "No especificado"}
+                      </p>
+                      <p>
+                        <strong>Hermanos:</strong>{" "}
+                        {medicalForm.familyInfo?.hasSiblings ||
+                          "No especificado"}
+                      </p>
+                      {medicalForm.familyInfo?.recentChanges && (
+                        <p>
+                          <strong>Cambios recientes:</strong>{" "}
+                          {medicalForm.familyInfo?.recentChanges}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="text-center pt-4 border-t">
+                <p className="text-sm text-gray-500">
+                  Para ver o editar la información completa del formulario
+                  médico, haga clic en los botones de arriba
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="text-center py-8">
+                <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  No hay formulario médico
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Este paciente aún no tiene un formulario médico completado.
+                </p>
+                <Button onClick={() => setIsMedicalFormModalOpen(true)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Crear Formulario Médico
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Analysis Form - Main Content */}
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="space-y-8">
+              {/* SECCIÓN 1: OBSERVACIÓN CLÍNICA */}
+              <div>
+                <div className="flex items-center space-x-3 mb-6 pb-2 border-b border-gray-200">
+                  <Eye className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-xl font-bold text-gray-900">
+                    OBSERVACIÓN CLÍNICA
+                  </h2>
+                </div>
+
+                {/* Impresión General */}
+                <div className="mb-8">
+                  <h3 className="text-md font-semibold text-gray-700 mb-4">
+                    Impresión General del Niño/a
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Presentación */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                        Presentación:
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          "Acicalado",
+                          "Descuidado",
+                          "Edad aparente acorde",
+                          "Edad aparente no acorde",
+                        ].map((item) => (
+                          <div
+                            key={item}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={item}
+                              checked={formData.presentation?.includes(item)}
+                              onCheckedChange={(checked) =>
+                                handleCheckboxChange(
+                                  "presentation",
+                                  item,
+                                  checked as boolean
+                                )
                               }
-                            </p>
-                          )}
-                        </div>
+                            />
+                            <Label htmlFor={item} className="text-sm">
+                              {item}
+                            </Label>
+                          </div>
+                        ))}
                       </div>
-
-                      {/* Family Info */}
-                      <div className="bg-purple-50 rounded-lg p-3">
-                        <div className="flex items-center mb-2">
-                          <Users className="h-4 w-4 mr-2 text-purple-600" />
-                          <span className="font-medium text-sm">
-                            Información Familiar
-                          </span>
-                        </div>
-                        <div className="text-xs space-y-1">
-                          <p>
-                            <strong>Vive con:</strong>{" "}
-                            {medicalForm.familyInfo.livesWithWhom ||
-                              "No especificado"}
-                          </p>
-                          <p>
-                            <strong>Hermanos:</strong>{" "}
-                            {medicalForm.familyInfo.hasSiblings ||
-                              "No especificado"}
-                          </p>
-                          {medicalForm.familyInfo.recentChanges && (
-                            <p>
-                              <strong>Cambios recientes:</strong>{" "}
-                              {medicalForm.familyInfo.recentChanges}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Analysis Form - Main Content */}
-          <div className={medicalForm ? "lg:col-span-2" : "lg:col-span-3"}>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-6">
-                <div className="space-y-8">
-                  {/* SECCIÓN 1: OBSERVACIÓN CLÍNICA */}
-                  <div>
-                    <div className="flex items-center space-x-3 mb-6 pb-2 border-b border-gray-200">
-                      <Eye className="h-5 w-5 text-blue-600" />
-                      <h2 className="text-xl font-bold text-gray-900">
-                        OBSERVACIÓN CLÍNICA
-                      </h2>
                     </div>
 
-                    {/* Impresión General */}
-                    <div className="mb-8">
-                      <h3 className="text-md font-semibold text-gray-700 mb-4">
-                        Impresión General del Niño/a
-                      </h3>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Presentación */}
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                            Presentación:
-                          </Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {[
-                              "Acicalado",
-                              "Descuidado",
-                              "Edad aparente acorde",
-                              "Edad aparente no acorde",
-                            ].map((item) => (
-                              <div
-                                key={item}
-                                className="flex items-center space-x-2"
-                              >
-                                <Checkbox
-                                  id={item}
-                                  checked={formData.presentacion.includes(item)}
-                                  onCheckedChange={(checked) =>
-                                    handleCheckboxChange(
-                                      "presentacion",
-                                      item,
-                                      checked as boolean
-                                    )
-                                  }
-                                />
-                                <Label htmlFor={item} className="text-sm">
-                                  {item}
-                                </Label>
-                              </div>
-                            ))}
+                    {/* Disposición */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                        Disposición:
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          "Colaborador",
+                          "Tímido",
+                          "Agitado",
+                          "Retraído",
+                          "Desafiante",
+                          "No contactable",
+                        ].map((item) => (
+                          <div
+                            key={item}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={item}
+                              checked={formData.disposition?.includes(item)}
+                              onCheckedChange={(checked) =>
+                                handleCheckboxChange(
+                                  "disposition",
+                                  item,
+                                  checked as boolean
+                                )
+                              }
+                            />
+                            <Label htmlFor={item} className="text-sm">
+                              {item}
+                            </Label>
                           </div>
-                        </div>
-
-                        {/* Disposición */}
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                            Disposición:
-                          </Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {[
-                              "Colaborador",
-                              "Tímido",
-                              "Agitado",
-                              "Retraído",
-                              "Desafiante",
-                              "No contactable",
-                            ].map((item) => (
-                              <div
-                                key={item}
-                                className="flex items-center space-x-2"
-                              >
-                                <Checkbox
-                                  id={item}
-                                  checked={formData.disposicion.includes(item)}
-                                  onCheckedChange={(checked) =>
-                                    handleCheckboxChange(
-                                      "disposicion",
-                                      item,
-                                      checked as boolean
-                                    )
-                                  }
-                                />
-                                <Label htmlFor={item} className="text-sm">
-                                  {item}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Contacto Ocular */}
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                            Contacto Ocular:
-                          </Label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {["Sostenido", "Fugaz", "Evita"].map((item) => (
-                              <div
-                                key={item}
-                                className="flex items-center space-x-2"
-                              >
-                                <Checkbox
-                                  id={item}
-                                  checked={formData.contactoOcular.includes(
-                                    item
-                                  )}
-                                  onCheckedChange={(checked) =>
-                                    handleCheckboxChange(
-                                      "contactoOcular",
-                                      item,
-                                      checked as boolean
-                                    )
-                                  }
-                                />
-                                <Label htmlFor={item} className="text-sm">
-                                  {item}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Nivel de Actividad */}
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                            Nivel de Actividad:
-                          </Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {[
-                              "Hipotónico/a",
-                              "Normotónico/a",
-                              "Hipertónico/a",
-                              "Hiperactivo/a",
-                              "Hipoactivo/a",
-                            ].map((item) => (
-                              <div
-                                key={item}
-                                className="flex items-center space-x-2"
-                              >
-                                <Checkbox
-                                  id={item}
-                                  checked={formData.nivelActividad.includes(
-                                    item
-                                  )}
-                                  onCheckedChange={(checked) =>
-                                    handleCheckboxChange(
-                                      "nivelActividad",
-                                      item,
-                                      checked as boolean
-                                    )
-                                  }
-                                />
-                                <Label htmlFor={item} className="text-sm">
-                                  {item}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                        ))}
                       </div>
+                    </div>
 
-                      {/* Evaluación Sensorial */}
-                      <div className="mt-6">
-                        <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                          Evaluación Sensorial (reacción a estímulos):
-                        </Label>
-                        <Textarea
-                          value={formData.evaluacionSensorial}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "evaluacionSensorial",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Describe las reacciones del niño/a a diferentes estímulos sensoriales..."
-                          rows={3}
-                          className="border-gray-200"
-                        />
+                    {/* Contacto Ocular */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                        Contacto Ocular:
+                      </Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {["Sostenido", "Fugaz", "Evita"].map((item) => (
+                          <div
+                            key={item}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={item}
+                              checked={formData.eyeContact?.includes(item)}
+                              onCheckedChange={(checked) =>
+                                handleCheckboxChange(
+                                  "eyeContact",
+                                  item,
+                                  checked as boolean
+                                )
+                              }
+                            />
+                            <Label htmlFor={item} className="text-sm">
+                              {item}
+                            </Label>
+                          </div>
+                        ))}
                       </div>
+                    </div>
 
-                      {/* Comportamiento General */}
-                      <div className="mt-6">
-                        <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                          Comportamiento General:
-                        </Label>
-                        <Textarea
-                          value={formData.comportamientoGeneral}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "comportamientoGeneral",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Describe el comportamiento general observado durante la sesión..."
-                          rows={3}
-                          className="border-gray-200"
-                        />
+                    {/* Nivel de Actividad */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                        Nivel de Actividad:
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          "Hipotónico/a",
+                          "Normotónico/a",
+                          "Hipertónico/a",
+                          "Hiperactivo/a",
+                          "Hipoactivo/a",
+                        ].map((item) => (
+                          <div
+                            key={item}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={item}
+                              checked={formData.activityLevel?.includes(item)}
+                              onCheckedChange={(checked) =>
+                                handleCheckboxChange(
+                                  "activityLevel",
+                                  item,
+                                  checked as boolean
+                                )
+                              }
+                            />
+                            <Label htmlFor={item} className="text-sm">
+                              {item}
+                            </Label>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
 
-                  {/* SECCIÓN 2: ANÁLISIS PROFESIONAL */}
-                  <div>
-                    <div className="flex items-center space-x-3 mb-6 pb-2 border-b border-gray-200">
-                      <Brain className="h-5 w-5 text-purple-600" />
-                      <h2 className="text-xl font-bold text-gray-900">
-                        ANÁLISIS PROFESIONAL
-                      </h2>
-                    </div>
-
-                    {/* Análisis Psicológico */}
-                    <div className="mb-6">
-                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                        Análisis Psicológico:
-                      </Label>
-                      <Textarea
-                        value={formData.analisisPsicologico}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "analisisPsicologico",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Análisis psicológico detallado del paciente..."
-                        rows={3}
-                        className="border-gray-200"
-                      />
-                    </div>
-
-                    {/* Análisis Psicopedagógico */}
-                    <div className="mb-6">
-                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                        Análisis Psicopedagógico:
-                      </Label>
-                      <div className="space-y-4">
-                        <div>
-                          <Label className="text-xs text-gray-500 mb-1 block">
-                            ÁREA COGNITIVA:
-                          </Label>
-                          <Textarea
-                            value={formData.areaCognitiva}
-                            onChange={(e) =>
-                              handleInputChange("areaCognitiva", e.target.value)
-                            }
-                            placeholder="Evaluación del área cognitiva..."
-                            rows={2}
-                            className="border-gray-200"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-500 mb-1 block">
-                            ÁREA DEL APRENDIZAJE:
-                          </Label>
-                          <Textarea
-                            value={formData.areaAprendizaje}
-                            onChange={(e) =>
-                              handleInputChange(
-                                "areaAprendizaje",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Evaluación del área de aprendizaje..."
-                            rows={2}
-                            className="border-gray-200"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-500 mb-1 block">
-                            DESEMPEÑO ESCOLAR (si aplica):
-                          </Label>
-                          <Textarea
-                            value={formData.desempenoEscolar}
-                            onChange={(e) =>
-                              handleInputChange(
-                                "desempenoEscolar",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Evaluación del desempeño escolar..."
-                            rows={2}
-                            className="border-gray-200"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Análisis de Lenguaje */}
-                    <div className="mb-6">
-                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                        Análisis de Lenguaje y Comunicación:
-                      </Label>
-                      <Textarea
-                        value={formData.analisisLenguaje}
-                        onChange={(e) =>
-                          handleInputChange("analisisLenguaje", e.target.value)
-                        }
-                        placeholder="Análisis del lenguaje y comunicación..."
-                        rows={3}
-                        className="border-gray-200"
-                      />
-                    </div>
-
-                    {/* Análisis Motor */}
-                    <div className="mb-6">
-                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                        Análisis Motor y Sensorial:
-                      </Label>
-                      <Textarea
-                        value={formData.analisisMotor}
-                        onChange={(e) =>
-                          handleInputChange("analisisMotor", e.target.value)
-                        }
-                        placeholder="Análisis motor y sensorial..."
-                        rows={3}
-                        className="border-gray-200"
-                      />
-                    </div>
-
-                    {/* Información Adicional */}
-                    <div className="mb-6">
-                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                        Información Adicional:
-                      </Label>
-                      <Textarea
-                        value={formData.informacionAdicional}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "informacionAdicional",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Información adicional relevante..."
-                        rows={3}
-                        className="border-gray-200"
-                      />
-                    </div>
-
-                    {/* Observaciones Generales */}
-                    <div className="mb-6">
-                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                        Observaciones Generales:
-                      </Label>
-                      <Textarea
-                        value={formData.observacionesGenerales}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "observacionesGenerales",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Observaciones generales de la evaluación..."
-                        rows={3}
-                        className="border-gray-200"
-                      />
-                    </div>
-
-                    {/* Hipótesis Diagnóstica */}
-                    <div className="mb-6">
-                      <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-                        Hipótesis Diagnóstica:
-                      </Label>
-                      <Textarea
-                        value={formData.hipotesisDiagnostica}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "hipotesisDiagnostica",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Hipótesis diagnóstica basada en la evaluación..."
-                        rows={3}
-                        className="border-gray-200"
-                      />
-                    </div>
+                  {/* Evaluación Sensorial */}
+                  <div className="mt-6">
+                    <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                      Evaluación Sensorial (reacción a estímulos):
+                    </Label>
+                    <Textarea
+                      value={formData.sensoryEvaluation || ""}
+                      onChange={(e) =>
+                        handleInputChange("sensoryEvaluation", e.target.value)
+                      }
+                      placeholder="Describe las reacciones del niño/a a diferentes estímulos sensoriales..."
+                      rows={3}
+                      className="border-gray-200"
+                    />
                   </div>
 
-                  {/* Botones de acción */}
-                  <div className="flex justify-center pt-4">
-                    {!evaluacionEnviada ? (
-                      <Button
-                        onClick={enviarAAdmin}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Enviar a Admin
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() =>
-                          router.push(`/admin/proposals/${appointmentId}`)
-                        }
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                        Ir a Propuesta de Servicio
-                      </Button>
-                    )}
+                  {/* Comportamiento General */}
+                  <div className="mt-6">
+                    <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                      Comportamiento General:
+                    </Label>
+                    <Textarea
+                      value={formData.generalBehavior || ""}
+                      onChange={(e) =>
+                        handleInputChange("generalBehavior", e.target.value)
+                      }
+                      placeholder="Describe el comportamiento general observado durante la sesión..."
+                      rows={3}
+                      className="border-gray-200"
+                    />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </div>
+
+              {/* SECCIÓN 2: ANÁLISIS PROFESIONAL */}
+              <div>
+                <div className="flex items-center space-x-3 mb-6 pb-2 border-b border-gray-200">
+                  <Brain className="h-5 w-5 text-purple-600" />
+                  <h2 className="text-xl font-bold text-gray-900">
+                    ANÁLISIS PROFESIONAL
+                  </h2>
+                </div>
+
+                {/* Análisis Psicológico */}
+                <div className="mb-6">
+                  <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                    Análisis Psicológico:
+                  </Label>
+                  <Textarea
+                    value={formData.psychologicalAnalysis || ""}
+                    onChange={(e) =>
+                      handleInputChange("psychologicalAnalysis", e.target.value)
+                    }
+                    placeholder="Análisis psicológico detallado del paciente..."
+                    rows={4}
+                    className="border-gray-200"
+                  />
+                </div>
+
+                {/* Análisis Psicopedagógico */}
+                <div className="mb-6">
+                  <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                    Análisis Psicopedagógico:
+                  </Label>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-xs text-gray-500 mb-1 block">
+                        ÁREA COGNITIVA:
+                      </Label>
+                      <Textarea
+                        value={formData.cognitiveArea || ""}
+                        onChange={(e) =>
+                          handleInputChange("cognitiveArea", e.target.value)
+                        }
+                        placeholder="Evaluación del área cognitiva..."
+                        rows={3}
+                        className="border-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 mb-1 block">
+                        ÁREA DEL APRENDIZAJE:
+                      </Label>
+                      <Textarea
+                        value={formData.learningArea || ""}
+                        onChange={(e) =>
+                          handleInputChange("learningArea", e.target.value)
+                        }
+                        placeholder="Evaluación del área de aprendizaje..."
+                        rows={3}
+                        className="border-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 mb-1 block">
+                        DESEMPEÑO ESCOLAR (si aplica):
+                      </Label>
+                      <Textarea
+                        value={formData.schoolPerformance || ""}
+                        onChange={(e) =>
+                          handleInputChange("schoolPerformance", e.target.value)
+                        }
+                        placeholder="Evaluación del desempeño escolar..."
+                        rows={3}
+                        className="border-gray-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Análisis de Lenguaje */}
+                <div className="mb-6">
+                  <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                    Análisis de Lenguaje y Comunicación:
+                  </Label>
+                  <Textarea
+                    value={formData.languageAnalysis || ""}
+                    onChange={(e) =>
+                      handleInputChange("languageAnalysis", e.target.value)
+                    }
+                    placeholder="Análisis del lenguaje y comunicación..."
+                    rows={4}
+                    className="border-gray-200"
+                  />
+                </div>
+
+                {/* Análisis Motor */}
+                <div className="mb-6">
+                  <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                    Análisis Motor y Sensorial:
+                  </Label>
+                  <Textarea
+                    value={formData.motorAnalysis || ""}
+                    onChange={(e) =>
+                      handleInputChange("motorAnalysis", e.target.value)
+                    }
+                    placeholder="Análisis motor y sensorial..."
+                    rows={4}
+                    className="border-gray-200"
+                  />
+                </div>
+
+                {/* Información Adicional */}
+                <div className="mb-6">
+                  <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                    Información Adicional:
+                  </Label>
+                  <Textarea
+                    value={formData.additionalInformation || ""}
+                    onChange={(e) =>
+                      handleInputChange("additionalInformation", e.target.value)
+                    }
+                    placeholder="Información adicional relevante..."
+                    rows={3}
+                    className="border-gray-200"
+                  />
+                </div>
+
+                {/* Observaciones Generales */}
+                <div className="mb-6">
+                  <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                    Observaciones Generales:
+                  </Label>
+                  <Textarea
+                    value={formData.generalObservations || ""}
+                    onChange={(e) =>
+                      handleInputChange("generalObservations", e.target.value)
+                    }
+                    placeholder="Observaciones generales de la evaluación..."
+                    rows={3}
+                    className="border-gray-200"
+                  />
+                </div>
+
+                {/* Hipótesis Diagnóstica */}
+                <div className="mb-6">
+                  <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                    Hipótesis Diagnóstica:
+                  </Label>
+                  <Textarea
+                    value={formData.diagnosticHypothesis || ""}
+                    onChange={(e) =>
+                      handleInputChange("diagnosticHypothesis", e.target.value)
+                    }
+                    placeholder="Hipótesis diagnóstica basada en la evaluación..."
+                    rows={3}
+                    className="border-gray-200"
+                  />
+                </div>
+
+                {/* Recomendaciones */}
+                <div className="mb-6">
+                  <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                    Recomendaciones:
+                  </Label>
+                  <Textarea
+                    value={formData.recommendations || ""}
+                    onChange={(e) =>
+                      handleInputChange("recommendations", e.target.value)
+                    }
+                    placeholder="Recomendaciones para el paciente y la familia..."
+                    rows={4}
+                    className="border-gray-200"
+                  />
+                </div>
+
+                {/* Plan de Tratamiento */}
+                <div className="mb-6">
+                  <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                    Plan de Tratamiento:
+                  </Label>
+                  <Textarea
+                    value={formData.treatmentPlan || ""}
+                    onChange={(e) =>
+                      handleInputChange("treatmentPlan", e.target.value)
+                    }
+                    placeholder="Plan de tratamiento propuesto..."
+                    rows={4}
+                    className="border-gray-200"
+                  />
+                </div>
+
+                {/* Seguimiento Necesario */}
+                <div className="mb-6">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="followUpNeeded"
+                      checked={formData.followUpNeeded || false}
+                      onCheckedChange={(checked) =>
+                        handleInputChange("followUpNeeded", !!checked)
+                      }
+                    />
+                    <Label
+                      htmlFor="followUpNeeded"
+                      className="text-sm font-medium"
+                    >
+                      Requiere seguimiento adicional
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status indicators */}
+              <div className="pt-6 border-t border-gray-200 mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                  Estado del Proceso:
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Medical Form Status */}
+                  <div className="flex items-start space-x-3 p-3 rounded-lg border">
+                    {analysisData?.medicalForm ? (
+                      analysisData.medicalForm.status === "REVIEWED" ? (
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                      )
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        Formulario Médico
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {analysisData?.medicalForm
+                          ? analysisData.medicalForm.status === "REVIEWED"
+                            ? "Completado y revisado"
+                            : "Pendiente de revisión"
+                          : "No completado"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Analysis Status */}
+                  <div className="flex items-start space-x-3 p-3 rounded-lg border">
+                    {(() => {
+                      const requiredFields = [
+                        "psychologicalAnalysis",
+                        "cognitiveArea",
+                        "languageAnalysis",
+                        "motorAnalysis",
+                        "diagnosticHypothesis",
+                        "recommendations",
+                        "treatmentPlan",
+                      ];
+                      const arrayFields = [
+                        "presentation",
+                        "disposition",
+                        "eyeContact",
+                        "activityLevel",
+                      ];
+
+                      const missingFields = requiredFields.filter(
+                        (field) =>
+                          !formData[field as keyof typeof formData] ||
+                          (
+                            formData[field as keyof typeof formData] as string
+                          ).trim() === ""
+                      );
+
+                      const hasArrayValues = arrayFields.some(
+                        (field) =>
+                          (formData[field as keyof typeof formData] as string[])
+                            ?.length > 0
+                      );
+
+                      const isComplete =
+                        missingFields.length === 0 && hasArrayValues;
+
+                      return (
+                        <>
+                          {isComplete ? (
+                            <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                          ) : (
+                            <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                          )}
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              Análisis Clínico
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              {isComplete
+                                ? "Completado"
+                                : `Faltan ${missingFields.length + (hasArrayValues ? 0 : 1)} campos por completar`}
+                            </p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Requirements notice */}
+                {(!analysisData?.medicalForm ||
+                  analysisData.medicalForm.status !== "REVIEWED") && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <Info className="h-4 w-4 text-blue-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-blue-800">
+                          <strong>Requisito:</strong> Complete y guarde el
+                          formulario médico antes de finalizar el análisis.
+                        </p>
+                        <button
+                          onClick={() => setIsMedicalFormModalOpen(true)}
+                          className="text-sm text-blue-600 hover:text-blue-800 underline mt-1"
+                        >
+                          Abrir formulario médico
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  variant="outline"
+                  onClick={guardarBorrador}
+                  disabled={saving}
+                  className="flex-1"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? "Guardando..." : "Guardar Borrador"}
+                </Button>
+
+                <Button
+                  onClick={completarAnalisis}
+                  disabled={saving}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Completar Análisis
+                </Button>
+
+                {formData.status === "COMPLETED" && (
+                  <Button
+                    onClick={enviarAAdmin}
+                    disabled={saving}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Enviar a Admin
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Medical Form Modal */}
+      <MedicalFormModal
+        isOpen={isMedicalFormModalOpen}
+        onClose={() => setIsMedicalFormModalOpen(false)}
+        appointmentId={appointmentId}
+        existingData={medicalForm}
+        patientName={appointment.patientName}
+        onSave={() => {
+          // Refresh the appointment data after saving
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

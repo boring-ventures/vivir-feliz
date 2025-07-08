@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
-  useTherapists,
+  useTherapistsWithSchedule,
   useUpdateTherapistSchedule,
 } from "@/hooks/useTherapists";
 import {
@@ -104,7 +104,11 @@ export default function TherapistAgendaPage() {
   const { profile, isLoading: authLoading } = useCurrentUser();
 
   // Fetch therapists data (to get current therapist's data)
-  const { data: therapists = [], isLoading, error } = useTherapists();
+  const {
+    data: therapists = [],
+    isLoading,
+    error,
+  } = useTherapistsWithSchedule();
   const updateScheduleMutation = useUpdateTherapistSchedule();
 
   // Find current therapist's profile

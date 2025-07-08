@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useTherapists } from "@/hooks/useTherapists";
+import { useTherapistsWithSchedule } from "@/hooks/useTherapists";
 import {
   TherapistProfile,
   WeeklyAvailability,
@@ -163,7 +163,11 @@ export default function TherapistsPage() {
   const [activeTab, setActiveTab] = useState<string>("calendario");
 
   // Fetch therapists data
-  const { data: therapists = [], isLoading, error } = useTherapists();
+  const {
+    data: therapists = [],
+    isLoading,
+    error,
+  } = useTherapistsWithSchedule();
 
   // Helper function to convert time string to minutes
   const timeToMinutes = (time: string): number => {

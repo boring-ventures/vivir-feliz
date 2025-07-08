@@ -92,20 +92,31 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Role-based access control for dashboard routes
-  if (session && req.nextUrl.pathname.startsWith("/dashboard")) {
+  // Role-based access control for dashboard routes (but not for /dashboard itself)
+  if (
+    session &&
+    req.nextUrl.pathname.startsWith("/dashboard") &&
+    req.nextUrl.pathname !== "/dashboard"
+  ) {
     try {
       // Make an internal API call to get user role
       const protocol = req.nextUrl.protocol;
       const host = req.nextUrl.host;
       const apiUrl = `${protocol}//${host}/api/profile`;
 
+      // Set a timeout for the API call to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
       const response = await fetch(apiUrl, {
         headers: {
           Cookie: req.headers.get("cookie") || "",
           Authorization: `Bearer ${session.access_token}`,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -113,14 +124,28 @@ export async function middleware(req: NextRequest) {
 
         if (userRole && !isCorrectRoleForPath(userRole, req.nextUrl.pathname)) {
           // User is trying to access a page for a different role
+          console.log(
+            `Middleware: Redirecting user with role ${userRole} from ${req.nextUrl.pathname} to correct dashboard`
+          );
           const correctDashboardPath = getRoleDashboardPath(userRole);
           const redirectUrl = req.nextUrl.clone();
           redirectUrl.pathname = correctDashboardPath;
           return NextResponse.redirect(redirectUrl);
         }
+      } else {
+        console.log(
+          `Middleware: Failed to fetch user profile, status: ${response.status}, continuing without role check`
+        );
+        // Continue without role check if API call fails
       }
     } catch (error) {
-      console.error("Error checking user role in middleware:", error);
+      if (error instanceof Error && error.name === "AbortError") {
+        console.log(
+          "Middleware: API call timeout, continuing without role check"
+        );
+      } else {
+        console.error("Error checking user role in middleware:", error);
+      }
       // Continue without role check if there's an error
     }
   }
