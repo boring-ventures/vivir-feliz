@@ -68,39 +68,60 @@ model Patient {
 }
 
 model TreatmentProposal {
-  id                String         @id @default(cuid())
-  patientId         String         @map("patient_id")
-  therapistId       String         @map("therapist_id")
-  title             String
-  description       String?
-  diagnosis         String?
-  objectives        String[]
-  methodology       String?
-  totalSessions     Int            @map("total_sessions")
-  sessionDuration   Int            @map("session_duration")
-  frequency         String
-  estimatedDuration String?        @map("estimated_duration")
-  sessionPrice      Decimal        @map("session_price") @db.Decimal(10, 2)
-  totalAmount       Decimal        @map("total_amount") @db.Decimal(10, 2)
-  paymentPlan       String?        @map("payment_plan")
-  status            ProposalStatus @default(PAYMENT_PENDING)
-  proposalDate      DateTime       @default(now()) @map("proposal_date")
-  approvedDate      DateTime?      @map("approved_date")
-  startDate         DateTime?      @map("start_date")
-  endDate           DateTime?      @map("end_date")
-  notes             String?
-  parentNotes       String?        @map("parent_notes")
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
-  appointments      Appointment[]
-  payments          Payment[]
-  patient           Patient        @relation(fields: [patientId], references: [id])
-  therapist         Profile        @relation("TherapistProposals", fields: [therapistId], references: [id])
+  id                    String              @id @default(cuid())
+  patientId             String?             @map("patient_id")
+  consultationRequestId String?             @map("consultation_request_id")
+  therapistId           String              @map("therapist_id")
+  title                 String
+  description           String?
+  diagnosis             String?
+  objectives            String[]
+  methodology           String?
+  totalSessions         Int                 @map("total_sessions")
+  sessionDuration       Int                 @map("session_duration")
+  frequency             String
+  estimatedDuration     String?             @map("estimated_duration")
+  sessionPrice          Decimal             @map("session_price") @db.Decimal(10, 2)
+  totalAmount           Decimal             @map("total_amount") @db.Decimal(10, 2)
+  paymentPlan           String?             @map("payment_plan")
+  status                ProposalStatus      @default(PAYMENT_PENDING)
+  proposalDate          DateTime            @default(now()) @map("proposal_date")
+  approvedDate          DateTime?           @map("approved_date")
+  startDate             DateTime?           @map("start_date")
+  endDate               DateTime?           @map("end_date")
+  notes                 String?
+  parentNotes           String?             @map("parent_notes")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+  appointments          Appointment[]
+  payments              Payment[]
+  patient               Patient?            @relation(fields: [patientId], references: [id])
+  consultationRequest   ConsultationRequest? @relation(fields: [consultationRequestId], references: [id])
+  therapist             Profile             @relation("TherapistProposals", fields: [therapistId], references: [id])
+  services              ProposalService[]
 
   @@index([patientId])
+  @@index([consultationRequestId])
   @@index([therapistId])
   @@index([status])
   @@map("treatment_proposals")
+}
+
+model ProposalService {
+  id                   String            @id @default(cuid())
+  treatmentProposalId  String            @map("treatment_proposal_id")
+  type                 ServiceType       @map("type")
+  code                 String            @map("code")
+  service              String            @map("service")
+  sessions             Int               @map("sessions")
+  cost                 Decimal?          @map("cost") @db.Decimal(10, 2)
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+  treatmentProposal    TreatmentProposal @relation(fields: [treatmentProposalId], references: [id], onDelete: Cascade)
+
+  @@index([treatmentProposalId])
+  @@index([type])
+  @@map("proposal_services")
 }
 
 model Payment {
@@ -240,14 +261,16 @@ model Appointment {
   cancelledBy        String?            @map("cancelled_by")
   homework           String?
   nextSessionPlan    String?            @map("next_session_plan")
-  patientId          String?            @map("patient_id")
-  proposalId         String?            @map("proposal_id")
-  rescheduledFrom    DateTime?          @map("rescheduled_from")
+  patientId             String?            @map("patient_id")
+  proposalId            String?            @map("proposal_id")
+  consultationRequestId String?            @map("consultation_request_id")
+  rescheduledFrom       DateTime?          @map("rescheduled_from")
   rescheduledTo      DateTime?          @map("rescheduled_to")
   sessionNotes       String?            @map("session_notes")
   status             AppointmentStatus  @default(SCHEDULED)
   patient            Patient?           @relation(fields: [patientId], references: [id])
   proposal           TreatmentProposal? @relation(fields: [proposalId], references: [id])
+  consultationRequest ConsultationRequest? @relation(fields: [consultationRequestId], references: [id])
   therapist          Profile            @relation("TherapistAppointments", fields: [therapistId], references: [id])
   medicalRecords     MedicalRecord[]
   medicalForm        MedicalForm?
@@ -257,6 +280,7 @@ model Appointment {
   @@index([therapistId])
   @@index([patientId])
   @@index([proposalId])
+  @@index([consultationRequestId])
   @@index([date])
   @@index([status])
   @@map("appointments")
@@ -459,6 +483,8 @@ model ConsultationRequest {
   // Relations
   children              ConsultationChild[]
   assignedTherapist     Profile?                  @relation("TherapistConsultationRequests", fields: [assignedTherapistId], references: [id])
+  appointments          Appointment[]
+  treatmentProposals    TreatmentProposal[]
   payments              Payment[]
 
   @@index([status])
@@ -609,4 +635,9 @@ enum MedicalFormStatus {
   DRAFT
   SUBMITTED
   REVIEWED
+}
+
+enum ServiceType {
+  EVALUATION
+  TREATMENT
 }
