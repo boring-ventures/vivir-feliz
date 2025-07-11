@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+// Helper function to format date without timezone issues
+const formatDateLocal = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to create Date object from date string without timezone issues
+const createDateFromString = (dateString: string): Date => {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day); // month is 0-indexed
+};
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -13,9 +27,9 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
 
     // Default to next 30 days if no date range provided
-    const start = startDate ? new Date(startDate) : new Date();
+    const start = startDate ? createDateFromString(startDate) : new Date();
     const end = endDate
-      ? new Date(endDate)
+      ? createDateFromString(endDate)
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     // Get all active therapists with their schedules
@@ -83,7 +97,7 @@ export async function GET(request: NextRequest) {
     // Generate dates for the range
     const currentDate = new Date(start);
     while (currentDate <= end) {
-      const dateStr = currentDate.toISOString().split("T")[0];
+      const dateStr = formatDateLocal(currentDate);
       const dayOfWeek = dayNames[currentDate.getDay()];
 
       availableSlots[dateStr] = [];
@@ -103,7 +117,7 @@ export async function GET(request: NextRequest) {
           // Check if date is blocked
           const isBlocked = schedule.blockedSlots.some(
             (blocked) =>
-              blocked.date.toISOString().split("T")[0] === dateStr &&
+              formatDateLocal(blocked.date) === dateStr &&
               blocked.startTime <= slot.startTime &&
               blocked.endTime >= slot.endTime
           );
@@ -130,9 +144,7 @@ export async function GET(request: NextRequest) {
           while (currentSlotTime < endTime) {
             // Check if this specific time slot is already booked
             const isBooked = therapist.appointments.some((appointment) => {
-              const appointmentDateStr = appointment.date
-                .toISOString()
-                .split("T")[0];
+              const appointmentDateStr = formatDateLocal(appointment.date);
               return (
                 appointmentDateStr === dateStr &&
                 appointment.startTime === currentSlotTime
@@ -187,8 +199,8 @@ export async function GET(request: NextRequest) {
       availableSlots,
       appointmentType,
       dateRange: {
-        start: start.toISOString().split("T")[0],
-        end: end.toISOString().split("T")[0],
+        start: formatDateLocal(start),
+        end: formatDateLocal(end),
       },
     });
   } catch (error) {

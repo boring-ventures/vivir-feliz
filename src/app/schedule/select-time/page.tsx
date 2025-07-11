@@ -46,21 +46,27 @@ function SelectTimePageContent() {
 
   const appointmentType = type === "interview" ? "INTERVIEW" : "CONSULTATION";
 
+  // Helper function to format date without timezone issues
+  const formatDateLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper function to create Date object from date string without timezone issues
+  const createDateFromString = (dateString: string): Date => {
+    const [year, month, day] = dateString.split("-").map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed
+  };
+
   // Calculate date range for fetching slots (current month)
-  const startDate = new Date(
-    currentMonth.getFullYear(),
-    currentMonth.getMonth(),
-    1
-  )
-    .toISOString()
-    .split("T")[0];
-  const endDate = new Date(
-    currentMonth.getFullYear(),
-    currentMonth.getMonth() + 1,
-    0
-  )
-    .toISOString()
-    .split("T")[0];
+  const startDate = formatDateLocal(
+    new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+  );
+  const endDate = formatDateLocal(
+    new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
+  );
 
   const {
     data: slotsData,
@@ -133,8 +139,7 @@ function SelectTimePageContent() {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek =
-      firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Adjust for Monday start
+    const startingDayOfWeek = firstDay.getDay(); // Sunday = 0, Monday = 1, etc.
 
     const days = [];
 
@@ -144,14 +149,14 @@ function SelectTimePageContent() {
       days.push({
         date: prevDate.getDate(),
         isCurrentMonth: false,
-        fullDate: prevDate.toISOString().split("T")[0],
+        fullDate: formatDateLocal(prevDate),
       });
     }
 
     // Current month days
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = new Date(year, month, day);
-      const fullDate = currentDate.toISOString().split("T")[0];
+      const fullDate = formatDateLocal(currentDate);
       const hasSlots = (slotsData?.availableSlots?.[fullDate]?.length ?? 0) > 0;
       const isPast = currentDate < new Date(new Date().setHours(0, 0, 0, 0));
 
@@ -171,7 +176,7 @@ function SelectTimePageContent() {
       days.push({
         date: day,
         isCurrentMonth: false,
-        fullDate: nextDate.toISOString().split("T")[0],
+        fullDate: formatDateLocal(nextDate),
       });
     }
 
@@ -291,7 +296,7 @@ function SelectTimePageContent() {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
-    const date = new Date(dateString);
+    const date = createDateFromString(dateString);
     return date.toLocaleDateString("es-ES", {
       day: "numeric",
       month: "long",
@@ -414,13 +419,13 @@ function SelectTimePageContent() {
                 </div>
 
                 <div className="grid grid-cols-7 gap-1 text-center">
+                  <div className="text-sm font-medium text-gray-500">D</div>
                   <div className="text-sm font-medium text-gray-500">L</div>
                   <div className="text-sm font-medium text-gray-500">M</div>
                   <div className="text-sm font-medium text-gray-500">M</div>
                   <div className="text-sm font-medium text-gray-500">J</div>
                   <div className="text-sm font-medium text-gray-500">V</div>
                   <div className="text-sm font-medium text-gray-500">S</div>
-                  <div className="text-sm font-medium text-gray-500">D</div>
 
                   {days.map((day, index) => (
                     <div
@@ -437,6 +442,7 @@ function SelectTimePageContent() {
                       )}
                       onClick={() =>
                         day.hasSlots &&
+                        day.isCurrentMonth &&
                         !day.isPast &&
                         handleDateClick(day.fullDate, day.hasSlots)
                       }

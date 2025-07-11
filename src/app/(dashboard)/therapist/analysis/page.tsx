@@ -79,7 +79,12 @@ export default function TherapistAnalysisPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Parse date as local date to avoid timezone issues
+    const parts = dateString.split("T")[0].split("-"); // Get YYYY-MM-DD part
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1; // Month is 0-indexed in JS Date
+    const day = parseInt(parts[2]);
+    const date = new Date(year, month, day);
     return date.toLocaleDateString("es-ES", {
       day: "2-digit",
       month: "2-digit",
@@ -352,14 +357,15 @@ export default function TherapistAnalysisPage() {
                                 <h3 className="text-lg font-semibold text-gray-900">
                                   {appointment.patientName}
                                 </h3>
-                                {appointment.patientAge && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    {appointment.patientAge} años
-                                  </Badge>
-                                )}
+                                {appointment.patientAge !== null &&
+                                  appointment.patientAge !== undefined && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {appointment.patientAge} años
+                                    </Badge>
+                                  )}
                                 <Badge
                                   className={`text-xs ${getTypeColor(appointment.type)}`}
                                 >

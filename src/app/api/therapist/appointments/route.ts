@@ -66,6 +66,18 @@ export async function GET(request: NextRequest) {
               specialty: true,
             },
           },
+          patient: {
+            select: {
+              id: true,
+              dateOfBirth: true,
+            },
+          },
+          medicalForm: {
+            select: {
+              id: true,
+              childBirthDate: true,
+            },
+          },
         },
         orderBy: [{ date: "desc" }, { startTime: "desc" }],
         skip,
@@ -74,14 +86,53 @@ export async function GET(request: NextRequest) {
       prisma.appointment.count({ where: whereClause }),
     ]);
 
+    // Helper function to calculate age from birthdate
+    const calculateAge = (birthDate: Date): number => {
+      // Parse birthdate properly to avoid timezone issues
+      const birthDateLocal = new Date(
+        birthDate.getFullYear(),
+        birthDate.getMonth(),
+        birthDate.getDate()
+      );
+      const today = new Date();
+      const todayLocal = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+
+      let years = todayLocal.getFullYear() - birthDateLocal.getFullYear();
+      const monthDiff = todayLocal.getMonth() - birthDateLocal.getMonth();
+
+      // Adjust if current month/day is before birth month/day
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && todayLocal.getDate() < birthDateLocal.getDate())
+      ) {
+        years--;
+      }
+
+      return years;
+    };
+
+    // Helper function to format date without timezone issues
+    const formatDateLocal = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     // Transform appointments to include additional calculated fields
     const transformedAppointments = appointments.map((appointment) => {
-      // Calculate age if we have patient data
+      // Calculate age from actual birthdate
       let age = null;
-      if (appointment.date) {
-        // For now, we'll estimate age based on typical consultation ages
-        // In a real implementation, you might want to store birth date
-        age = Math.floor(Math.random() * 10) + 5; // Random age between 5-14 for demo
+
+      // Try to get birthdate from patient first, then medical form
+      if (appointment.patient?.dateOfBirth) {
+        age = calculateAge(appointment.patient.dateOfBirth);
+      } else if (appointment.medicalForm?.childBirthDate) {
+        age = calculateAge(appointment.medicalForm.childBirthDate);
       }
 
       // Determine priority based on appointment type and date
@@ -109,7 +160,7 @@ export async function GET(request: NextRequest) {
         parentName: appointment.parentName || "No especificado",
         parentPhone: appointment.parentPhone || "",
         parentEmail: appointment.parentEmail || "",
-        appointmentDate: appointment.date.toISOString().split("T")[0],
+        appointmentDate: formatDateLocal(appointment.date),
         appointmentTime: appointment.startTime,
         type: appointment.type,
         status: appointment.status,
@@ -122,7 +173,7 @@ export async function GET(request: NextRequest) {
           appointment.status === "COMPLETED" ? "completado" : "pendiente",
         analysisDate:
           appointment.status === "COMPLETED"
-            ? appointment.updatedAt.toISOString().split("T")[0]
+            ? formatDateLocal(appointment.updatedAt)
             : null,
         diagnosis: appointment.sessionNotes || null,
         recommendations: appointment.homework || null,
@@ -148,7 +199,7 @@ export async function GET(request: NextRequest) {
           (a) => a.status === "COMPLETED"
         ).length,
         highPriority: transformedAppointments.filter(
-          (a) => a.priority === "alta"
+          (a) => a.priority === "ALTA"
         ).length,
         consultations: transformedAppointments.filter(
           (a) => a.type === "CONSULTA"
