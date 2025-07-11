@@ -757,21 +757,77 @@ export default function MedicalFormPage({
                 <div className="mt-2 space-y-2">
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      id="incubadora"
+                      id="uci-neonatal"
                       checked={formData.internacionEspecial.includes(
-                        "incubadora"
+                        "UCI Neonatal"
                       )}
                       onCheckedChange={(checked) => {
                         if (checked) {
                           updateFormData("internacionEspecial", [
-                            ...formData.internacionEspecial,
-                            "incubadora",
+                            ...formData.internacionEspecial.filter(
+                              (item) => item !== "Ninguna"
+                            ),
+                            "UCI Neonatal",
                           ]);
                         } else {
                           updateFormData(
                             "internacionEspecial",
                             formData.internacionEspecial.filter(
-                              (item) => item !== "incubadora"
+                              (item) => item !== "UCI Neonatal"
+                            )
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="uci-neonatal">UCI Neonatal</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="cuidados-intermedios"
+                      checked={formData.internacionEspecial.includes(
+                        "Cuidados intermedios"
+                      )}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          updateFormData("internacionEspecial", [
+                            ...formData.internacionEspecial.filter(
+                              (item) => item !== "Ninguna"
+                            ),
+                            "Cuidados intermedios",
+                          ]);
+                        } else {
+                          updateFormData(
+                            "internacionEspecial",
+                            formData.internacionEspecial.filter(
+                              (item) => item !== "Cuidados intermedios"
+                            )
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor="cuidados-intermedios">
+                      Cuidados intermedios
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="incubadora"
+                      checked={formData.internacionEspecial.includes(
+                        "Incubadora"
+                      )}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          updateFormData("internacionEspecial", [
+                            ...formData.internacionEspecial.filter(
+                              (item) => item !== "Ninguna"
+                            ),
+                            "Incubadora",
+                          ]);
+                        } else {
+                          updateFormData(
+                            "internacionEspecial",
+                            formData.internacionEspecial.filter(
+                              (item) => item !== "Incubadora"
                             )
                           );
                         }
@@ -781,57 +837,29 @@ export default function MedicalFormPage({
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      id="terapia-intensiva"
-                      checked={formData.internacionEspecial.includes(
-                        "terapia-intensiva"
-                      )}
+                      id="ninguna-internacion"
+                      checked={formData.internacionEspecial.includes("Ninguna")}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          updateFormData("internacionEspecial", [
-                            ...formData.internacionEspecial,
-                            "terapia-intensiva",
-                          ]);
+                          updateFormData("internacionEspecial", ["Ninguna"]);
                         } else {
                           updateFormData(
                             "internacionEspecial",
                             formData.internacionEspecial.filter(
-                              (item) => item !== "terapia-intensiva"
+                              (item) => item !== "Ninguna"
                             )
                           );
                         }
                       }}
                     />
-                    <Label htmlFor="terapia-intensiva">Terapia intensiva</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="no-internacion"
-                      checked={formData.internacionEspecial.includes(
-                        "no-internacion"
-                      )}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          updateFormData("internacionEspecial", [
-                            "no-internacion",
-                          ]);
-                        } else {
-                          updateFormData(
-                            "internacionEspecial",
-                            formData.internacionEspecial.filter(
-                              (item) => item !== "no-internacion"
-                            )
-                          );
-                        }
-                      }}
-                    />
-                    <Label htmlFor="no-internacion">
+                    <Label htmlFor="ninguna-internacion">
                       No requirió internación
                     </Label>
                   </div>
                 </div>
 
                 {formData.internacionEspecial.length > 0 &&
-                  !formData.internacionEspecial.includes("no-internacion") && (
+                  !formData.internacionEspecial.includes("Ninguna") && (
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div>
                         <Label htmlFor="tiempoInternacion">
@@ -883,11 +911,14 @@ export default function MedicalFormPage({
                 </Label>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {[
-                    "asma",
-                    "alergias",
-                    "epilepsia",
-                    "diabetes",
-                    "cardiopatia",
+                    "Asma",
+                    "Alergias",
+                    "Epilepsia",
+                    "Diabetes",
+                    "Problemas cardíacos",
+                    "Problemas renales",
+                    "Otras",
+                    "Ninguna",
                   ].map((enfermedad) => (
                     <div
                       key={enfermedad}
@@ -900,10 +931,18 @@ export default function MedicalFormPage({
                         )}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            updateFormData("enfermedadesImportantes", [
-                              ...formData.enfermedadesImportantes,
-                              enfermedad,
-                            ]);
+                            if (enfermedad === "Ninguna") {
+                              updateFormData("enfermedadesImportantes", [
+                                "Ninguna",
+                              ]);
+                            } else {
+                              updateFormData("enfermedadesImportantes", [
+                                ...formData.enfermedadesImportantes.filter(
+                                  (item) => item !== "Ninguna"
+                                ),
+                                enfermedad,
+                              ]);
+                            }
                           } else {
                             updateFormData(
                               "enfermedadesImportantes",
@@ -915,42 +954,16 @@ export default function MedicalFormPage({
                         }}
                       />
                       <Label htmlFor={enfermedad} className="capitalize">
-                        {enfermedad === "cardiopatia"
-                          ? "Cardiopatía"
-                          : enfermedad}
+                        {enfermedad}
                       </Label>
                     </div>
                   ))}
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="otra-enfermedad"
-                      checked={formData.enfermedadesImportantes.includes(
-                        "otra"
-                      )}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          updateFormData("enfermedadesImportantes", [
-                            ...formData.enfermedadesImportantes,
-                            "otra",
-                          ]);
-                        } else {
-                          updateFormData(
-                            "enfermedadesImportantes",
-                            formData.enfermedadesImportantes.filter(
-                              (item) => item !== "otra"
-                            )
-                          );
-                        }
-                      }}
-                    />
-                    <Label htmlFor="otra-enfermedad">Otra</Label>
-                  </div>
                 </div>
 
-                {formData.enfermedadesImportantes.includes("otra") && (
+                {formData.enfermedadesImportantes.includes("Otras") && (
                   <div className="mt-2">
                     <Input
-                      placeholder="Especifique otra enfermedad"
+                      placeholder="Especifique otras enfermedades"
                       value={formData.otraEnfermedad}
                       onChange={(e) =>
                         updateFormData("otraEnfermedad", e.target.value)
@@ -1061,8 +1074,8 @@ export default function MedicalFormPage({
                   className="mt-2 space-y-2"
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="ninguna" id="cirugia-ninguna" />
-                    <Label htmlFor="cirugia-ninguna">Ninguna</Label>
+                    <RadioGroupItem value="no" id="cirugia-no" />
+                    <Label htmlFor="cirugia-no">No</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="si" id="cirugia-si" />
@@ -1253,11 +1266,14 @@ export default function MedicalFormPage({
                   </Label>
                   <div className="mt-1 grid grid-cols-2 gap-2">
                     {[
-                      "ninguna",
-                      "leche",
-                      "huevos",
-                      "frutos-secos",
-                      "mariscos",
+                      "Ninguna",
+                      "Leche",
+                      "Huevos",
+                      "Frutos secos",
+                      "Mariscos",
+                      "Soja",
+                      "Trigo",
+                      "Otras",
                     ].map((alergia) => (
                       <div
                         key={alergia}
@@ -1270,14 +1286,14 @@ export default function MedicalFormPage({
                           )}
                           onCheckedChange={(checked) => {
                             if (checked) {
-                              if (alergia === "ninguna") {
+                              if (alergia === "Ninguna") {
                                 updateFormData("alergiasAlimentarias", [
-                                  "ninguna",
+                                  "Ninguna",
                                 ]);
                               } else {
                                 updateFormData("alergiasAlimentarias", [
                                   ...formData.alergiasAlimentarias.filter(
-                                    (item) => item !== "ninguna"
+                                    (item) => item !== "Ninguna"
                                   ),
                                   alergia,
                                 ]);
@@ -1296,48 +1312,16 @@ export default function MedicalFormPage({
                           htmlFor={`alergia-alim-${alergia}`}
                           className="capitalize"
                         >
-                          {alergia === "ninguna"
-                            ? "Ninguna"
-                            : alergia === "leche"
-                              ? "Leche"
-                              : alergia === "huevos"
-                                ? "Huevos"
-                                : alergia === "frutos-secos"
-                                  ? "Frutos secos"
-                                  : "Mariscos"}
+                          {alergia}
                         </Label>
                       </div>
                     ))}
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="alergia-alim-otra"
-                        checked={formData.alergiasAlimentarias.includes("otra")}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            updateFormData("alergiasAlimentarias", [
-                              ...formData.alergiasAlimentarias.filter(
-                                (item) => item !== "ninguna"
-                              ),
-                              "otra",
-                            ]);
-                          } else {
-                            updateFormData(
-                              "alergiasAlimentarias",
-                              formData.alergiasAlimentarias.filter(
-                                (item) => item !== "otra"
-                              )
-                            );
-                          }
-                        }}
-                      />
-                      <Label htmlFor="alergia-alim-otra">Otra</Label>
-                    </div>
                   </div>
 
-                  {formData.alergiasAlimentarias.includes("otra") && (
+                  {formData.alergiasAlimentarias.includes("Otras") && (
                     <div className="mt-2">
                       <Input
-                        placeholder="Especifique otra alergia alimentaria"
+                        placeholder="Especifique otras alergias alimentarias"
                         value={formData.otraAlergiaAlimentaria}
                         onChange={(e) =>
                           updateFormData(
@@ -1355,82 +1339,56 @@ export default function MedicalFormPage({
                     ALERGIAS A MEDICAMENTOS:
                   </Label>
                   <div className="mt-1 grid grid-cols-2 gap-2">
-                    {["ninguna", "penicilina", "aspirina"].map((alergia) => (
-                      <div
-                        key={alergia}
-                        className="flex items-center space-x-2"
-                      >
-                        <Checkbox
-                          id={`alergia-med-${alergia}`}
-                          checked={formData.alergiasMedicamentos.includes(
-                            alergia
-                          )}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              if (alergia === "ninguna") {
-                                updateFormData("alergiasMedicamentos", [
-                                  "ninguna",
-                                ]);
-                              } else {
-                                updateFormData("alergiasMedicamentos", [
-                                  ...formData.alergiasMedicamentos.filter(
-                                    (item) => item !== "ninguna"
-                                  ),
-                                  alergia,
-                                ]);
-                              }
-                            } else {
-                              updateFormData(
-                                "alergiasMedicamentos",
-                                formData.alergiasMedicamentos.filter(
-                                  (item) => item !== alergia
-                                )
-                              );
-                            }
-                          }}
-                        />
-                        <Label
-                          htmlFor={`alergia-med-${alergia}`}
-                          className="capitalize"
+                    {["Ninguna", "Penicilina", "Aspirina", "Otras"].map(
+                      (alergia) => (
+                        <div
+                          key={alergia}
+                          className="flex items-center space-x-2"
                         >
-                          {alergia === "ninguna"
-                            ? "Ninguna"
-                            : alergia === "penicilina"
-                              ? "Penicilina"
-                              : "Aspirina"}
-                        </Label>
-                      </div>
-                    ))}
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="alergia-med-otra"
-                        checked={formData.alergiasMedicamentos.includes("otra")}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            updateFormData("alergiasMedicamentos", [
-                              ...formData.alergiasMedicamentos.filter(
-                                (item) => item !== "ninguna"
-                              ),
-                              "otra",
-                            ]);
-                          } else {
-                            updateFormData(
-                              "alergiasMedicamentos",
-                              formData.alergiasMedicamentos.filter(
-                                (item) => item !== "otra"
-                              )
-                            );
-                          }
-                        }}
-                      />
-                      <Label htmlFor="alergia-med-otra">Otra</Label>
-                    </div>
+                          <Checkbox
+                            id={`alergia-med-${alergia}`}
+                            checked={formData.alergiasMedicamentos.includes(
+                              alergia
+                            )}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                if (alergia === "Ninguna") {
+                                  updateFormData("alergiasMedicamentos", [
+                                    "Ninguna",
+                                  ]);
+                                } else {
+                                  updateFormData("alergiasMedicamentos", [
+                                    ...formData.alergiasMedicamentos.filter(
+                                      (item) => item !== "Ninguna"
+                                    ),
+                                    alergia,
+                                  ]);
+                                }
+                              } else {
+                                updateFormData(
+                                  "alergiasMedicamentos",
+                                  formData.alergiasMedicamentos.filter(
+                                    (item) => item !== alergia
+                                  )
+                                );
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={`alergia-med-${alergia}`}
+                            className="capitalize"
+                          >
+                            {alergia}
+                          </Label>
+                        </div>
+                      )
+                    )}
                   </div>
 
-                  {formData.alergiasMedicamentos.includes("otra") && (
+                  {formData.alergiasMedicamentos.includes("Otras") && (
                     <div className="mt-2">
                       <Input
-                        placeholder="Especifique otra alergia a medicamentos"
+                        placeholder="Especifique otras alergias a medicamentos"
                         value={formData.otraAlergiaMedicamento}
                         onChange={(e) =>
                           updateFormData(
@@ -1446,70 +1404,46 @@ export default function MedicalFormPage({
                 <div className="mt-4">
                   <Label className="text-sm font-medium">OTRAS ALERGIAS:</Label>
                   <div className="mt-1 grid grid-cols-2 gap-2">
-                    {["polen", "acaros", "pelo-animales"].map((alergia) => (
-                      <div
-                        key={alergia}
-                        className="flex items-center space-x-2"
-                      >
-                        <Checkbox
-                          id={`alergia-otra-${alergia}`}
-                          checked={formData.otrasAlergias.includes(alergia)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              updateFormData("otrasAlergias", [
-                                ...formData.otrasAlergias,
-                                alergia,
-                              ]);
-                            } else {
-                              updateFormData(
-                                "otrasAlergias",
-                                formData.otrasAlergias.filter(
-                                  (item) => item !== alergia
-                                )
-                              );
-                            }
-                          }}
-                        />
-                        <Label
-                          htmlFor={`alergia-otra-${alergia}`}
-                          className="capitalize"
+                    {["Polen", "Ácaros", "Pelo de animales", "Otras"].map(
+                      (alergia) => (
+                        <div
+                          key={alergia}
+                          className="flex items-center space-x-2"
                         >
-                          {alergia === "polen"
-                            ? "Polen"
-                            : alergia === "acaros"
-                              ? "Ácaros"
-                              : "Pelo de animales"}
-                        </Label>
-                      </div>
-                    ))}
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="alergia-otra-otra"
-                        checked={formData.otrasAlergias.includes("otra")}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            updateFormData("otrasAlergias", [
-                              ...formData.otrasAlergias,
-                              "otra",
-                            ]);
-                          } else {
-                            updateFormData(
-                              "otrasAlergias",
-                              formData.otrasAlergias.filter(
-                                (item) => item !== "otra"
-                              )
-                            );
-                          }
-                        }}
-                      />
-                      <Label htmlFor="alergia-otra-otra">Otra</Label>
-                    </div>
+                          <Checkbox
+                            id={`alergia-otra-${alergia}`}
+                            checked={formData.otrasAlergias.includes(alergia)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                updateFormData("otrasAlergias", [
+                                  ...formData.otrasAlergias,
+                                  alergia,
+                                ]);
+                              } else {
+                                updateFormData(
+                                  "otrasAlergias",
+                                  formData.otrasAlergias.filter(
+                                    (item) => item !== alergia
+                                  )
+                                );
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={`alergia-otra-${alergia}`}
+                            className="capitalize"
+                          >
+                            {alergia}
+                          </Label>
+                        </div>
+                      )
+                    )}
                   </div>
 
-                  {formData.otrasAlergias.includes("otra") && (
+                  {formData.otrasAlergias.includes("Otras") && (
                     <div className="mt-2">
                       <Input
-                        placeholder="Especifique otra alergia"
+                        placeholder="Especifique otras alergias"
                         value={formData.otraAlergia}
                         onChange={(e) =>
                           updateFormData("otraAlergia", e.target.value)

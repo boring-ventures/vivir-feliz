@@ -4,6 +4,14 @@ import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 import { AppointmentStatus } from "@prisma/client";
 
+// Helper function to format date without timezone issues
+const formatDateLocal = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ appointmentId: string }> }
@@ -104,7 +112,7 @@ export async function PATCH(
       parentName: updatedAppointment.parentName || "No especificado",
       parentPhone: updatedAppointment.parentPhone || "",
       parentEmail: updatedAppointment.parentEmail || "",
-      appointmentDate: updatedAppointment.date.toISOString().split("T")[0],
+      appointmentDate: formatDateLocal(updatedAppointment.date),
       appointmentTime: updatedAppointment.startTime,
       type: updatedAppointment.type,
       status: updatedAppointment.status,
@@ -115,7 +123,7 @@ export async function PATCH(
         updatedAppointment.status === "COMPLETED" ? "completado" : "pendiente",
       analysisDate:
         updatedAppointment.status === "COMPLETED"
-          ? updatedAppointment.updatedAt.toISOString().split("T")[0]
+          ? formatDateLocal(updatedAppointment.updatedAt)
           : null,
       diagnosis: updatedAppointment.sessionNotes || null,
       recommendations: updatedAppointment.homework || null,
@@ -203,7 +211,7 @@ export async function GET(
       parentName: appointment.parentName || "No especificado",
       parentPhone: appointment.parentPhone || "",
       parentEmail: appointment.parentEmail || "",
-      appointmentDate: appointment.date.toISOString().split("T")[0],
+      appointmentDate: formatDateLocal(appointment.date),
       appointmentTime: appointment.startTime,
       type: appointment.type,
       status: appointment.status,
@@ -214,7 +222,7 @@ export async function GET(
         appointment.status === "COMPLETED" ? "completado" : "pendiente",
       analysisDate:
         appointment.status === "COMPLETED"
-          ? appointment.updatedAt.toISOString().split("T")[0]
+          ? formatDateLocal(appointment.updatedAt)
           : null,
       diagnosis: appointment.sessionNotes || null,
       recommendations: appointment.homework || null,

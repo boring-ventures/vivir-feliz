@@ -275,9 +275,9 @@ export default function MedicalFormModal({
 
       complicacionesParto: data.perinatalHistory?.deliveryComplications || "",
       detallesComplicaciones: data.perinatalHistory?.complicationDetails || "",
-      internacionEspecial: data.perinatalHistory?.specialCareStay || [],
-      tiempoInternacion: data.perinatalHistory?.stayDuration || "",
-      motivoInternacion: data.perinatalHistory?.stayReason || "",
+      internacionEspecial: data.perinatalHistory?.specialCare || [],
+      tiempoInternacion: data.perinatalHistory?.hospitalizationDays || "",
+      motivoInternacion: data.perinatalHistory?.hospitalizationReason || "",
 
       enfermedadesImportantes: data.medicalHistory?.importantIllnesses || [],
       otraEnfermedad: data.medicalHistory?.otherIllness || "",
@@ -299,7 +299,7 @@ export default function MedicalFormModal({
       otraAlergiaMedicamento:
         data.medicationsAllergies?.otherMedicationAllergy || "",
       otrasAlergias: data.medicationsAllergies?.otherAllergies || [],
-      otraAlergia: data.medicationsAllergies?.otherAllergy || "",
+      otraAlergia: data.medicationsAllergies?.otherAllergyDescription || "",
 
       sostenCabeza: data.motorDevelopment?.headControlAge || "",
       sentadoSinApoyo: data.motorDevelopment?.sittingAge || "",
@@ -310,7 +310,7 @@ export default function MedicalFormModal({
       detallesDificultadesEquilibrio:
         data.motorDevelopment?.balanceDifficultyDetails || "",
       motorFino: data.motorDevelopment?.fineMotorSkills || [],
-      torreCubos: data.motorDevelopment?.blockTower || "",
+      torreCubos: data.motorDevelopment?.blockTowers || "",
       dificultadesMotorFino: data.motorDevelopment?.fineMotorDifficulties || "",
       detallesDificultadesMotorFino:
         data.motorDevelopment?.fineMotorDifficultyDetails || "",
@@ -335,12 +335,12 @@ export default function MedicalFormModal({
       expresaEmociones: data.socialEmotional?.expressesEmotions || false,
       rabietas: data.socialEmotional?.tantrums || "",
       frecuenciaRabietas: data.socialEmotional?.tantrumFrequency || "",
-      adaptacionCambios: data.socialEmotional?.adaptationToChanges || "",
+      adaptacionCambios: data.socialEmotional?.adaptsToChanges || "",
       conductasRepetitivas: data.socialEmotional?.repetitiveBehaviors || "",
       detallesConductas: data.socialEmotional?.behaviorDetails || "",
-      alimentacion: data.socialEmotional?.feeding || [],
+      alimentacion: data.socialEmotional?.feedingHabits || [],
       utilizaCubiertos: data.socialEmotional?.usesUtensils || false,
-      sueno: data.socialEmotional?.sleep || [],
+      sueno: data.socialEmotional?.sleepHabits || [],
       controlEsfinterDiurno: data.socialEmotional?.daytimeToiletControl || "",
       controlEsfinterNocturno:
         data.socialEmotional?.nighttimeToiletControl || "",
@@ -350,14 +350,14 @@ export default function MedicalFormModal({
       viveConQuien: data.familyInfo?.livesWithWhom || "",
       tieneHermanos: data.familyInfo?.hasSiblings || "",
       cantidadHermanos: data.familyInfo?.numberOfSiblings || "",
-      edadesHermanos: data.familyInfo?.siblingAges || "",
+      edadesHermanos: data.familyInfo?.siblingsAges || "",
       ambienteFamiliar: data.familyInfo?.familyEnvironment || "",
       cambiosRecientes: data.familyInfo?.recentChanges || "",
-      tiposCambios: data.familyInfo?.changeTypes || [],
+      tiposCambios: data.familyInfo?.typesOfChanges || [],
       otroCambio: data.familyInfo?.otherChange || "",
       detallesCambios: data.familyInfo?.changeDetails || "",
       antecedentesFamiliares: data.familyInfo?.familyHistory || "",
-      detallesAntecedentes: data.familyInfo?.historyDetails || "",
+      detallesAntecedentes: data.familyInfo?.familyHistoryDetails || "",
     };
   };
 
@@ -434,9 +434,9 @@ export default function MedicalFormModal({
       // Birth Complications
       deliveryComplications: formData.complicacionesParto,
       complicationDetails: formData.detallesComplicaciones,
-      specialCareStay: formData.internacionEspecial,
-      stayDuration: formData.tiempoInternacion,
-      stayReason: formData.motivoInternacion,
+      specialCare: formData.internacionEspecial,
+      hospitalizationDays: formData.tiempoInternacion,
+      hospitalizationReason: formData.motivoInternacion,
 
       // Medical History
       importantIllnesses: formData.enfermedadesImportantes,
@@ -454,7 +454,7 @@ export default function MedicalFormModal({
       medicationAllergies: formData.alergiasMedicamentos,
       otherMedicationAllergy: formData.otraAlergiaMedicamento,
       otherAllergies: formData.otrasAlergias,
-      otherAllergy: formData.otraAlergia,
+      otherAllergyDescription: formData.otraAlergia,
 
       // Motor Development
       headControlAge: formData.sostenCabeza,
@@ -465,7 +465,7 @@ export default function MedicalFormModal({
       balanceDifficulties: formData.dificultadesEquilibrio,
       balanceDifficultyDetails: formData.detallesDificultadesEquilibrio,
       fineMotorSkills: formData.motorFino,
-      blockTower: formData.torreCubos,
+      blockTowers: formData.torreCubos,
       fineMotorDifficulties: formData.dificultadesMotorFino,
       fineMotorDifficultyDetails: formData.detallesDificultadesMotorFino,
 
@@ -489,12 +489,12 @@ export default function MedicalFormModal({
       expressesEmotions: formData.expresaEmociones,
       tantrums: formData.rabietas,
       tantrumFrequency: formData.frecuenciaRabietas,
-      adaptationToChanges: formData.adaptacionCambios,
+      adaptsToChanges: formData.adaptacionCambios,
       repetitiveBehaviors: formData.conductasRepetitivas,
       behaviorDetails: formData.detallesConductas,
-      feeding: formData.alimentacion,
+      feedingHabits: formData.alimentacion,
       usesUtensils: formData.utilizaCubiertos,
-      sleep: formData.sueno,
+      sleepHabits: formData.sueno,
       daytimeToiletControl: formData.controlEsfinterDiurno,
       nighttimeToiletControl: formData.controlEsfinterNocturno,
       usesDiapers: formData.usaPanal,
@@ -504,14 +504,14 @@ export default function MedicalFormModal({
       livesWithWhom: formData.viveConQuien,
       hasSiblings: formData.tieneHermanos,
       numberOfSiblings: formData.cantidadHermanos,
-      siblingAges: formData.edadesHermanos,
+      siblingsAges: formData.edadesHermanos,
       familyEnvironment: formData.ambienteFamiliar,
       recentChanges: formData.cambiosRecientes,
-      changeTypes: formData.tiposCambios,
+      typesOfChanges: formData.tiposCambios,
       otherChange: formData.otroCambio,
       changeDetails: formData.detallesCambios,
       familyHistory: formData.antecedentesFamiliares,
-      historyDetails: formData.detallesAntecedentes,
+      familyHistoryDetails: formData.detallesAntecedentes,
     };
   };
 

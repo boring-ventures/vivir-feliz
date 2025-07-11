@@ -33,7 +33,7 @@ export async function POST(
       serviciosTratamiento,
     } = body;
 
-    // First, verify the appointment exists and get patient data
+    // First, verify the appointment exists
     const appointment = await prisma.appointment.findUnique({
       where: { id: appointmentId },
       include: {
@@ -48,9 +48,21 @@ export async function POST(
       );
     }
 
-    // If no patient is linked, create one based on appointment data
+    // Check if this is a CONSULTA appointment with consultationRequestId
+    let consultationRequestId = null;
     let patientId = appointment.patientId;
 
+    // @ts-ignore - consultationRequestId exists but Prisma client needs regeneration
+    if (appointment.consultationRequestId) {
+      // @ts-ignore
+      consultationRequestId = appointment.consultationRequestId;
+      console.log(
+        "Found consultation request ID from appointment:",
+        consultationRequestId
+      );
+    }
+
+    // If no patient is linked, create one based on appointment data
     if (!patientId && appointment.patientName) {
       // First, find or create a parent profile
       let parentProfile = await prisma.profile.findFirst({
@@ -149,6 +161,7 @@ export async function POST(
     // Create the treatment proposal
     const proposal = await prisma.treatmentProposal.create({
       data: {
+        consultationRequestId, // 🔗 Use consultation request ID when available
         patientId,
         therapistId: appointment.therapistId,
         title: `Propuesta Técnica - ${appointment.patientName}`,
@@ -172,13 +185,38 @@ export async function POST(
         paymentPlan: "Por definir con administración",
         status: "PAYMENT_PENDING",
         notes: JSON.stringify({
-          serviciosEvaluacion,
-          serviciosTratamiento,
           quienTomaConsulta,
           derivacion,
+          consultationRequestId, // Include for reference
         }),
       },
     });
+
+    // Create proposal services in the new table
+    const servicesToCreate = [
+      ...serviciosEvaluacion.map((service: ServiceData) => ({
+        treatmentProposalId: proposal.id,
+        type: "EVALUATION" as const,
+        code: service.codigo,
+        service: service.servicio,
+        sessions: service.sesiones,
+        cost: sessionPrice * service.sesiones,
+      })),
+      ...serviciosTratamiento.map((service: ServiceData) => ({
+        treatmentProposalId: proposal.id,
+        type: "TREATMENT" as const,
+        code: service.codigo,
+        service: service.servicio,
+        sessions: service.sesiones,
+        cost: sessionPrice * service.sesiones,
+      })),
+    ];
+
+    if (servicesToCreate.length > 0) {
+      await prisma.proposalService.createMany({
+        data: servicesToCreate,
+      });
+    }
 
     // Update the analysis status to completed
     await prisma.analysis.updateMany({
@@ -192,7 +230,11 @@ export async function POST(
     return NextResponse.json({
       success: true,
       proposalId: proposal.id,
-      message: "Propuesta técnica creada exitosamente",
+      consultationRequestId,
+      patientId,
+      message: consultationRequestId
+        ? "Propuesta técnica creada exitosamente y vinculada a la solicitud de consulta"
+        : "Propuesta técnica creada exitosamente y vinculada al paciente",
     });
   } catch (error) {
     console.error("Error creating proposal:", error);

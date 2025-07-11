@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+// Helper function to format date without timezone issues
+const formatDateLocal = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ appointmentId: string }> }
@@ -63,7 +71,7 @@ export async function GET(
     // Transform appointment data
     const appointmentData = {
       id: appointment.id,
-      date: appointment.date.toISOString().split("T")[0],
+      date: formatDateLocal(appointment.date),
       startTime: appointment.startTime,
       endTime: appointment.endTime,
       patientName:
