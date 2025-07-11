@@ -759,113 +759,181 @@ export default function MedicalFormModal({
     <div className="space-y-6">
       <div className="text-center mb-6">
         <Hospital className="h-12 w-12 mx-auto text-blue-600 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">
-          Complicaciones del Nacimiento
-        </h3>
+        <h3 className="text-lg font-semibold mb-2">Primeros Días de Vida</h3>
       </div>
 
       <div className="space-y-6">
         <div>
-          <Label htmlFor="complicacionesParto">
-            Complicaciones durante el parto:
+          <Label className="text-base font-medium">
+            ¿Hubo complicaciones durante el parto?
           </Label>
-          <Textarea
-            id="complicacionesParto"
+          <RadioGroup
             value={formData.complicacionesParto}
-            onChange={(e) =>
-              updateFormData("complicacionesParto", e.target.value)
+            onValueChange={(value) =>
+              updateFormData("complicacionesParto", value)
             }
-            placeholder="Describa cualquier complicación durante el parto"
-            className="mt-2"
-          />
-        </div>
+            className="mt-2 space-y-2"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="si" id="complicaciones-si" />
+              <Label htmlFor="complicaciones-si">Sí</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="no" id="complicaciones-no" />
+              <Label htmlFor="complicaciones-no">No</Label>
+            </div>
+          </RadioGroup>
 
-        <div>
-          <Label htmlFor="detallesComplicaciones">
-            Detalles de las complicaciones:
-          </Label>
-          <Textarea
-            id="detallesComplicaciones"
-            value={formData.detallesComplicaciones}
-            onChange={(e) =>
-              updateFormData("detallesComplicaciones", e.target.value)
-            }
-            placeholder="Proporcione más detalles sobre las complicaciones"
-            className="mt-2"
-          />
+          {formData.complicacionesParto === "si" && (
+            <div className="mt-2">
+              <Label htmlFor="detallesComplicaciones">
+                Si respondió &quot;Sí&quot;, especifique:
+              </Label>
+              <Textarea
+                id="detallesComplicaciones"
+                value={formData.detallesComplicaciones}
+                onChange={(e) =>
+                  updateFormData("detallesComplicaciones", e.target.value)
+                }
+                placeholder="Describa las complicaciones"
+                className="mt-1"
+              />
+            </div>
+          )}
         </div>
 
         <div>
           <Label className="text-base font-medium">
-            Internación en cuidados especiales:
+            ¿Requirió internación especial?
           </Label>
           <div className="mt-2 space-y-2">
-            {[
-              "UCI Neonatal",
-              "Cuidados intermedios",
-              "Incubadora",
-              "Ninguna",
-            ].map((option) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox
-                  id={option}
-                  checked={formData.internacionEspecial.includes(option)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      updateFormData("internacionEspecial", [
-                        ...formData.internacionEspecial,
-                        option,
-                      ]);
-                    } else {
-                      updateFormData(
-                        "internacionEspecial",
-                        formData.internacionEspecial.filter(
-                          (item) => item !== option
-                        )
-                      );
-                    }
-                  }}
-                />
-                <Label htmlFor={option}>{option}</Label>
-              </div>
-            ))}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="uci-neonatal"
+                checked={formData.internacionEspecial.includes("UCI Neonatal")}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    updateFormData("internacionEspecial", [
+                      ...formData.internacionEspecial.filter(
+                        (item) => item !== "Ninguna"
+                      ),
+                      "UCI Neonatal",
+                    ]);
+                  } else {
+                    updateFormData(
+                      "internacionEspecial",
+                      formData.internacionEspecial.filter(
+                        (item) => item !== "UCI Neonatal"
+                      )
+                    );
+                  }
+                }}
+              />
+              <Label htmlFor="uci-neonatal">UCI Neonatal</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="cuidados-intermedios"
+                checked={formData.internacionEspecial.includes(
+                  "Cuidados intermedios"
+                )}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    updateFormData("internacionEspecial", [
+                      ...formData.internacionEspecial.filter(
+                        (item) => item !== "Ninguna"
+                      ),
+                      "Cuidados intermedios",
+                    ]);
+                  } else {
+                    updateFormData(
+                      "internacionEspecial",
+                      formData.internacionEspecial.filter(
+                        (item) => item !== "Cuidados intermedios"
+                      )
+                    );
+                  }
+                }}
+              />
+              <Label htmlFor="cuidados-intermedios">Cuidados intermedios</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="incubadora"
+                checked={formData.internacionEspecial.includes("Incubadora")}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    updateFormData("internacionEspecial", [
+                      ...formData.internacionEspecial.filter(
+                        (item) => item !== "Ninguna"
+                      ),
+                      "Incubadora",
+                    ]);
+                  } else {
+                    updateFormData(
+                      "internacionEspecial",
+                      formData.internacionEspecial.filter(
+                        (item) => item !== "Incubadora"
+                      )
+                    );
+                  }
+                }}
+              />
+              <Label htmlFor="incubadora">Incubadora</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="ninguna-internacion"
+                checked={formData.internacionEspecial.includes("Ninguna")}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    updateFormData("internacionEspecial", ["Ninguna"]);
+                  } else {
+                    updateFormData(
+                      "internacionEspecial",
+                      formData.internacionEspecial.filter(
+                        (item) => item !== "Ninguna"
+                      )
+                    );
+                  }
+                }}
+              />
+              <Label htmlFor="ninguna-internacion">
+                No requirió internación
+              </Label>
+            </div>
           </div>
+
+          {formData.internacionEspecial.length > 0 &&
+            !formData.internacionEspecial.includes("Ninguna") && (
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <Label htmlFor="tiempoInternacion">Tiempo (días):</Label>
+                  <Input
+                    id="tiempoInternacion"
+                    type="number"
+                    value={formData.tiempoInternacion}
+                    onChange={(e) =>
+                      updateFormData("tiempoInternacion", e.target.value)
+                    }
+                    placeholder="0"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="motivoInternacion">Motivo:</Label>
+                  <Input
+                    id="motivoInternacion"
+                    value={formData.motivoInternacion}
+                    onChange={(e) =>
+                      updateFormData("motivoInternacion", e.target.value)
+                    }
+                    placeholder="Indique el motivo"
+                  />
+                </div>
+              </div>
+            )}
         </div>
-
-        {formData.internacionEspecial.length > 0 &&
-          !formData.internacionEspecial.includes("Ninguna") && (
-            <>
-              <div>
-                <Label htmlFor="tiempoInternacion">
-                  Tiempo de internación:
-                </Label>
-                <Input
-                  id="tiempoInternacion"
-                  value={formData.tiempoInternacion}
-                  onChange={(e) =>
-                    updateFormData("tiempoInternacion", e.target.value)
-                  }
-                  placeholder="Ej: 5 días, 2 semanas"
-                  className="mt-2"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="motivoInternacion">
-                  Motivo de internación:
-                </Label>
-                <Textarea
-                  id="motivoInternacion"
-                  value={formData.motivoInternacion}
-                  onChange={(e) =>
-                    updateFormData("motivoInternacion", e.target.value)
-                  }
-                  placeholder="Explique el motivo de la internación"
-                  className="mt-2"
-                />
-              </div>
-            </>
-          )}
       </div>
     </div>
   );
@@ -874,15 +942,15 @@ export default function MedicalFormModal({
     <div className="space-y-6">
       <div className="text-center mb-6">
         <Stethoscope className="h-12 w-12 mx-auto text-teal-600 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Historial Médico</h3>
+        <h3 className="text-lg font-semibold mb-2">Antecedentes Médicos</h3>
       </div>
 
       <div className="space-y-6">
         <div>
           <Label className="text-base font-medium">
-            Enfermedades importantes:
+            ENFERMEDADES IMPORTANTES:
           </Label>
-          <div className="mt-2 space-y-2">
+          <div className="mt-2 grid grid-cols-2 gap-2">
             {[
               "Asma",
               "Alergias",
@@ -892,62 +960,68 @@ export default function MedicalFormModal({
               "Problemas renales",
               "Otras",
               "Ninguna",
-            ].map((option) => (
-              <div key={option} className="flex items-center space-x-2">
+            ].map((enfermedad) => (
+              <div key={enfermedad} className="flex items-center space-x-2">
                 <Checkbox
-                  id={option}
-                  checked={formData.enfermedadesImportantes.includes(option)}
+                  id={enfermedad}
+                  checked={formData.enfermedadesImportantes.includes(
+                    enfermedad
+                  )}
                   onCheckedChange={(checked) => {
                     if (checked) {
-                      updateFormData("enfermedadesImportantes", [
-                        ...formData.enfermedadesImportantes,
-                        option,
-                      ]);
+                      if (enfermedad === "Ninguna") {
+                        updateFormData("enfermedadesImportantes", ["Ninguna"]);
+                      } else {
+                        updateFormData("enfermedadesImportantes", [
+                          ...formData.enfermedadesImportantes.filter(
+                            (item) => item !== "Ninguna"
+                          ),
+                          enfermedad,
+                        ]);
+                      }
                     } else {
                       updateFormData(
                         "enfermedadesImportantes",
                         formData.enfermedadesImportantes.filter(
-                          (item) => item !== option
+                          (item) => item !== enfermedad
                         )
                       );
                     }
                   }}
                 />
-                <Label htmlFor={option}>{option}</Label>
+                <Label htmlFor={enfermedad} className="capitalize">
+                  {enfermedad}
+                </Label>
               </div>
             ))}
           </div>
-        </div>
 
-        {formData.enfermedadesImportantes.includes("Otras") && (
-          <div>
-            <Label htmlFor="otraEnfermedad">
-              Especifique otras enfermedades:
-            </Label>
-            <Input
-              id="otraEnfermedad"
-              value={formData.otraEnfermedad}
-              onChange={(e) => updateFormData("otraEnfermedad", e.target.value)}
-              placeholder="Describa otras enfermedades"
-              className="mt-2"
-            />
-          </div>
-        )}
+          {formData.enfermedadesImportantes.includes("Otras") && (
+            <div className="mt-2">
+              <Input
+                placeholder="Especifique otras enfermedades"
+                value={formData.otraEnfermedad}
+                onChange={(e) =>
+                  updateFormData("otraEnfermedad", e.target.value)
+                }
+              />
+            </div>
+          )}
+        </div>
 
         <div>
           <Label className="text-base font-medium">
-            Hospitalizaciones previas:
+            HOSPITALIZACIONES PREVIAS:
           </Label>
-          {formData.hospitalizaciones.map((hosp, index) => (
-            <div
-              key={index}
-              className="mt-2 grid grid-cols-2 gap-4 p-4 border rounded"
-            >
+          {formData.hospitalizaciones.map((hospitalizacion, index) => (
+            <div key={index} className="mt-2 space-y-2 p-3 border rounded-md">
               <div>
-                <Label htmlFor={`motivo-${index}`}>Motivo:</Label>
+                <Label htmlFor={`hospitalizacion-motivo-${index}`}>
+                  Motivo:
+                </Label>
                 <Input
-                  id={`motivo-${index}`}
-                  value={hosp.motivo}
+                  id={`hospitalizacion-motivo-${index}`}
+                  value={hospitalizacion.motivo}
                   onChange={(e) => {
                     const newHospitalizaciones = [
                       ...formData.hospitalizaciones,
@@ -955,14 +1029,18 @@ export default function MedicalFormModal({
                     newHospitalizaciones[index].motivo = e.target.value;
                     updateFormData("hospitalizaciones", newHospitalizaciones);
                   }}
-                  placeholder="Motivo de hospitalización"
+                  placeholder="Indique el motivo"
+                  className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor={`edad-${index}`}>Edad:</Label>
+                <Label htmlFor={`hospitalizacion-edad-${index}`}>
+                  Edad (años):
+                </Label>
                 <Input
-                  id={`edad-${index}`}
-                  value={hosp.edad}
+                  id={`hospitalizacion-edad-${index}`}
+                  type="number"
+                  value={hospitalizacion.edad}
                   onChange={(e) => {
                     const newHospitalizaciones = [
                       ...formData.hospitalizaciones,
@@ -970,14 +1048,32 @@ export default function MedicalFormModal({
                     newHospitalizaciones[index].edad = e.target.value;
                     updateFormData("hospitalizaciones", newHospitalizaciones);
                   }}
-                  placeholder="Edad durante hospitalización"
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
                 />
               </div>
+              {index > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newHospitalizaciones = [
+                      ...formData.hospitalizaciones,
+                    ];
+                    newHospitalizaciones.splice(index, 1);
+                    updateFormData("hospitalizaciones", newHospitalizaciones);
+                  }}
+                  className="mt-2"
+                >
+                  Eliminar
+                </Button>
+              )}
             </div>
           ))}
           <Button
-            type="button"
             variant="outline"
+            size="sm"
             onClick={() => {
               updateFormData("hospitalizaciones", [
                 ...formData.hospitalizaciones,
@@ -986,59 +1082,58 @@ export default function MedicalFormModal({
             }}
             className="mt-2"
           >
-            + Agregar hospitalización
+            + Agregar otra hospitalización
           </Button>
         </div>
 
         <div>
-          <Label className="text-base font-medium">
-            ¿Ha tenido cirugías previas?
-          </Label>
+          <Label className="text-base font-medium">CIRUGÍAS PREVIAS:</Label>
           <RadioGroup
             value={formData.cirugiasPrevias}
             onValueChange={(value) => updateFormData("cirugiasPrevias", value)}
             className="mt-2 space-y-2"
           >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="si" id="cirugias-si" />
-              <Label htmlFor="cirugias-si">Sí</Label>
+              <RadioGroupItem value="no" id="cirugia-no" />
+              <Label htmlFor="cirugia-no">No</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="cirugias-no" />
-              <Label htmlFor="cirugias-no">No</Label>
+              <RadioGroupItem value="si" id="cirugia-si" />
+              <Label htmlFor="cirugia-si">Sí</Label>
             </div>
           </RadioGroup>
+
+          {formData.cirugiasPrevias === "si" && (
+            <div className="mt-2 space-y-2">
+              <div>
+                <Label htmlFor="detallesCirugias">Detalles:</Label>
+                <Input
+                  id="detallesCirugias"
+                  value={formData.detallesCirugias}
+                  onChange={(e) =>
+                    updateFormData("detallesCirugias", e.target.value)
+                  }
+                  placeholder="Describa la cirugía"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edadCirugias">Edad (años):</Label>
+                <Input
+                  id="edadCirugias"
+                  type="number"
+                  value={formData.edadCirugias}
+                  onChange={(e) =>
+                    updateFormData("edadCirugias", e.target.value)
+                  }
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
         </div>
-
-        {formData.cirugiasPrevias === "si" && (
-          <>
-            <div>
-              <Label htmlFor="detallesCirugias">
-                Detalles de las cirugías:
-              </Label>
-              <Textarea
-                id="detallesCirugias"
-                value={formData.detallesCirugias}
-                onChange={(e) =>
-                  updateFormData("detallesCirugias", e.target.value)
-                }
-                placeholder="Describa las cirugías realizadas"
-                className="mt-2"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="edadCirugias">Edad durante las cirugías:</Label>
-              <Input
-                id="edadCirugias"
-                value={formData.edadCirugias}
-                onChange={(e) => updateFormData("edadCirugias", e.target.value)}
-                placeholder="Edad cuando se realizaron las cirugías"
-                className="mt-2"
-              />
-            </div>
-          </>
-        )}
       </div>
     </div>
   );
@@ -1053,148 +1148,293 @@ export default function MedicalFormModal({
       <div className="space-y-6">
         <div>
           <Label className="text-base font-medium">
-            ¿Toma medicamentos actualmente?
+            💊 MEDICAMENTOS ACTUALES:
           </Label>
-          <RadioGroup
-            value={formData.tomaMedicamentos}
-            onValueChange={(value) => updateFormData("tomaMedicamentos", value)}
-            className="mt-2 space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="si" id="medicamentos-si" />
-              <Label htmlFor="medicamentos-si">Sí</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="medicamentos-no" />
-              <Label htmlFor="medicamentos-no">No</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        {formData.tomaMedicamentos === "si" && (
-          <div>
-            <Label className="text-base font-medium">
-              Medicamentos actuales:
+          <div className="mt-2">
+            <Label className="text-sm">
+              ¿Toma algún medicamento actualmente?
             </Label>
-            {formData.medicamentos.map((med, index) => (
-              <div
-                key={index}
-                className="mt-2 grid grid-cols-3 gap-4 p-4 border rounded"
-              >
-                <div>
-                  <Label htmlFor={`med-nombre-${index}`}>Nombre:</Label>
-                  <Input
-                    id={`med-nombre-${index}`}
-                    value={med.nombre}
-                    onChange={(e) => {
-                      const newMedicamentos = [...formData.medicamentos];
-                      newMedicamentos[index].nombre = e.target.value;
-                      updateFormData("medicamentos", newMedicamentos);
-                    }}
-                    placeholder="Nombre del medicamento"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`med-dosis-${index}`}>Dosis:</Label>
-                  <Input
-                    id={`med-dosis-${index}`}
-                    value={med.dosis}
-                    onChange={(e) => {
-                      const newMedicamentos = [...formData.medicamentos];
-                      newMedicamentos[index].dosis = e.target.value;
-                      updateFormData("medicamentos", newMedicamentos);
-                    }}
-                    placeholder="Dosis"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`med-motivo-${index}`}>Motivo:</Label>
-                  <Input
-                    id={`med-motivo-${index}`}
-                    value={med.motivo}
-                    onChange={(e) => {
-                      const newMedicamentos = [...formData.medicamentos];
-                      newMedicamentos[index].motivo = e.target.value;
-                      updateFormData("medicamentos", newMedicamentos);
-                    }}
-                    placeholder="Motivo"
-                  />
-                </div>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                updateFormData("medicamentos", [
-                  ...formData.medicamentos,
-                  { nombre: "", dosis: "", motivo: "" },
-                ]);
-              }}
-              className="mt-2"
+            <RadioGroup
+              value={formData.tomaMedicamentos}
+              onValueChange={(value) =>
+                updateFormData("tomaMedicamentos", value)
+              }
+              className="mt-1 space-y-2"
             >
-              + Agregar medicamento
-            </Button>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="medicamentos-no" />
+                <Label htmlFor="medicamentos-no">No toma medicamentos</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="si" id="medicamentos-si" />
+                <Label htmlFor="medicamentos-si">Sí, especifique:</Label>
+              </div>
+            </RadioGroup>
           </div>
-        )}
+
+          {formData.tomaMedicamentos === "si" && (
+            <div className="mt-2">
+              {formData.medicamentos.map((medicamento, index) => (
+                <div
+                  key={index}
+                  className="mt-2 space-y-2 p-3 border rounded-md"
+                >
+                  <div>
+                    <Label htmlFor={`medicamento-nombre-${index}`}>
+                      Medicamento:
+                    </Label>
+                    <Input
+                      id={`medicamento-nombre-${index}`}
+                      value={medicamento.nombre}
+                      onChange={(e) => {
+                        const newMedicamentos = [...formData.medicamentos];
+                        newMedicamentos[index].nombre = e.target.value;
+                        updateFormData("medicamentos", newMedicamentos);
+                      }}
+                      placeholder="Nombre del medicamento"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor={`medicamento-dosis-${index}`}>
+                        Dosis:
+                      </Label>
+                      <Input
+                        id={`medicamento-dosis-${index}`}
+                        value={medicamento.dosis}
+                        onChange={(e) => {
+                          const newMedicamentos = [...formData.medicamentos];
+                          newMedicamentos[index].dosis = e.target.value;
+                          updateFormData("medicamentos", newMedicamentos);
+                        }}
+                        placeholder="Dosis"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`medicamento-motivo-${index}`}>
+                        Motivo:
+                      </Label>
+                      <Input
+                        id={`medicamento-motivo-${index}`}
+                        value={medicamento.motivo}
+                        onChange={(e) => {
+                          const newMedicamentos = [...formData.medicamentos];
+                          newMedicamentos[index].motivo = e.target.value;
+                          updateFormData("medicamentos", newMedicamentos);
+                        }}
+                        placeholder="Motivo"
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  {index > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newMedicamentos = [...formData.medicamentos];
+                        newMedicamentos.splice(index, 1);
+                        updateFormData("medicamentos", newMedicamentos);
+                      }}
+                      className="mt-2"
+                    >
+                      Eliminar
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  updateFormData("medicamentos", [
+                    ...formData.medicamentos,
+                    { nombre: "", dosis: "", motivo: "" },
+                  ]);
+                }}
+                className="mt-2"
+              >
+                + Agregar otro medicamento
+              </Button>
+            </div>
+          )}
+        </div>
 
         <div>
           <Label className="text-base font-medium">
-            Alergias alimentarias:
+            ⚠️ ALERGIAS CONOCIDAS:
           </Label>
-          <div className="mt-2 space-y-2">
-            {[
-              "Leche",
-              "Huevos",
-              "Frutos secos",
-              "Mariscos",
-              "Soja",
-              "Trigo",
-              "Otras",
-              "Ninguna",
-            ].map((option) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox
-                  id={option}
-                  checked={formData.alergiasAlimentarias.includes(option)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      updateFormData("alergiasAlimentarias", [
-                        ...formData.alergiasAlimentarias,
-                        option,
-                      ]);
-                    } else {
-                      updateFormData(
-                        "alergiasAlimentarias",
-                        formData.alergiasAlimentarias.filter(
-                          (item) => item !== option
-                        )
-                      );
-                    }
-                  }}
+
+          <div className="mt-4">
+            <Label className="text-sm font-medium">
+              ALERGIAS ALIMENTARIAS:
+            </Label>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              {[
+                "Ninguna",
+                "Leche",
+                "Huevos",
+                "Frutos secos",
+                "Mariscos",
+                "Soja",
+                "Trigo",
+                "Otras",
+              ].map((alergia) => (
+                <div key={alergia} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`alergia-alim-${alergia}`}
+                    checked={formData.alergiasAlimentarias.includes(alergia)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        if (alergia === "Ninguna") {
+                          updateFormData("alergiasAlimentarias", ["Ninguna"]);
+                        } else {
+                          updateFormData("alergiasAlimentarias", [
+                            ...formData.alergiasAlimentarias.filter(
+                              (item) => item !== "Ninguna"
+                            ),
+                            alergia,
+                          ]);
+                        }
+                      } else {
+                        updateFormData(
+                          "alergiasAlimentarias",
+                          formData.alergiasAlimentarias.filter(
+                            (item) => item !== alergia
+                          )
+                        );
+                      }
+                    }}
+                  />
+                  <Label
+                    htmlFor={`alergia-alim-${alergia}`}
+                    className="capitalize"
+                  >
+                    {alergia}
+                  </Label>
+                </div>
+              ))}
+            </div>
+
+            {formData.alergiasAlimentarias.includes("Otras") && (
+              <div className="mt-2">
+                <Input
+                  placeholder="Especifique otras alergias alimentarias"
+                  value={formData.otraAlergiaAlimentaria}
+                  onChange={(e) =>
+                    updateFormData("otraAlergiaAlimentaria", e.target.value)
+                  }
                 />
-                <Label htmlFor={option}>{option}</Label>
               </div>
-            ))}
+            )}
+          </div>
+
+          <div className="mt-4">
+            <Label className="text-sm font-medium">
+              ALERGIAS A MEDICAMENTOS:
+            </Label>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              {["Ninguna", "Penicilina", "Aspirina", "Otras"].map((alergia) => (
+                <div key={alergia} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`alergia-med-${alergia}`}
+                    checked={formData.alergiasMedicamentos.includes(alergia)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        if (alergia === "Ninguna") {
+                          updateFormData("alergiasMedicamentos", ["Ninguna"]);
+                        } else {
+                          updateFormData("alergiasMedicamentos", [
+                            ...formData.alergiasMedicamentos.filter(
+                              (item) => item !== "Ninguna"
+                            ),
+                            alergia,
+                          ]);
+                        }
+                      } else {
+                        updateFormData(
+                          "alergiasMedicamentos",
+                          formData.alergiasMedicamentos.filter(
+                            (item) => item !== alergia
+                          )
+                        );
+                      }
+                    }}
+                  />
+                  <Label
+                    htmlFor={`alergia-med-${alergia}`}
+                    className="capitalize"
+                  >
+                    {alergia}
+                  </Label>
+                </div>
+              ))}
+            </div>
+
+            {formData.alergiasMedicamentos.includes("Otras") && (
+              <div className="mt-2">
+                <Input
+                  placeholder="Especifique otras alergias a medicamentos"
+                  value={formData.otraAlergiaMedicamento}
+                  onChange={(e) =>
+                    updateFormData("otraAlergiaMedicamento", e.target.value)
+                  }
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <Label className="text-sm font-medium">OTRAS ALERGIAS:</Label>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              {["Polen", "Ácaros", "Pelo de animales", "Otras"].map(
+                (alergia) => (
+                  <div key={alergia} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`alergia-otra-${alergia}`}
+                      checked={formData.otrasAlergias.includes(alergia)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          updateFormData("otrasAlergias", [
+                            ...formData.otrasAlergias,
+                            alergia,
+                          ]);
+                        } else {
+                          updateFormData(
+                            "otrasAlergias",
+                            formData.otrasAlergias.filter(
+                              (item) => item !== alergia
+                            )
+                          );
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor={`alergia-otra-${alergia}`}
+                      className="capitalize"
+                    >
+                      {alergia}
+                    </Label>
+                  </div>
+                )
+              )}
+            </div>
+
+            {formData.otrasAlergias.includes("Otras") && (
+              <div className="mt-2">
+                <Input
+                  placeholder="Especifique otras alergias"
+                  value={formData.otraAlergia}
+                  onChange={(e) =>
+                    updateFormData("otraAlergia", e.target.value)
+                  }
+                />
+              </div>
+            )}
           </div>
         </div>
-
-        {formData.alergiasAlimentarias.includes("Otras") && (
-          <div>
-            <Label htmlFor="otraAlergiaAlimentaria">
-              Especifique otras alergias alimentarias:
-            </Label>
-            <Input
-              id="otraAlergiaAlimentaria"
-              value={formData.otraAlergiaAlimentaria}
-              onChange={(e) =>
-                updateFormData("otraAlergiaAlimentaria", e.target.value)
-              }
-              placeholder="Otras alergias alimentarias"
-              className="mt-2"
-            />
-          </div>
-        )}
       </div>
     </div>
   );
@@ -1207,137 +1447,205 @@ export default function MedicalFormModal({
       </div>
 
       <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="sostenCabeza">Sostuvo la cabeza (meses):</Label>
-            <Input
-              id="sostenCabeza"
-              value={formData.sostenCabeza}
-              onChange={(e) => updateFormData("sostenCabeza", e.target.value)}
-              placeholder="3-4"
-              className="mt-2"
-            />
-          </div>
-          <div>
-            <Label htmlFor="sentadoSinApoyo">Se sentó sin apoyo (meses):</Label>
-            <Input
-              id="sentadoSinApoyo"
-              value={formData.sentadoSinApoyo}
-              onChange={(e) =>
-                updateFormData("sentadoSinApoyo", e.target.value)
-              }
-              placeholder="6-8"
-              className="mt-2"
-            />
-          </div>
-        </div>
+        <div>
+          <Label className="text-base font-medium">
+            🏃 MOTOR GRUESO (Grandes movimientos):
+          </Label>
+          <div className="mt-2 space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="sostenCabeza">Sostén de cabeza (meses):</Label>
+                <Input
+                  id="sostenCabeza"
+                  type="number"
+                  value={formData.sostenCabeza}
+                  onChange={(e) =>
+                    updateFormData("sostenCabeza", e.target.value)
+                  }
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="sentadoSinApoyo">
+                  Sentado sin apoyo (meses):
+                </Label>
+                <Input
+                  id="sentadoSinApoyo"
+                  type="number"
+                  value={formData.sentadoSinApoyo}
+                  onChange={(e) =>
+                    updateFormData("sentadoSinApoyo", e.target.value)
+                  }
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
+                />
+              </div>
+            </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="gateo">Gateó (meses):</Label>
-            <Input
-              id="gateo"
-              value={formData.gateo}
-              onChange={(e) => updateFormData("gateo", e.target.value)}
-              placeholder="8-10"
-              className="mt-2"
-            />
-          </div>
-          <div>
-            <Label htmlFor="caminaSolo">Caminó solo (meses):</Label>
-            <Input
-              id="caminaSolo"
-              value={formData.caminaSolo}
-              onChange={(e) => updateFormData("caminaSolo", e.target.value)}
-              placeholder="12-15"
-              className="mt-2"
-            />
-          </div>
-        </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="gateo">Gateo (meses):</Label>
+                <Input
+                  id="gateo"
+                  type="number"
+                  value={formData.gateo}
+                  onChange={(e) => updateFormData("gateo", e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="caminaSolo">Camina solo (meses):</Label>
+                <Input
+                  id="caminaSolo"
+                  type="number"
+                  value={formData.caminaSolo}
+                  onChange={(e) => updateFormData("caminaSolo", e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
+                />
+              </div>
+            </div>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="subeEscaleras"
-            checked={formData.subeEscaleras}
-            onCheckedChange={(checked) =>
-              updateFormData("subeEscaleras", checked)
-            }
-          />
-          <Label htmlFor="subeEscaleras">Sube escaleras</Label>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="subeEscaleras"
+                checked={formData.subeEscaleras}
+                onCheckedChange={(checked) =>
+                  updateFormData("subeEscaleras", !!checked)
+                }
+              />
+              <Label htmlFor="subeEscaleras">Sube/baja escaleras</Label>
+            </div>
+
+            <div>
+              <Label className="text-sm">
+                ¿Dificultades en equilibrio/coordinación?
+              </Label>
+              <RadioGroup
+                value={formData.dificultadesEquilibrio}
+                onValueChange={(value) =>
+                  updateFormData("dificultadesEquilibrio", value)
+                }
+                className="mt-1 space-y-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="no" id="equilibrio-no" />
+                  <Label htmlFor="equilibrio-no">No</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="si" id="equilibrio-si" />
+                  <Label htmlFor="equilibrio-si">Sí</Label>
+                </div>
+              </RadioGroup>
+
+              {formData.dificultadesEquilibrio === "si" && (
+                <div className="mt-2">
+                  <Input
+                    placeholder="Especifique las dificultades"
+                    value={formData.detallesDificultadesEquilibrio}
+                    onChange={(e) =>
+                      updateFormData(
+                        "detallesDificultadesEquilibrio",
+                        e.target.value
+                      )
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div>
           <Label className="text-base font-medium">
-            ¿Tiene dificultades de equilibrio?
+            ✋ MOTOR FINO (Movimientos precisos):
           </Label>
-          <RadioGroup
-            value={formData.dificultadesEquilibrio}
-            onValueChange={(value) =>
-              updateFormData("dificultadesEquilibrio", value)
-            }
-            className="mt-2 space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="si" id="equilibrio-si" />
-              <Label htmlFor="equilibrio-si">Sí</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="equilibrio-no" />
-              <Label htmlFor="equilibrio-no">No</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        {formData.dificultadesEquilibrio === "si" && (
-          <div>
-            <Label htmlFor="detallesDificultadesEquilibrio">
-              Detalles de dificultades de equilibrio:
-            </Label>
-            <Textarea
-              id="detallesDificultadesEquilibrio"
-              value={formData.detallesDificultadesEquilibrio}
-              onChange={(e) =>
-                updateFormData("detallesDificultadesEquilibrio", e.target.value)
-              }
-              placeholder="Describa las dificultades de equilibrio"
-              className="mt-2"
-            />
-          </div>
-        )}
-
-        <div>
-          <Label className="text-base font-medium">
-            Habilidades motoras finas:
-          </Label>
-          <div className="mt-2 space-y-2">
+          <div className="mt-2 grid grid-cols-2 gap-2">
             {[
-              "Agarra objetos pequeños",
-              "Usa pinza digital",
-              "Dibuja",
-              "Usa cubiertos",
-              "Se viste solo",
-            ].map((option) => (
-              <div key={option} className="flex items-center space-x-2">
+              { id: "prension", label: "Prensión (pinza fina)" },
+              { id: "garabatea", label: "Garabatea" },
+              { id: "dibuja-formas", label: "Dibuja formas básicas" },
+              { id: "usa-tijeras", label: "Usa tijeras" },
+            ].map((habilidad) => (
+              <div key={habilidad.id} className="flex items-center space-x-2">
                 <Checkbox
-                  id={option}
-                  checked={formData.motorFino.includes(option)}
+                  id={habilidad.id}
+                  checked={formData.motorFino.includes(habilidad.id)}
                   onCheckedChange={(checked) => {
                     if (checked) {
                       updateFormData("motorFino", [
                         ...formData.motorFino,
-                        option,
+                        habilidad.id,
                       ]);
                     } else {
                       updateFormData(
                         "motorFino",
-                        formData.motorFino.filter((item) => item !== option)
+                        formData.motorFino.filter(
+                          (item) => item !== habilidad.id
+                        )
                       );
                     }
                   }}
                 />
-                <Label htmlFor={option}>{option}</Label>
+                <Label htmlFor={habilidad.id}>{habilidad.label}</Label>
               </div>
             ))}
+          </div>
+
+          <div className="mt-4">
+            <Label htmlFor="torreCubos">Arma torres de cubos (cantidad):</Label>
+            <Input
+              id="torreCubos"
+              type="number"
+              value={formData.torreCubos}
+              onChange={(e) => updateFormData("torreCubos", e.target.value)}
+              placeholder="0"
+              min="0"
+              className="mt-1"
+            />
+          </div>
+
+          <div className="mt-4">
+            <Label className="text-sm">
+              ¿Dificultades para manipular objetos pequeños?
+            </Label>
+            <RadioGroup
+              value={formData.dificultadesMotorFino}
+              onValueChange={(value) =>
+                updateFormData("dificultadesMotorFino", value)
+              }
+              className="mt-1 space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="motor-fino-no" />
+                <Label htmlFor="motor-fino-no">No</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="si" id="motor-fino-si" />
+                <Label htmlFor="motor-fino-si">Sí</Label>
+              </div>
+            </RadioGroup>
+
+            {formData.dificultadesMotorFino === "si" && (
+              <div className="mt-2">
+                <Input
+                  placeholder="Especifique las dificultades"
+                  value={formData.detallesDificultadesMotorFino}
+                  onChange={(e) =>
+                    updateFormData(
+                      "detallesDificultadesMotorFino",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1352,161 +1660,265 @@ export default function MedicalFormModal({
       </div>
 
       <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="primerasPalabras">Primeras palabras (meses):</Label>
-            <Input
-              id="primerasPalabras"
-              value={formData.primerasPalabras}
-              onChange={(e) =>
-                updateFormData("primerasPalabras", e.target.value)
-              }
-              placeholder="12-18"
-              className="mt-2"
-            />
-          </div>
-          <div>
-            <Label htmlFor="frases2Palabras">
-              Frases de 2 palabras (meses):
-            </Label>
-            <Input
-              id="frases2Palabras"
-              value={formData.frases2Palabras}
-              onChange={(e) =>
-                updateFormData("frases2Palabras", e.target.value)
-              }
-              placeholder="18-24"
-              className="mt-2"
-            />
-          </div>
-        </div>
+        <div>
+          <Label className="text-base font-medium">
+            💬 DESARROLLO DEL LENGUAJE:
+          </Label>
+          <div className="mt-2 space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="primerasPalabras">
+                  Primeras palabras (meses):
+                </Label>
+                <Input
+                  id="primerasPalabras"
+                  type="number"
+                  value={formData.primerasPalabras}
+                  onChange={(e) =>
+                    updateFormData("primerasPalabras", e.target.value)
+                  }
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="frases2Palabras">
+                  Frases 2-3 palabras (meses):
+                </Label>
+                <Input
+                  id="frases2Palabras"
+                  type="number"
+                  value={formData.frases2Palabras}
+                  onChange={(e) =>
+                    updateFormData("frases2Palabras", e.target.value)
+                  }
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
+                />
+              </div>
+            </div>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="oracionesCompletas"
-            checked={formData.oracionesCompletas}
-            onCheckedChange={(checked) =>
-              updateFormData("oracionesCompletas", checked)
-            }
-          />
-          <Label htmlFor="oracionesCompletas">Forma oraciones completas</Label>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="oracionesCompletas"
+                checked={formData.oracionesCompletas}
+                onCheckedChange={(checked) =>
+                  updateFormData("oracionesCompletas", !!checked)
+                }
+              />
+              <Label htmlFor="oracionesCompletas">Oraciones completas</Label>
+            </div>
+          </div>
         </div>
 
         <div>
-          <Label className="text-base font-medium">Comunicación actual:</Label>
-          <div className="mt-2 space-y-2">
+          <Label className="text-base font-medium">
+            ¿CÓMO SE COMUNICA ACTUALMENTE?
+          </Label>
+          <div className="mt-2 grid grid-cols-2 gap-2">
             {[
-              "Palabras sueltas",
-              "Frases simples",
-              "Oraciones completas",
-              "Gestos",
-              "Señala",
-              "No verbal",
-            ].map((option) => (
-              <div key={option} className="flex items-center space-x-2">
+              { id: "palabras", label: "Palabras" },
+              { id: "gestos", label: "Gestos" },
+              { id: "senalando", label: "Señalando" },
+              { id: "sonidos", label: "Sonidos" },
+              { id: "no-verbal", label: "No verbal" },
+            ].map((comunicacion) => (
+              <div
+                key={comunicacion.id}
+                className="flex items-center space-x-2"
+              >
                 <Checkbox
-                  id={option}
-                  checked={formData.comunicacionActual.includes(option)}
+                  id={comunicacion.id}
+                  checked={formData.comunicacionActual.includes(
+                    comunicacion.id
+                  )}
                   onCheckedChange={(checked) => {
                     if (checked) {
                       updateFormData("comunicacionActual", [
                         ...formData.comunicacionActual,
-                        option,
+                        comunicacion.id,
                       ]);
                     } else {
                       updateFormData(
                         "comunicacionActual",
                         formData.comunicacionActual.filter(
-                          (item) => item !== option
+                          (item) => item !== comunicacion.id
                         )
                       );
                     }
                   }}
                 />
-                <Label htmlFor={option}>{option}</Label>
+                <Label htmlFor={comunicacion.id}>{comunicacion.label}</Label>
+              </div>
+            ))}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="comunicacion-otra"
+                checked={formData.comunicacionActual.includes("otra")}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    updateFormData("comunicacionActual", [
+                      ...formData.comunicacionActual,
+                      "otra",
+                    ]);
+                  } else {
+                    updateFormData(
+                      "comunicacionActual",
+                      formData.comunicacionActual.filter(
+                        (item) => item !== "otra"
+                      )
+                    );
+                  }
+                }}
+              />
+              <Label htmlFor="comunicacion-otra">Otro</Label>
+            </div>
+          </div>
+
+          {formData.comunicacionActual.includes("otra") && (
+            <div className="mt-2">
+              <Input
+                placeholder="Especifique otra forma de comunicación"
+                value={formData.otraComunicacion}
+                onChange={(e) =>
+                  updateFormData("otraComunicacion", e.target.value)
+                }
+              />
+            </div>
+          )}
+        </div>
+
+        <div>
+          <Label className="text-base font-medium">COMPRENSIÓN:</Label>
+          <div className="mt-2">
+            <Label className="text-sm">Se le comprende:</Label>
+            <RadioGroup
+              value={formData.comprension}
+              onValueChange={(value) => updateFormData("comprension", value)}
+              className="mt-1 space-y-2"
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {["siempre", "mayoria", "a-veces", "casi-nunca"].map(
+                  (nivel) => (
+                    <div key={nivel} className="flex items-center space-x-2">
+                      <RadioGroupItem
+                        value={nivel}
+                        id={`comprension-${nivel}`}
+                      />
+                      <Label htmlFor={`comprension-${nivel}`}>
+                        {nivel === "siempre"
+                          ? "Siempre"
+                          : nivel === "mayoria"
+                            ? "Mayoría"
+                            : nivel === "a-veces"
+                              ? "A veces"
+                              : "Casi nunca"}
+                      </Label>
+                    </div>
+                  )
+                )}
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="instrucciones-simples"
+                checked={formData.sigueInstruccionesSimples}
+                onCheckedChange={(checked) =>
+                  updateFormData("sigueInstruccionesSimples", !!checked)
+                }
+              />
+              <Label htmlFor="instrucciones-simples">
+                Sigue instrucciones simples
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="instrucciones-complejas"
+                checked={formData.sigueInstruccionesComplejas}
+                onCheckedChange={(checked) =>
+                  updateFormData("sigueInstruccionesComplejas", !!checked)
+                }
+              />
+              <Label htmlFor="instrucciones-complejas">
+                Sigue instrucciones complejas
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="responde-nombre"
+                checked={formData.respondeNombre}
+                onCheckedChange={(checked) =>
+                  updateFormData("respondeNombre", !!checked)
+                }
+              />
+              <Label htmlFor="responde-nombre">Responde a su nombre</Label>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-base font-medium">
+            🧠 DESARROLLO COGNITIVO:
+          </Label>
+          <div className="mt-2 space-y-2">
+            {[
+              {
+                id: "muestra-interes",
+                label: "Muestra interés por explorar",
+              },
+              {
+                id: "presta-atencion",
+                label: "Presta atención a cuentos/actividades",
+              },
+              {
+                id: "recuerda-eventos",
+                label: "Recuerda eventos recientes",
+              },
+            ].map((habilidad) => (
+              <div key={habilidad.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={habilidad.id}
+                  checked={formData.desarrolloCognitivo.includes(habilidad.id)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      updateFormData("desarrolloCognitivo", [
+                        ...formData.desarrolloCognitivo,
+                        habilidad.id,
+                      ]);
+                    } else {
+                      updateFormData(
+                        "desarrolloCognitivo",
+                        formData.desarrolloCognitivo.filter(
+                          (item) => item !== habilidad.id
+                        )
+                      );
+                    }
+                  }}
+                />
+                <Label htmlFor={habilidad.id}>{habilidad.label}</Label>
               </div>
             ))}
           </div>
-        </div>
 
-        <div>
-          <Label className="text-base font-medium">Comprensión:</Label>
-          <RadioGroup
-            value={formData.comprension}
-            onValueChange={(value) => updateFormData("comprension", value)}
-            className="mt-2 space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="excelente" id="comprension-excelente" />
-              <Label htmlFor="comprension-excelente">Excelente</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="buena" id="comprension-buena" />
-              <Label htmlFor="comprension-buena">Buena</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="regular" id="comprension-regular" />
-              <Label htmlFor="comprension-regular">Regular</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="limitada" id="comprension-limitada" />
-              <Label htmlFor="comprension-limitada">Limitada</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="sigueInstruccionesSimples"
-              checked={formData.sigueInstruccionesSimples}
-              onCheckedChange={(checked) =>
-                updateFormData("sigueInstruccionesSimples", checked)
-              }
-            />
-            <Label htmlFor="sigueInstruccionesSimples">
-              Sigue instrucciones simples
+          <div className="mt-4">
+            <Label htmlFor="dificultades-aprender">
+              Dificultades para aprender:
             </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="sigueInstruccionesComplejas"
-              checked={formData.sigueInstruccionesComplejas}
-              onCheckedChange={(checked) =>
-                updateFormData("sigueInstruccionesComplejas", checked)
+            <Input
+              id="dificultades-aprender"
+              value={formData.dificultadesAprender}
+              onChange={(e) =>
+                updateFormData("dificultadesAprender", e.target.value)
               }
+              placeholder="Especifique si hay dificultades para aprender"
+              className="mt-1"
             />
-            <Label htmlFor="sigueInstruccionesComplejas">
-              Sigue instrucciones complejas
-            </Label>
           </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="respondeNombre"
-              checked={formData.respondeNombre}
-              onCheckedChange={(checked) =>
-                updateFormData("respondeNombre", checked)
-              }
-            />
-            <Label htmlFor="respondeNombre">Responde a su nombre</Label>
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="dificultadesAprender">
-            Dificultades para aprender:
-          </Label>
-          <Textarea
-            id="dificultadesAprender"
-            value={formData.dificultadesAprender}
-            onChange={(e) =>
-              updateFormData("dificultadesAprender", e.target.value)
-            }
-            placeholder="Describa cualquier dificultad para aprender o seguir instrucciones"
-            className="mt-2"
-          />
         </div>
       </div>
     </div>
@@ -1517,154 +1929,321 @@ export default function MedicalFormModal({
       <div className="text-center mb-6">
         <Smile className="h-12 w-12 mx-auto text-orange-600 mb-4" />
         <h3 className="text-lg font-semibold mb-2">
-          Desarrollo Social y Hábitos
+          Desarrollo Social y Emocional
         </h3>
       </div>
 
       <div className="space-y-6">
         <div>
           <Label className="text-base font-medium">
-            ¿Interactúa con otros niños?
+            😊 INTERACCIÓN SOCIAL:
           </Label>
-          <RadioGroup
-            value={formData.interactuaOtrosNinos}
-            onValueChange={(value) =>
-              updateFormData("interactuaOtrosNinos", value)
-            }
-            className="mt-2 space-y-2"
-          >
+          <div className="mt-2">
+            <Label className="text-sm">¿Interactúa con otros niños?</Label>
+            <RadioGroup
+              value={formData.interactuaOtrosNinos}
+              onValueChange={(value) =>
+                updateFormData("interactuaOtrosNinos", value)
+              }
+              className="mt-1 space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="si" id="interactua-si" />
+                <Label htmlFor="interactua-si">Sí</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="interactua-no" />
+                <Label htmlFor="interactua-no">No</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value="con-dificultad"
+                  id="interactua-dificultad"
+                />
+                <Label htmlFor="interactua-dificultad">Con dificultad</Label>
+              </div>
+            </RadioGroup>
+
+            {formData.interactuaOtrosNinos === "con-dificultad" && (
+              <div className="mt-2">
+                <Input
+                  placeholder="Especifique las dificultades"
+                  value={formData.detallesInteraccion}
+                  onChange={(e) =>
+                    updateFormData("detallesInteraccion", e.target.value)
+                  }
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 space-y-2">
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="mucho" id="interaccion-mucho" />
-              <Label htmlFor="interaccion-mucho">Mucho</Label>
+              <Checkbox
+                id="comparte-juguetes"
+                checked={formData.comparteJuguetes}
+                onCheckedChange={(checked) =>
+                  updateFormData("comparteJuguetes", !!checked)
+                }
+              />
+              <Label htmlFor="comparte-juguetes">
+                Comparte juguetes/actividades
+              </Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="poco" id="interaccion-poco" />
-              <Label htmlFor="interaccion-poco">Poco</Label>
+              <Checkbox
+                id="expresa-emociones"
+                checked={formData.expresaEmociones}
+                onCheckedChange={(checked) =>
+                  updateFormData("expresaEmociones", !!checked)
+                }
+              />
+              <Label htmlFor="expresa-emociones">
+                Expresa emociones (alegría, tristeza, enojo)
+              </Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="nada" id="interaccion-nada" />
-              <Label htmlFor="interaccion-nada">Nada</Label>
-            </div>
-          </RadioGroup>
+          </div>
         </div>
 
         <div>
-          <Label htmlFor="detallesInteraccion">
-            Detalles de la interacción:
-          </Label>
-          <Textarea
-            id="detallesInteraccion"
-            value={formData.detallesInteraccion}
-            onChange={(e) =>
-              updateFormData("detallesInteraccion", e.target.value)
-            }
-            placeholder="Describa cómo interactúa con otros niños"
-            className="mt-2"
-          />
-        </div>
+          <Label className="text-base font-medium">COMPORTAMIENTO:</Label>
+          <div className="mt-2">
+            <Label className="text-sm">Rabietas:</Label>
+            <RadioGroup
+              value={formData.rabietas}
+              onValueChange={(value) => updateFormData("rabietas", value)}
+              className="mt-1 space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="rabietas-no" />
+                <Label htmlFor="rabietas-no">No</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="si" id="rabietas-si" />
+                <Label htmlFor="rabietas-si">Sí</Label>
+              </div>
+            </RadioGroup>
 
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="comparteJuguetes"
-              checked={formData.comparteJuguetes}
-              onCheckedChange={(checked) =>
-                updateFormData("comparteJuguetes", checked)
-              }
-            />
-            <Label htmlFor="comparteJuguetes">Comparte juguetes</Label>
+            {formData.rabietas === "si" && (
+              <div className="mt-2">
+                <Label htmlFor="frecuencia-rabietas">Frecuencia:</Label>
+                <Input
+                  id="frecuencia-rabietas"
+                  placeholder="Especifique la frecuencia"
+                  value={formData.frecuenciaRabietas}
+                  onChange={(e) =>
+                    updateFormData("frecuenciaRabietas", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="expresaEmociones"
-              checked={formData.expresaEmociones}
-              onCheckedChange={(checked) =>
-                updateFormData("expresaEmociones", checked)
+          <div className="mt-4">
+            <Label className="text-sm">Adaptación a cambios:</Label>
+            <RadioGroup
+              value={formData.adaptacionCambios}
+              onValueChange={(value) =>
+                updateFormData("adaptacionCambios", value)
               }
-            />
-            <Label htmlFor="expresaEmociones">
-              Expresa emociones apropiadamente
-            </Label>
+              className="mt-1 space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="facilmente" id="adaptacion-facil" />
+                <Label htmlFor="adaptacion-facil">Fácilmente</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value="con-dificultad"
+                  id="adaptacion-dificultad"
+                />
+                <Label htmlFor="adaptacion-dificultad">Con dificultad</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="le-cuesta-mucho" id="adaptacion-mucho" />
+                <Label htmlFor="adaptacion-mucho">Le cuesta mucho</Label>
+              </div>
+            </RadioGroup>
           </div>
-        </div>
 
-        <div>
-          <Label className="text-base font-medium">Rabietas:</Label>
-          <RadioGroup
-            value={formData.rabietas}
-            onValueChange={(value) => updateFormData("rabietas", value)}
-            className="mt-2 space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="frecuentes" id="rabietas-frecuentes" />
-              <Label htmlFor="rabietas-frecuentes">Frecuentes</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="ocasionales" id="rabietas-ocasionales" />
-              <Label htmlFor="rabietas-ocasionales">Ocasionales</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="raras" id="rabietas-raras" />
-              <Label htmlFor="rabietas-raras">Raras</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="nunca" id="rabietas-nunca" />
-              <Label htmlFor="rabietas-nunca">Nunca</Label>
-            </div>
-          </RadioGroup>
+          <div className="mt-4">
+            <Label className="text-sm">Conductas repetitivas:</Label>
+            <RadioGroup
+              value={formData.conductasRepetitivas}
+              onValueChange={(value) =>
+                updateFormData("conductasRepetitivas", value)
+              }
+              className="mt-1 space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="conductas-no" />
+                <Label htmlFor="conductas-no">No</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="si" id="conductas-si" />
+                <Label htmlFor="conductas-si">Sí</Label>
+              </div>
+            </RadioGroup>
+
+            {formData.conductasRepetitivas === "si" && (
+              <div className="mt-2">
+                <Input
+                  placeholder="Especifique las conductas"
+                  value={formData.detallesConductas}
+                  onChange={(e) =>
+                    updateFormData("detallesConductas", e.target.value)
+                  }
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div>
           <Label className="text-base font-medium">
-            Control de esfínter diurno:
+            🍽️ HÁBITOS Y AUTONOMÍA:
           </Label>
-          <RadioGroup
-            value={formData.controlEsfinterDiurno}
-            onValueChange={(value) =>
-              updateFormData("controlEsfinterDiurno", value)
-            }
-            className="mt-2 space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="completo" id="diurno-completo" />
-              <Label htmlFor="diurno-completo">Completo</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="parcial" id="diurno-parcial" />
-              <Label htmlFor="diurno-parcial">Parcial</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="diurno-no" />
-              <Label htmlFor="diurno-no">No</Label>
-            </div>
-          </RadioGroup>
-        </div>
 
-        <div>
-          <Label className="text-base font-medium">
-            Control de esfínter nocturno:
-          </Label>
-          <RadioGroup
-            value={formData.controlEsfinterNocturno}
-            onValueChange={(value) =>
-              updateFormData("controlEsfinterNocturno", value)
-            }
-            className="mt-2 space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="completo" id="nocturno-completo" />
-              <Label htmlFor="nocturno-completo">Completo</Label>
+          <div className="mt-2">
+            <Label className="text-sm font-medium">ALIMENTACIÓN:</Label>
+            <div className="mt-1 space-y-2">
+              {[
+                { id: "come-todo", label: "Come de todo" },
+                { id: "selectivo", label: "Selectivo" },
+                {
+                  id: "dificultad-masticar",
+                  label: "Dificultad masticar",
+                },
+              ].map((habito) => (
+                <div key={habito.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={habito.id}
+                    checked={formData.alimentacion.includes(habito.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        updateFormData("alimentacion", [
+                          ...formData.alimentacion,
+                          habito.id,
+                        ]);
+                      } else {
+                        updateFormData(
+                          "alimentacion",
+                          formData.alimentacion.filter(
+                            (item) => item !== habito.id
+                          )
+                        );
+                      }
+                    }}
+                  />
+                  <Label htmlFor={habito.id}>{habito.label}</Label>
+                </div>
+              ))}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="utiliza-cubiertos"
+                  checked={formData.utilizaCubiertos}
+                  onCheckedChange={(checked) =>
+                    updateFormData("utilizaCubiertos", !!checked)
+                  }
+                />
+                <Label htmlFor="utiliza-cubiertos">Utiliza cubiertos</Label>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="parcial" id="nocturno-parcial" />
-              <Label htmlFor="nocturno-parcial">Parcial</Label>
+          </div>
+
+          <div className="mt-4">
+            <Label className="text-sm font-medium">SUEÑO:</Label>
+            <div className="mt-1 space-y-2">
+              {[
+                { id: "duerme-noche", label: "Duerme toda la noche" },
+                { id: "se-despierta", label: "Se despierta" },
+                {
+                  id: "dificultad-conciliar",
+                  label: "Dificultad conciliar",
+                },
+                { id: "pesadillas", label: "Pesadillas" },
+              ].map((habito) => (
+                <div key={habito.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={habito.id}
+                    checked={formData.sueno.includes(habito.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        updateFormData("sueno", [...formData.sueno, habito.id]);
+                      } else {
+                        updateFormData(
+                          "sueno",
+                          formData.sueno.filter((item) => item !== habito.id)
+                        );
+                      }
+                    }}
+                  />
+                  <Label htmlFor={habito.id}>{habito.label}</Label>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="nocturno-no" />
-              <Label htmlFor="nocturno-no">No</Label>
+          </div>
+
+          <div className="mt-4">
+            <Label className="text-sm font-medium">CONTROL ESFÍNTERES:</Label>
+            <div className="mt-1 grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="control-diurno">Diurno (años):</Label>
+                <Input
+                  id="control-diurno"
+                  type="number"
+                  value={formData.controlEsfinterDiurno}
+                  onChange={(e) =>
+                    updateFormData("controlEsfinterDiurno", e.target.value)
+                  }
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="control-nocturno">Nocturno (años):</Label>
+                <Input
+                  id="control-nocturno"
+                  type="number"
+                  value={formData.controlEsfinterNocturno}
+                  onChange={(e) =>
+                    updateFormData("controlEsfinterNocturno", e.target.value)
+                  }
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
+                />
+              </div>
             </div>
-          </RadioGroup>
+
+            <div className="mt-2 flex items-center space-x-2">
+              <Checkbox
+                id="usa-panal"
+                checked={formData.usaPanal}
+                onCheckedChange={(checked) =>
+                  updateFormData("usaPanal", !!checked)
+                }
+              />
+              <Label htmlFor="usa-panal">Usa pañal</Label>
+            </div>
+
+            {formData.usaPanal && (
+              <div className="mt-2">
+                <Label htmlFor="edad-panal">Edad:</Label>
+                <Input
+                  id="edad-panal"
+                  type="number"
+                  value={formData.edadPanal}
+                  onChange={(e) => updateFormData("edadPanal", e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  className="mt-1"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1674,184 +2253,253 @@ export default function MedicalFormModal({
     <div className="space-y-6">
       <div className="text-center mb-6">
         <Users className="h-12 w-12 mx-auto text-purple-600 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Información Familiar</h3>
+        <h3 className="text-lg font-semibold mb-2">Dinámica Familiar</h3>
       </div>
 
       <div className="space-y-6">
         <div>
-          <Label htmlFor="viveConQuien">¿Con quién vive el niño/a?</Label>
-          <Input
-            id="viveConQuien"
-            value={formData.viveConQuien}
-            onChange={(e) => updateFormData("viveConQuien", e.target.value)}
-            placeholder="Ej: Padres, abuelos, madre soltera, etc."
-            className="mt-2"
-          />
-        </div>
-
-        <div>
-          <Label className="text-base font-medium">¿Tiene hermanos?</Label>
-          <RadioGroup
-            value={formData.tieneHermanos}
-            onValueChange={(value) => updateFormData("tieneHermanos", value)}
-            className="mt-2 space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="si" id="hermanos-si" />
-              <Label htmlFor="hermanos-si">Sí</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="hermanos-no" />
-              <Label htmlFor="hermanos-no">No</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        {formData.tieneHermanos === "si" && (
-          <>
-            <div>
-              <Label htmlFor="cantidadHermanos">Cantidad de hermanos:</Label>
-              <Input
-                id="cantidadHermanos"
-                type="number"
-                value={formData.cantidadHermanos}
-                onChange={(e) =>
-                  updateFormData("cantidadHermanos", e.target.value)
-                }
-                placeholder="1"
-                min="1"
-                className="mt-2"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="edadesHermanos">Edades de los hermanos:</Label>
-              <Input
-                id="edadesHermanos"
-                value={formData.edadesHermanos}
-                onChange={(e) =>
-                  updateFormData("edadesHermanos", e.target.value)
-                }
-                placeholder="Ej: 5 años, 8 años"
-                className="mt-2"
-              />
-            </div>
-          </>
-        )}
-
-        <div>
-          <Label htmlFor="ambienteFamiliar">Ambiente familiar:</Label>
-          <Textarea
-            id="ambienteFamiliar"
-            value={formData.ambienteFamiliar}
-            onChange={(e) => updateFormData("ambienteFamiliar", e.target.value)}
-            placeholder="Describa el ambiente familiar y las dinámicas del hogar"
-            className="mt-2"
-          />
-        </div>
-
-        <div>
           <Label className="text-base font-medium">
-            ¿Ha habido cambios recientes importantes en la familia?
+            👨‍👩‍👧‍👦 COMPOSICIÓN FAMILIAR:
           </Label>
+          <div className="mt-2">
+            <Label htmlFor="vive-con-quien">¿Con quién vive el niño/a?</Label>
+            <Textarea
+              id="vive-con-quien"
+              value={formData.viveConQuien}
+              onChange={(e) => updateFormData("viveConQuien", e.target.value)}
+              placeholder="Describa con quién vive el niño/a"
+              className="mt-1"
+            />
+          </div>
+
+          <div className="mt-4">
+            <Label className="text-sm">Hermanos:</Label>
+            <RadioGroup
+              value={formData.tieneHermanos}
+              onValueChange={(value) => updateFormData("tieneHermanos", value)}
+              className="mt-1 space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="hermanos-no" />
+                <Label htmlFor="hermanos-no">No</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="si" id="hermanos-si" />
+                <Label htmlFor="hermanos-si">Sí</Label>
+              </div>
+            </RadioGroup>
+
+            {formData.tieneHermanos === "si" && (
+              <div className="mt-2 grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="cantidad-hermanos">Cantidad:</Label>
+                  <Input
+                    id="cantidad-hermanos"
+                    type="number"
+                    value={formData.cantidadHermanos}
+                    onChange={(e) =>
+                      updateFormData("cantidadHermanos", e.target.value)
+                    }
+                    placeholder="0"
+                    min="0"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edades-hermanos">Edades:</Label>
+                  <Input
+                    id="edades-hermanos"
+                    value={formData.edadesHermanos}
+                    onChange={(e) =>
+                      updateFormData("edadesHermanos", e.target.value)
+                    }
+                    placeholder="Ej: 5, 8, 12 años"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-base font-medium">AMBIENTE FAMILIAR:</Label>
           <RadioGroup
-            value={formData.cambiosRecientes}
-            onValueChange={(value) => updateFormData("cambiosRecientes", value)}
+            value={formData.ambienteFamiliar}
+            onValueChange={(value) => updateFormData("ambienteFamiliar", value)}
             className="mt-2 space-y-2"
           >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="si" id="cambios-si" />
-              <Label htmlFor="cambios-si">Sí</Label>
+              <RadioGroupItem value="armonioso" id="ambiente-armonioso" />
+              <Label htmlFor="ambiente-armonioso">Armonioso</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="cambios-no" />
-              <Label htmlFor="cambios-no">No</Label>
+              <RadioGroupItem
+                value="algunas-tensiones"
+                id="ambiente-tensiones"
+              />
+              <Label htmlFor="ambiente-tensiones">Con algunas tensiones</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem
+                value="conflictos-frecuentes"
+                id="ambiente-conflictos"
+              />
+              <Label htmlFor="ambiente-conflictos">
+                Con conflictos frecuentes
+              </Label>
             </div>
           </RadioGroup>
         </div>
 
-        {formData.cambiosRecientes === "si" && (
-          <>
-            <div>
-              <Label className="text-base font-medium">Tipos de cambios:</Label>
-              <div className="mt-2 space-y-2">
-                {[
-                  "Mudanza",
-                  "Divorcio/separación",
-                  "Nuevo bebé",
-                  "Pérdida familiar",
-                  "Cambio de trabajo",
-                  "Otros",
-                ].map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
+        <div>
+          <Label className="text-base font-medium">CAMBIOS RECIENTES:</Label>
+          <div className="mt-2">
+            <Label className="text-sm">
+              ¿Ha habido cambios significativos recientemente?
+            </Label>
+            <RadioGroup
+              value={formData.cambiosRecientes}
+              onValueChange={(value) =>
+                updateFormData("cambiosRecientes", value)
+              }
+              className="mt-1 space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="cambios-no" />
+                <Label htmlFor="cambios-no">No</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="si" id="cambios-si" />
+                <Label htmlFor="cambios-si">Sí</Label>
+              </div>
+            </RadioGroup>
+
+            {formData.cambiosRecientes === "si" && (
+              <div className="mt-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "mudanza", label: "Mudanza" },
+                    { id: "nacimiento", label: "Nacimiento" },
+                    { id: "separacion", label: "Separación" },
+                    { id: "perdida", label: "Pérdida" },
+                  ].map((cambio) => (
+                    <div
+                      key={cambio.id}
+                      className="flex items-center space-x-2"
+                    >
+                      <Checkbox
+                        id={cambio.id}
+                        checked={formData.tiposCambios.includes(cambio.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            updateFormData("tiposCambios", [
+                              ...formData.tiposCambios,
+                              cambio.id,
+                            ]);
+                          } else {
+                            updateFormData(
+                              "tiposCambios",
+                              formData.tiposCambios.filter(
+                                (item) => item !== cambio.id
+                              )
+                            );
+                          }
+                        }}
+                      />
+                      <Label htmlFor={cambio.id}>{cambio.label}</Label>
+                    </div>
+                  ))}
+                  <div className="flex items-center space-x-2">
                     <Checkbox
-                      id={option}
-                      checked={formData.tiposCambios.includes(option)}
+                      id="otro-cambio"
+                      checked={formData.tiposCambios.includes("otro")}
                       onCheckedChange={(checked) => {
                         if (checked) {
                           updateFormData("tiposCambios", [
                             ...formData.tiposCambios,
-                            option,
+                            "otro",
                           ]);
                         } else {
                           updateFormData(
                             "tiposCambios",
                             formData.tiposCambios.filter(
-                              (item) => item !== option
+                              (item) => item !== "otro"
                             )
                           );
                         }
                       }}
                     />
-                    <Label htmlFor={option}>{option}</Label>
+                    <Label htmlFor="otro-cambio">Otro</Label>
                   </div>
-                ))}
+                </div>
+
+                {formData.tiposCambios.includes("otro") && (
+                  <div className="mt-2">
+                    <Input
+                      placeholder="Especifique otro cambio"
+                      value={formData.otroCambio}
+                      onChange={(e) =>
+                        updateFormData("otroCambio", e.target.value)
+                      }
+                    />
+                  </div>
+                )}
+
+                <div className="mt-2">
+                  <Label htmlFor="detalles-cambios">Detalles:</Label>
+                  <Textarea
+                    id="detalles-cambios"
+                    value={formData.detallesCambios}
+                    onChange={(e) =>
+                      updateFormData("detallesCambios", e.target.value)
+                    }
+                    placeholder="Describa los detalles de los cambios"
+                    className="mt-1"
+                  />
+                </div>
               </div>
-            </div>
-
-            <div>
-              <Label htmlFor="detallesCambios">Detalles de los cambios:</Label>
-              <Textarea
-                id="detallesCambios"
-                value={formData.detallesCambios}
-                onChange={(e) =>
-                  updateFormData("detallesCambios", e.target.value)
-                }
-                placeholder="Proporcione más detalles sobre los cambios familiares"
-                className="mt-2"
-              />
-            </div>
-          </>
-        )}
-
-        <div>
-          <Label htmlFor="antecedentesFamiliares">
-            Antecedentes familiares relevantes:
-          </Label>
-          <Textarea
-            id="antecedentesFamiliares"
-            value={formData.antecedentesFamiliares}
-            onChange={(e) =>
-              updateFormData("antecedentesFamiliares", e.target.value)
-            }
-            placeholder="Mencione cualquier condición médica, desarrollo o mental significativa en la familia"
-            className="mt-2"
-          />
+            )}
+          </div>
         </div>
 
         <div>
-          <Label htmlFor="detallesAntecedentes">
-            Detalles de antecedentes:
+          <Label className="text-base font-medium">
+            ANTECEDENTES FAMILIARES:
           </Label>
-          <Textarea
-            id="detallesAntecedentes"
-            value={formData.detallesAntecedentes}
-            onChange={(e) =>
-              updateFormData("detallesAntecedentes", e.target.value)
-            }
-            placeholder="Proporcione más detalles sobre los antecedentes familiares"
-            className="mt-2"
-          />
+          <div className="mt-2">
+            <Label className="text-sm">
+              ¿Alguien más en la familia ha tenido dificultades similares?
+            </Label>
+            <RadioGroup
+              value={formData.antecedentesFamiliares}
+              onValueChange={(value) =>
+                updateFormData("antecedentesFamiliares", value)
+              }
+              className="mt-1 space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="antecedentes-no" />
+                <Label htmlFor="antecedentes-no">No</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="si" id="antecedentes-si" />
+                <Label htmlFor="antecedentes-si">Sí</Label>
+              </div>
+            </RadioGroup>
+
+            {formData.antecedentesFamiliares === "si" && (
+              <div className="mt-2">
+                <Input
+                  placeholder="Especifique los antecedentes familiares"
+                  value={formData.detallesAntecedentes}
+                  onChange={(e) =>
+                    updateFormData("detallesAntecedentes", e.target.value)
+                  }
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
