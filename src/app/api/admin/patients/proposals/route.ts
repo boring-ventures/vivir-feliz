@@ -25,16 +25,16 @@ export async function GET(request: NextRequest) {
     const proposals = await prisma.treatmentProposal.findMany({
       where,
       include: {
-        patient: {
-          include: {
-            parent: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                phone: true,
-              },
-            },
+        consultationRequest: {
+          select: {
+            id: true,
+            childName: true,
+            childDateOfBirth: true,
+            childGender: true,
+            motherName: true,
+            motherPhone: true,
+            fatherName: true,
+            fatherPhone: true,
           },
         },
         therapist: {
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         appointments: {
           orderBy: { date: "asc" },
         },
-      },
+      } as any,
       orderBy: { createdAt: "desc" },
     });
 

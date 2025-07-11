@@ -18,18 +18,94 @@ import {
   Receipt,
   FileText,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { RoleGuard } from "@/components/auth/role-guard";
+import { useProposals } from "@/hooks/useProposals";
+import { format } from "date-fns";
+
+interface DisplayProposal {
+  id: string | number;
+  childName: string;
+  age: number;
+  parentName: string;
+  consultationDate: string;
+  consultationReason: string;
+  phone: string;
+  email?: string;
+  status: string;
+  analysisDate?: string;
+  diagnosis?: string;
+}
 
 export default function AdminProposalsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  // Fetch real data from the database
+  const { data: dbProposals, isLoading } = useProposals();
+
+  // Transform database proposals to match the example data structure
+  const databaseProposals: DisplayProposal[] = dbProposals
+    ? dbProposals.map((proposal) => {
+        // Use consultation request data for all patient information
+        if (!proposal.consultationRequest) {
+          console.warn(
+            `Proposal ${proposal.id} has no consultation request data`
+          );
+          return {
+            id: proposal.id,
+            childName: "Información no disponible",
+            age: 0,
+            parentName: "Sin información",
+            consultationDate: format(
+              new Date(proposal.createdAt),
+              "dd/MM/yyyy"
+            ),
+            consultationReason: proposal.title,
+            phone: "Sin teléfono",
+            status:
+              proposal.status === "TREATMENT_COMPLETED"
+                ? "completed"
+                : "pending",
+            analysisDate: proposal.updatedAt
+              ? format(new Date(proposal.updatedAt), "dd/MM/yyyy")
+              : undefined,
+            diagnosis: proposal.diagnosis,
+          };
+        }
+
+        const consultationRequest = proposal.consultationRequest;
+
+        return {
+          id: proposal.id,
+          childName: consultationRequest.childName,
+          age: calculateAge(consultationRequest.childDateOfBirth),
+          parentName:
+            consultationRequest.motherName ||
+            consultationRequest.fatherName ||
+            "Sin nombre",
+          consultationDate: format(new Date(proposal.createdAt), "dd/MM/yyyy"),
+          consultationReason: proposal.title,
+          phone:
+            consultationRequest.motherPhone ||
+            consultationRequest.fatherPhone ||
+            "Sin teléfono",
+          status:
+            proposal.status === "TREATMENT_COMPLETED" ? "completed" : "pending",
+          analysisDate: proposal.updatedAt
+            ? format(new Date(proposal.updatedAt), "dd/MM/yyyy")
+            : undefined,
+          diagnosis: proposal.diagnosis,
+        };
+      })
+    : [];
+
   // Example data for pending and completed proposals
-  const pendingProposals = [
+  const pendingProposals: DisplayProposal[] = [
     {
-      id: 1,
+      id: "example-1",
       childName: "Juan Pérez González",
       age: 8,
       parentName: "María González",
@@ -40,7 +116,7 @@ export default function AdminProposalsPage() {
       status: "pending",
     },
     {
-      id: 2,
+      id: "example-2",
       childName: "Ana García López",
       age: 6,
       parentName: "Carlos García",
@@ -51,7 +127,7 @@ export default function AdminProposalsPage() {
       status: "pending",
     },
     {
-      id: 3,
+      id: "example-3",
       childName: "Luis Morales Vega",
       age: 7,
       parentName: "Ana Morales",
@@ -62,7 +138,7 @@ export default function AdminProposalsPage() {
       status: "pending",
     },
     {
-      id: 4,
+      id: "example-4",
       childName: "Carmen Silva Rojas",
       age: 9,
       parentName: "Roberto Silva",
@@ -74,9 +150,9 @@ export default function AdminProposalsPage() {
     },
   ];
 
-  const completedProposals = [
+  const completedProposals: DisplayProposal[] = [
     {
-      id: 5,
+      id: "example-5",
       childName: "Pedro Mamani Flores",
       age: 7,
       parentName: "Elena Mamani",
@@ -90,8 +166,14 @@ export default function AdminProposalsPage() {
     },
   ];
 
-  const allProposals = [...pendingProposals, ...completedProposals];
+  // Combine example data with database data
+  const allProposals = [
+    ...databaseProposals,
+    ...pendingProposals,
+    ...completedProposals,
+  ];
 
+  // Filter proposals based on search term and status
   const filteredProposals = allProposals.filter((proposal) => {
     const matchesSearch =
       proposal.childName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -112,6 +194,59 @@ export default function AdminProposalsPage() {
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
   };
+
+  // Helper function to calculate age
+  function calculateAge(birthDate: Date | string): number {
+    // Handle invalid dates
+    if (!birthDate) return 0;
+
+    // Parse birthdate properly to avoid timezone issues
+    let parsedBirthDate: Date;
+
+    if (typeof birthDate === "string") {
+      // Parse string dates
+      const parts = birthDate.split("T")[0].split("-"); // Get YYYY-MM-DD part
+      if (parts.length === 3) {
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1; // Month is 0-indexed in JS Date
+        const day = parseInt(parts[2]);
+        parsedBirthDate = new Date(year, month, day);
+      } else {
+        parsedBirthDate = new Date(birthDate);
+      }
+    } else {
+      parsedBirthDate = new Date(
+        birthDate.getFullYear(),
+        birthDate.getMonth(),
+        birthDate.getDate()
+      );
+    }
+
+    // Check if we got a valid date
+    if (isNaN(parsedBirthDate.getTime())) {
+      console.warn("Invalid birthdate:", birthDate);
+      return 0;
+    }
+
+    const today = new Date();
+    const todayLocal = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    let age = todayLocal.getFullYear() - parsedBirthDate.getFullYear();
+    const monthDiff = todayLocal.getMonth() - parsedBirthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && todayLocal.getDate() < parsedBirthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  }
 
   return (
     <RoleGuard allowedRoles={["ADMIN"]}>
@@ -136,7 +271,13 @@ export default function AdminProposalsPage() {
               <ClipboardList className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{allProposals.length}</div>
+              <div className="text-2xl font-bold">
+                {isLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  allProposals.length
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Propuestas registradas
               </p>
@@ -149,7 +290,11 @@ export default function AdminProposalsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {pendingProposals.length}
+                {isLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  allProposals.filter((p) => p.status === "pending").length
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
                 Esperando elaboración
@@ -163,7 +308,11 @@ export default function AdminProposalsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {completedProposals.length}
+                {isLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  allProposals.filter((p) => p.status === "completed").length
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
                 Propuestas enviadas
@@ -177,7 +326,11 @@ export default function AdminProposalsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {completedProposals.length}
+                {isLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  allProposals.filter((p) => p.status === "completed").length
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
                 Propuestas económicas
@@ -225,7 +378,14 @@ export default function AdminProposalsPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {filteredProposals.length === 0 ? (
+            {isLoading ? (
+              <div className="p-12 text-center">
+                <Loader2 className="h-16 w-16 mx-auto animate-spin text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Cargando propuestas...
+                </h3>
+              </div>
+            ) : filteredProposals.length === 0 ? (
               <div className="p-12 text-center">
                 <ClipboardList className="h-16 w-16 mx-auto text-gray-300 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -298,22 +458,22 @@ export default function AdminProposalsPage() {
                                   {proposal.consultationDate}
                                 </p>
                                 {proposal.status === "completed" &&
-                                  "analysisDate" in proposal && (
+                                  proposal.analysisDate && (
                                     <p className="text-xs text-gray-500 mt-1">
-                                      Análisis: {String(proposal.analysisDate)}
+                                      Análisis: {proposal.analysisDate}
                                     </p>
                                   )}
                               </div>
                             </div>
 
                             {proposal.status === "completed" &&
-                              "diagnosis" in proposal && (
+                              proposal.diagnosis && (
                                 <div className="mt-3 p-3 bg-green-50 rounded-lg">
                                   <span className="text-sm font-medium text-green-800">
                                     Diagnóstico:
                                   </span>
                                   <p className="text-sm text-green-700 mt-1">
-                                    {String(proposal.diagnosis)}
+                                    {proposal.diagnosis}
                                   </p>
                                 </div>
                               )}

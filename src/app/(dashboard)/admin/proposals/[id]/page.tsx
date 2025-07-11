@@ -1,18 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, Plus, Trash2, Eye, Save } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Eye, Save, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { RoleGuard } from "@/components/auth/role-guard";
+import {
+  useProposals,
+  useProposalServices,
+  useUpdateProposalServices,
+} from "@/hooks/useProposals";
 
 interface ServiceItem {
   id: number;
+  dbId?: string; // Optional DB ID for existing services
   name: string;
   sessions: number;
   cost: number;
@@ -20,41 +26,143 @@ interface ServiceItem {
 
 export default function AdminProposalEditPage() {
   const params = useParams();
+  const { data: proposals, isLoading } = useProposals();
+  const { data: proposalServices, isLoading: servicesLoading } =
+    useProposalServices(params.id as string);
+  const updateServicesMutation = useUpdateProposalServices();
+  const currentProposal = proposals?.find((p) => p.id === params.id);
 
-  // Mock patient data
-  const [patientInfo] = useState({
-    childName: "Juan Pérez González",
-    age: 8,
-    parentName: "María González",
-    consultationDate: "20/01/2025",
-    consultationReason: "Dificultades de atención en el colegio",
-    phone: "+591-7-123-4567",
-    email: "maria.gonzalez@email.com",
-  });
+  // Patient data from database using consultation request data
+  const patientInfo = currentProposal
+    ? {
+        childName: currentProposal.consultationRequest.childName,
+        age: calculateAge(currentProposal.consultationRequest.childDateOfBirth),
+        parentName:
+          currentProposal.consultationRequest.motherName ||
+          currentProposal.consultationRequest.fatherName ||
+          "Sin nombre",
+        consultationDate: new Date(
+          currentProposal.createdAt
+        ).toLocaleDateString("es-ES"),
+        consultationReason: currentProposal.title,
+        phone:
+          currentProposal.consultationRequest.motherPhone ||
+          currentProposal.consultationRequest.fatherPhone ||
+          "Sin teléfono",
+      }
+    : null;
 
   // Editable proposal data
   const [proposalData, setProposalData] = useState({
-    therapist: "Dr. Carlos Mendoza",
-    date: "15 de Enero, 2025",
-    observations:
-      "Evaluación integral recomendada para determinar el plan de tratamiento más adecuado.",
+    therapist: "",
+    date: "",
+    observations: "",
   });
 
-  const [evaluations, setEvaluations] = useState<ServiceItem[]>([
-    { id: 1, name: "Evaluación Integral", sessions: 4, cost: 800 },
-    { id: 2, name: "Evaluación Fonoaudiológica", sessions: 2, cost: 400 },
-  ]);
+  // Update proposal data when currentProposal loads
+  useEffect(() => {
+    if (currentProposal) {
+      setProposalData({
+        therapist: `${currentProposal.therapist.firstName} ${currentProposal.therapist.lastName}`,
+        date: new Date(currentProposal.createdAt).toLocaleDateString("es-ES", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+        observations: currentProposal.description || "",
+      });
+    }
+  }, [currentProposal]);
 
-  const [treatments, setTreatments] = useState<ServiceItem[]>([
-    { id: 1, name: "Terapia Psicológica", sessions: 16, cost: 3200 },
-    { id: 2, name: "Terapia Fonoaudiológica", sessions: 8, cost: 1600 },
-    { id: 3, name: "Taller Psicológico", sessions: 4, cost: 800 },
-  ]);
+  // Initialize state for services
+  const [evaluations, setEvaluations] = useState<ServiceItem[]>([]);
+  const [treatments, setTreatments] = useState<ServiceItem[]>([]);
+
+  // Update services when data loads from database
+  useEffect(() => {
+    if (proposalServices) {
+      const evaluationServices = proposalServices
+        .filter((service) => service.type === "EVALUATION")
+        .map((service, index) => ({
+          id: 1000 + index, // Use 1000+ for evaluations to avoid conflicts
+          dbId: service.id, // Keep original DB ID for reference
+          name: service.service,
+          sessions: Number(service.sessions), // Convert to number
+          cost: Number(service.cost || 0), // Convert to number
+        }));
+
+      const treatmentServices = proposalServices
+        .filter((service) => service.type === "TREATMENT")
+        .map((service, index) => ({
+          id: 2000 + index, // Use 2000+ for treatments to avoid conflicts
+          dbId: service.id, // Keep original DB ID for reference
+          name: service.service,
+          sessions: Number(service.sessions), // Convert to number
+          cost: Number(service.cost || 0), // Convert to number
+        }));
+
+      setEvaluations(evaluationServices);
+      setTreatments(treatmentServices);
+    }
+  }, [proposalServices, params.id, servicesLoading]);
+
+  // Helper function to calculate age
+  function calculateAge(birthDate: Date | string): number {
+    // Handle invalid dates
+    if (!birthDate) return 0;
+
+    // Parse birthdate properly to avoid timezone issues
+    let parsedBirthDate: Date;
+
+    if (typeof birthDate === "string") {
+      // Parse string dates
+      const parts = birthDate.split("T")[0].split("-"); // Get YYYY-MM-DD part
+      if (parts.length === 3) {
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1; // Month is 0-indexed in JS Date
+        const day = parseInt(parts[2]);
+        parsedBirthDate = new Date(year, month, day);
+      } else {
+        parsedBirthDate = new Date(birthDate);
+      }
+    } else {
+      parsedBirthDate = new Date(
+        birthDate.getFullYear(),
+        birthDate.getMonth(),
+        birthDate.getDate()
+      );
+    }
+
+    // Check if we got a valid date
+    if (isNaN(parsedBirthDate.getTime())) {
+      console.warn("Invalid birthdate:", birthDate);
+      return 0;
+    }
+
+    const today = new Date();
+    const todayLocal = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    let age = todayLocal.getFullYear() - parsedBirthDate.getFullYear();
+    const monthDiff = todayLocal.getMonth() - parsedBirthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && todayLocal.getDate() < parsedBirthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  }
 
   // Functions to handle evaluations
   const addEvaluation = () => {
     const newEvaluation: ServiceItem = {
-      id: Math.max(...evaluations.map((e) => e.id), 0) + 1,
+      id: Math.max(...evaluations.map((e) => e.id), 999) + 1,
       name: "",
       sessions: 1,
       cost: 0,
@@ -69,7 +177,15 @@ export default function AdminProposalEditPage() {
   ) => {
     setEvaluations(
       evaluations.map((evaluation) =>
-        evaluation.id === id ? { ...evaluation, [field]: value } : evaluation
+        evaluation.id === id
+          ? {
+              ...evaluation,
+              [field]:
+                field === "sessions" || field === "cost"
+                  ? Number(value) || 0
+                  : value,
+            }
+          : evaluation
       )
     );
   };
@@ -81,7 +197,7 @@ export default function AdminProposalEditPage() {
   // Functions to handle treatments
   const addTreatment = () => {
     const newTreatment: ServiceItem = {
-      id: Math.max(...treatments.map((t) => t.id), 0) + 1,
+      id: Math.max(...treatments.map((t) => t.id), 1999) + 1,
       name: "",
       sessions: 1,
       cost: 0,
@@ -96,7 +212,15 @@ export default function AdminProposalEditPage() {
   ) => {
     setTreatments(
       treatments.map((treatment) =>
-        treatment.id === id ? { ...treatment, [field]: value } : treatment
+        treatment.id === id
+          ? {
+              ...treatment,
+              [field]:
+                field === "sessions" || field === "cost"
+                  ? Number(value) || 0
+                  : value,
+            }
+          : treatment
       )
     );
   };
@@ -113,10 +237,60 @@ export default function AdminProposalEditPage() {
   const totalTreatments = treatments.reduce((sum, item) => sum + item.cost, 0);
   const totalGeneral = totalEvaluations + totalTreatments;
 
-  const saveProposal = () => {
-    // Logic to save the proposal would go here
-    alert("Propuesta guardada exitosamente");
+  const saveProposal = async () => {
+    try {
+      // Prepare services data for API
+      const allServices = [
+        ...evaluations.map((evaluation) => ({
+          treatmentProposalId: params.id as string,
+          type: "EVALUATION" as const,
+          code: `EVAL-${evaluation.id}`,
+          service: evaluation.name,
+          sessions: evaluation.sessions,
+          cost: evaluation.cost,
+        })),
+        ...treatments.map((treatment) => ({
+          treatmentProposalId: params.id as string,
+          type: "TREATMENT" as const,
+          code: `TREAT-${treatment.id}`,
+          service: treatment.name,
+          sessions: treatment.sessions,
+          cost: treatment.cost,
+        })),
+      ];
+
+      // Filter out empty services (services without names)
+      const validServices = allServices.filter(
+        (service) => service.service.trim() !== ""
+      );
+
+      await updateServicesMutation.mutateAsync({
+        proposalId: params.id as string,
+        services: validServices,
+      });
+
+      alert("Propuesta guardada exitosamente");
+    } catch (error) {
+      console.error("Error saving proposal:", error);
+      alert("Error al guardar la propuesta. Por favor, intenta de nuevo.");
+    }
   };
+
+  if (isLoading || servicesLoading || !currentProposal || !patientInfo) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-16 w-16 animate-spin mx-auto text-gray-400" />
+          <h3 className="mt-4 text-lg font-medium text-gray-900">
+            Cargando propuesta...
+          </h3>
+          <p className="mt-2 text-sm text-gray-500">
+            Por favor espere mientras cargamos los datos de la propuesta
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <RoleGuard allowedRoles={["ADMIN"]}>
@@ -140,13 +314,21 @@ export default function AdminProposalEditPage() {
           <div className="flex items-center space-x-4">
             <Button
               onClick={saveProposal}
+              disabled={updateServicesMutation.isPending}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              <Save className="h-4 w-4 mr-2" />
+              {updateServicesMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
               Guardar
             </Button>
             <Link href={`/admin/proposals/preview/${params.id}`}>
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                onClick={saveProposal}
+              >
                 <Eye className="h-4 w-4 mr-2" />
                 Vista Previa
               </Button>
@@ -284,7 +466,7 @@ export default function AdminProposalEditPage() {
                           updateEvaluation(
                             evaluation.id,
                             "sessions",
-                            parseInt(e.target.value) || 0
+                            e.target.value
                           )
                         }
                         min="1"
@@ -303,7 +485,7 @@ export default function AdminProposalEditPage() {
                             updateEvaluation(
                               evaluation.id,
                               "cost",
-                              parseInt(e.target.value) || 0
+                              e.target.value
                             )
                           }
                           min="0"
@@ -372,7 +554,7 @@ export default function AdminProposalEditPage() {
                           updateTreatment(
                             treatment.id,
                             "sessions",
-                            parseInt(e.target.value) || 0
+                            e.target.value
                           )
                         }
                         min="1"
@@ -391,7 +573,7 @@ export default function AdminProposalEditPage() {
                             updateTreatment(
                               treatment.id,
                               "cost",
-                              parseInt(e.target.value) || 0
+                              e.target.value
                             )
                           }
                           min="0"
@@ -453,14 +635,22 @@ export default function AdminProposalEditPage() {
           <div className="flex space-x-4">
             <Button
               onClick={saveProposal}
+              disabled={updateServicesMutation.isPending}
               variant="outline"
               className="border-blue-200 text-blue-600 hover:bg-blue-50"
             >
-              <Save className="h-4 w-4 mr-2" />
+              {updateServicesMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
               Guardar Borrador
             </Button>
             <Link href={`/admin/proposals/preview/${params.id}`}>
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                onClick={saveProposal}
+              >
                 <Eye className="h-4 w-4 mr-2" />
                 Generar Vista Previa
               </Button>
