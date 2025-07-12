@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       // Create the appointment
       const appointment = await tx.appointment.create({
-        data: appointmentData as any, // @ts-ignore - consultationRequestId exists after migration
+        data: appointmentData,
         include: {
           therapist: {
             select: {

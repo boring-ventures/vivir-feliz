@@ -52,9 +52,7 @@ export async function POST(
     let consultationRequestId = null;
     let patientId = appointment.patientId;
 
-    // @ts-ignore - consultationRequestId exists but Prisma client needs regeneration
     if (appointment.consultationRequestId) {
-      // @ts-ignore
       consultationRequestId = appointment.consultationRequestId;
       console.log(
         "Found consultation request ID from appointment:",

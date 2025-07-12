@@ -49,14 +49,22 @@ export async function PUT(
     // Then create the new services
     if (services && services.length > 0) {
       await prisma.proposalService.createMany({
-        data: services.map((service: any) => ({
-          treatmentProposalId: id,
-          type: service.type,
-          code: service.code,
-          service: service.service,
-          sessions: service.sessions,
-          cost: service.cost,
-        })),
+        data: services.map(
+          (service: {
+            type: string;
+            code: string;
+            service: string;
+            sessions: number;
+            cost: number;
+          }) => ({
+            treatmentProposalId: id,
+            type: service.type,
+            code: service.code,
+            service: service.service,
+            sessions: service.sessions,
+            cost: service.cost,
+          })
+        ),
       });
     }
 

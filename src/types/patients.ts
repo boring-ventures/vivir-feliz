@@ -221,6 +221,7 @@ export {
 
 // Status mapping utilities
 export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
+  PROPOSAL_CREATED: "Propuesta Creada",
   PAYMENT_PENDING: "Pago Pendiente",
   PAYMENT_CONFIRMED: "Pago Confirmado",
   APPOINTMENTS_SCHEDULED: "Citas Programadas",
@@ -230,6 +231,7 @@ export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
 };
 
 export const PROPOSAL_STATUS_COLORS: Record<ProposalStatus, string> = {
+  PROPOSAL_CREATED: "bg-yellow-100 text-yellow-800",
   PAYMENT_PENDING: "bg-red-100 text-red-800",
   PAYMENT_CONFIRMED: "bg-green-100 text-green-800",
   APPOINTMENTS_SCHEDULED: "bg-blue-100 text-blue-800",

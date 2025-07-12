@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         appointments: {
           orderBy: { date: "asc" },
         },
-      } as any,
+      },
       orderBy: { createdAt: "desc" },
     });
 
