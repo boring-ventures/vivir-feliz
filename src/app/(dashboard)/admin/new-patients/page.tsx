@@ -24,7 +24,7 @@ import {
   useProposalsDisplayData,
 } from "@/hooks/usePatients";
 import { useToast } from "@/components/ui/use-toast";
-import { ProposalDisplayData } from "@/types/patients";
+import { ProposalDisplayData, ProposalStatus } from "@/types/patients";
 
 export default function AdminNuevosPacientesPage() {
   const [filtro, setFiltro] = useState("Todos");
@@ -45,6 +45,10 @@ export default function AdminNuevosPacientesPage() {
     error,
   } = useProposals(undefined, undefined, true);
 
+  // Get raw proposals data for hook usage
+  const rawProposals = Array.isArray(response) ? response : [];
+  const rawProposalsData = useProposalsDisplayData(rawProposals);
+
   // Handle the transformed data format from the API
   const pacientes = (() => {
     if (!response) return [];
@@ -52,43 +56,62 @@ export default function AdminNuevosPacientesPage() {
     try {
       // If response has 'data' property, it's the transformed format
       if ("data" in response && Array.isArray(response.data)) {
-        return response.data.map((item: any) => ({
-          id: item.id || "",
-          patientName: item.nombre || "Paciente",
-          patientAge: item.edad || 0,
-          parentName: item.padre || "Padre/Madre",
-          parentPhone: item.telefono || "",
-          therapistName: item.terapeuta || "Terapeuta",
-          proposalDate: item.fechaPropuesta || "",
-          totalAmount: item.montoPropuesta || "Bs. 0",
-          status: item.proposalData?.status || "PAYMENT_PENDING",
-          statusDisplay: item.estadoPropuesta || "Pago Pendiente",
-          statusColor:
-            item.estadoPropuesta === "Pago Pendiente"
-              ? "bg-red-100 text-red-800"
-              : item.estadoPropuesta === "Pago Confirmado"
-                ? "bg-green-100 text-green-800"
-                : item.estadoPropuesta === "Citas Programadas"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-gray-100 text-gray-800",
-          paymentConfirmed: item.pagoConfirmado || false,
-          appointmentsScheduled: item.citasProgramadas || false,
-          canConfirmPayment: item.proposalData?.status === "PAYMENT_PENDING",
-          canScheduleAppointments:
-            item.proposalData?.status === "PAYMENT_CONFIRMED" &&
-            !item.citasProgramadas,
-        }));
+        return response.data.map(
+          (item: {
+            id?: string;
+            nombre?: string;
+            edad?: number;
+            padre?: string;
+            telefono?: string;
+            terapeuta?: string;
+            fechaPropuesta?: string;
+            montoPropuesta?: string;
+            estadoPropuesta?: string;
+            pagoConfirmado?: boolean;
+            citasProgramadas?: boolean;
+            proposalData?: {
+              status?: string;
+            };
+          }) => ({
+            id: item.id || "",
+            patientName: item.nombre || "Paciente",
+            patientAge: item.edad || 0,
+            parentName: item.padre || "Padre/Madre",
+            parentPhone: item.telefono || "",
+            therapistName: item.terapeuta || "Terapeuta",
+            proposalDate: item.fechaPropuesta || "",
+            totalAmount: item.montoPropuesta || "Bs. 0",
+            status:
+              (item.proposalData?.status as ProposalStatus) ||
+              "PAYMENT_PENDING",
+            statusDisplay: item.estadoPropuesta || "Pago Pendiente",
+            statusColor:
+              item.estadoPropuesta === "Pago Pendiente"
+                ? "bg-red-100 text-red-800"
+                : item.estadoPropuesta === "Pago Confirmado"
+                  ? "bg-green-100 text-green-800"
+                  : item.estadoPropuesta === "Citas Programadas"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-gray-100 text-gray-800",
+            paymentConfirmed: item.pagoConfirmado || false,
+            appointmentsScheduled: item.citasProgramadas || false,
+            canConfirmPayment: item.proposalData?.status === "PAYMENT_PENDING",
+            canScheduleAppointments:
+              item.proposalData?.status === "PAYMENT_CONFIRMED" &&
+              !item.citasProgramadas,
+          })
+        ) as ProposalDisplayData[];
       }
 
       // If response is an array, it's the raw format
       if (Array.isArray(response)) {
-        return useProposalsDisplayData(response);
+        return rawProposalsData;
       }
     } catch (error) {
       console.error("Error processing proposals data:", error);
     }
 
-    return [];
+    return [] as ProposalDisplayData[];
   })();
 
   // Mutation for updating proposal status
