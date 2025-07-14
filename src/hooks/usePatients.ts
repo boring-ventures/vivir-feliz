@@ -42,13 +42,20 @@ export function usePatients(params?: PatientSearchParams) {
 }
 
 // Fetch treatment proposals
-export function useProposals(status?: string, therapistId?: string) {
+export function useProposals(
+  status?: string,
+  therapistId?: string,
+  forNewPatients?: boolean
+) {
   const searchParams = new URLSearchParams();
   if (status) searchParams.set("status", status);
   if (therapistId) searchParams.set("therapistId", therapistId);
+  if (forNewPatients) searchParams.set("forNewPatients", "true");
 
-  return useQuery<TreatmentProposalWithRelations[]>({
-    queryKey: ["proposals", status, therapistId],
+  return useQuery<
+    TreatmentProposalWithRelations[] | { success: boolean; data: any[] }
+  >({
+    queryKey: ["proposals", status, therapistId, forNewPatients],
     queryFn: async () => {
       const response = await fetch(
         `/api/admin/patients/proposals?${searchParams}`
@@ -276,7 +283,13 @@ export function useProposalsDisplayData(
       parentName,
       parentPhone: proposal.patient.parent.phone || "",
       therapistName,
-      proposalDate: proposal.proposalDate.toLocaleDateString(),
+      proposalDate: (() => {
+        const date = new Date(proposal.proposalDate);
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      })(),
       totalAmount: `Bs. ${Number(proposal.totalAmount).toLocaleString()}`,
       status: proposal.status,
       statusDisplay: PROPOSAL_STATUS_LABELS[proposal.status],
