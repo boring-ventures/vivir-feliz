@@ -1,5 +1,5 @@
 -- AlterEnum
-ALTER TYPE "ProposalStatus" ADD VALUE 'PROPOSAL_CREATED';
+ALTER TYPE "ProposalStatus" ADD VALUE 'NEW_PROPOSAL';
 
 -- AlterTable
-ALTER TABLE "treatment_proposals" ALTER COLUMN "status" SET DEFAULT 'PROPOSAL_CREATED';
+ALTER TABLE "treatment_proposals" ALTER COLUMN "status" SET DEFAULT 'NEW_PROPOSAL';
