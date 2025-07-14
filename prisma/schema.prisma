@@ -84,7 +84,7 @@ model TreatmentProposal {
   sessionPrice          Decimal             @map("session_price") @db.Decimal(10, 2)
   totalAmount           Decimal             @map("total_amount") @db.Decimal(10, 2)
   paymentPlan           String?             @map("payment_plan")
-  status                ProposalStatus      @default(PAYMENT_PENDING)
+  status                ProposalStatus      @default(PROPOSAL_CREATED)
   proposalDate          DateTime            @default(now()) @map("proposal_date")
   approvedDate          DateTime?           @map("approved_date")
   startDate             DateTime?           @map("start_date")
@@ -585,6 +585,7 @@ enum AppointmentType {
 }
 
 enum ProposalStatus {
+  PROPOSAL_CREATED
   PAYMENT_PENDING
   PAYMENT_CONFIRMED
   APPOINTMENTS_SCHEDULED
