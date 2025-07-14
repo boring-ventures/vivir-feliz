@@ -78,6 +78,14 @@ export async function GET(request: NextRequest) {
               childBirthDate: true,
             },
           },
+          analysis: {
+            select: {
+              id: true,
+              status: true,
+              completedAt: true,
+              sentToAdminAt: true,
+            },
+          },
         },
         orderBy: [{ date: "desc" }, { startTime: "desc" }],
         skip,
@@ -170,16 +178,23 @@ export async function GET(request: NextRequest) {
         createdAt: appointment.createdAt.toISOString(),
         // Additional fields for analysis
         analysisStatus:
-          appointment.status === "COMPLETED" ? "completado" : "pendiente",
-        analysisDate:
-          appointment.status === "COMPLETED"
+          appointment.analysis?.status === "COMPLETED" ||
+          appointment.analysis?.status === "SENT_TO_ADMIN"
+            ? "completado"
+            : appointment.analysis?.status === "DRAFT"
+              ? "borrador"
+              : "pendiente",
+        analysisDate: appointment.analysis?.completedAt
+          ? formatDateLocal(appointment.analysis.completedAt)
+          : appointment.status === "COMPLETED"
             ? formatDateLocal(appointment.updatedAt)
             : null,
         diagnosis: appointment.sessionNotes || null,
         recommendations: appointment.homework || null,
         sentToAdmin:
-          appointment.status === "COMPLETED" &&
-          appointment.notes?.includes("[SENT_TO_ADMIN:"),
+          appointment.analysis?.status === "SENT_TO_ADMIN" ||
+          (appointment.status === "COMPLETED" &&
+            appointment.notes?.includes("[SENT_TO_ADMIN:")),
       };
     });
 

@@ -50,7 +50,7 @@ export async function POST(
 
     // Check if this is a CONSULTA appointment with consultationRequestId
     let consultationRequestId = null;
-    let patientId = appointment.patientId;
+    let patientId = appointment.patientId; // Use existing patientId if available
 
     if (appointment.consultationRequestId) {
       consultationRequestId = appointment.consultationRequestId;
@@ -60,70 +60,11 @@ export async function POST(
       );
     }
 
-    // If no patient is linked, create one based on appointment data
-    if (!patientId && appointment.patientName) {
-      // First, find or create a parent profile
-      let parentProfile = await prisma.profile.findFirst({
-        where: {
-          OR: [{ phone: appointment.parentPhone }],
-          role: "PARENT",
-        },
-      });
+    // Note: We'll proceed with or without a patientId
+    // No patient creation logic - patients will be created through other flows
 
-      if (!parentProfile && appointment.parentName) {
-        // Create a parent profile
-        const nameParts = appointment.parentName.split(" ");
-        parentProfile = await prisma.profile.create({
-          data: {
-            userId: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Temporary unique userId
-            firstName: nameParts[0] || appointment.parentName,
-            lastName: nameParts.slice(1).join(" ") || "",
-            phone: appointment.parentPhone,
-            role: "PARENT",
-            active: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        });
-      }
-
-      if (parentProfile) {
-        // Create a patient record based on appointment information
-        const newPatient = await prisma.patient.create({
-          data: {
-            parentId: parentProfile.id,
-            firstName:
-              appointment.patientName.split(" ")[0] || appointment.patientName,
-            lastName:
-              appointment.patientName.split(" ").slice(1).join(" ") || "",
-            dateOfBirth: new Date(
-              Date.now() -
-                (appointment.patientAge || 8) * 365.25 * 24 * 60 * 60 * 1000
-            ),
-            phone: appointment.parentPhone,
-            emergencyContact: appointment.parentName,
-            emergencyPhone: appointment.parentPhone,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        });
-
-        // Link the patient to the appointment
-        await prisma.appointment.update({
-          where: { id: appointmentId },
-          data: { patientId: newPatient.id },
-        });
-
-        patientId = newPatient.id;
-      }
-    }
-
-    if (!patientId) {
-      return NextResponse.json(
-        { error: "No se pudo determinar el paciente para esta cita" },
-        { status: 400 }
-      );
-    }
+    // We can proceed without a patientId - the proposal will be linked to the appointment
+    // and can be processed by admin later
 
     // Calculate total sessions and estimated cost
     const evaluationSessions = serviciosEvaluacion.reduce(
@@ -160,7 +101,7 @@ export async function POST(
     const proposal = await prisma.treatmentProposal.create({
       data: {
         consultationRequestId, // 🔗 Use consultation request ID when available
-        patientId,
+        patientId, // This might be null, which is fine
         therapistId: appointment.therapistId,
         title: `Propuesta Técnica - ${appointment.patientName}`,
         description: proposalDescription,
@@ -181,11 +122,18 @@ export async function POST(
         sessionPrice,
         totalAmount,
         paymentPlan: "Por definir con administración",
-        status: "PAYMENT_PENDING",
+        status: "PROPOSAL_CREATED",
         notes: JSON.stringify({
           quienTomaConsulta,
           derivacion,
           consultationRequestId, // Include for reference
+          appointmentData: {
+            patientName: appointment.patientName,
+            patientAge: appointment.patientAge,
+            parentName: appointment.parentName,
+            parentPhone: appointment.parentPhone,
+            parentEmail: appointment.parentEmail,
+          },
         }),
       },
     });
@@ -216,7 +164,7 @@ export async function POST(
       });
     }
 
-    // Update the analysis status to completed
+    // Update the analysis status to completed and appointment status to completed
     await prisma.analysis.updateMany({
       where: { appointmentId },
       data: {
@@ -225,14 +173,22 @@ export async function POST(
       },
     });
 
+    // Update the appointment status to completed since the proposal has been sent to admin
+    await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: {
+        status: "COMPLETED",
+        updatedAt: new Date(),
+      },
+    });
+
     return NextResponse.json({
       success: true,
       proposalId: proposal.id,
       consultationRequestId,
-      patientId,
       message: consultationRequestId
-        ? "Propuesta técnica creada exitosamente y vinculada a la solicitud de consulta"
-        : "Propuesta técnica creada exitosamente y vinculada al paciente",
+        ? "Propuesta técnica creada exitosamente y vinculada a la solicitud de consulta. El administrador se encargará de la gestión del paciente."
+        : "Propuesta técnica creada exitosamente. El administrador se encargará de la gestión del paciente.",
     });
   } catch (error) {
     console.error("Error creating proposal:", error);
