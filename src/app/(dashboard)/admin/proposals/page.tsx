@@ -188,7 +188,7 @@ export default function AdminProposalsPage() {
       consultationReason: "Dificultades en matemáticas y lectura",
       phone: "+591-7-456-7890",
       email: "roberto.silva@email.com",
-      status: "PROPOSAL_CREATED",
+      status: "NEW_PROPOSAL",
     },
   ];
 
@@ -223,8 +223,7 @@ export default function AdminProposalsPage() {
 
     const matchesStatus =
       statusFilter === "all" ||
-      (statusFilter === "proposal_created" &&
-        proposal.status === "PROPOSAL_CREATED") ||
+      (statusFilter === "NEW_PROPOSAL" && proposal.status === "NEW_PROPOSAL") ||
       (statusFilter === "payment_pending" &&
         proposal.status === "PAYMENT_PENDING") ||
       (statusFilter === "payment_confirmed" &&
@@ -233,8 +232,7 @@ export default function AdminProposalsPage() {
         (proposal.status === "TREATMENT_COMPLETED" ||
           proposal.status === "completed")) ||
       (statusFilter === "pending" &&
-        (proposal.status === "pending" ||
-          proposal.status === "PROPOSAL_CREATED"));
+        (proposal.status === "pending" || proposal.status === "NEW_PROPOSAL"));
 
     return matchesSearch && matchesStatus;
   });
@@ -345,8 +343,7 @@ export default function AdminProposalsPage() {
                 {isLoading ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
                 ) : (
-                  allProposals.filter((p) => p.status === "PROPOSAL_CREATED")
-                    .length
+                  allProposals.filter((p) => p.status === "NEW_PROPOSAL").length
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -451,7 +448,7 @@ export default function AdminProposalsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos los estados</SelectItem>
-                    <SelectItem value="proposal_created">Borrador</SelectItem>
+                    <SelectItem value="NEW_PROPOSAL">Borrador</SelectItem>
                     <SelectItem value="payment_pending">
                       Enviada a Comercial
                     </SelectItem>
@@ -520,7 +517,7 @@ export default function AdminProposalsPage() {
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 {proposal.age} años
                               </span>
-                              {proposal.status === "PROPOSAL_CREATED" && (
+                              {proposal.status === "NEW_PROPOSAL" && (
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                   Borrador
                                 </span>
@@ -596,7 +593,7 @@ export default function AdminProposalsPage() {
                           </div>
 
                           <div className="ml-6 flex-shrink-0">
-                            {proposal.status === "PROPOSAL_CREATED" && (
+                            {proposal.status === "NEW_PROPOSAL" && (
                               <Link href={`/admin/proposals/${proposal.id}`}>
                                 <Button className="bg-blue-600 hover:bg-blue-700 text-white group-hover:shadow-md transition-all">
                                   <Receipt className="h-4 w-4 mr-2" />
@@ -612,7 +609,7 @@ export default function AdminProposalsPage() {
                                   onClick={() =>
                                     sendToCommercial(
                                       proposal.id,
-                                      "PROPOSAL_CREATED"
+                                      "NEW_PROPOSAL"
                                     )
                                   }
                                   variant="outline"

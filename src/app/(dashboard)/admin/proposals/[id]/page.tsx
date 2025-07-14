@@ -246,16 +246,16 @@ export default function AdminProposalEditPage() {
           type: "EVALUATION" as const,
           code: `EVAL-${evaluation.id}`,
           service: evaluation.name,
-          sessions: evaluation.sessions,
-          cost: evaluation.cost,
+          sessions: Number(evaluation.sessions),
+          cost: Number(evaluation.cost) || 0, // Ensure cost is a number
         })),
         ...treatments.map((treatment) => ({
           treatmentProposalId: params.id as string,
           type: "TREATMENT" as const,
           code: `TREAT-${treatment.id}`,
           service: treatment.name,
-          sessions: treatment.sessions,
-          cost: treatment.cost,
+          sessions: Number(treatment.sessions),
+          cost: Number(treatment.cost) || 0, // Ensure cost is a number
         })),
       ];
 

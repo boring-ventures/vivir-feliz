@@ -197,7 +197,7 @@ export default function AdminProposalPreviewPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            status: "PROPOSAL_CREATED",
+            status: "NEW_PROPOSAL",
           }),
         }
       );
@@ -788,8 +788,8 @@ export default function AdminProposalPreviewPage() {
               </CardContent>
             </Card>
 
-            {/* Payment Method - Only show for PROPOSAL_CREATED status */}
-            {currentProposal?.status === "PROPOSAL_CREATED" && (
+            {/* Payment Method - Only show for NEW_PROPOSAL status */}
+            {currentProposal?.status === "NEW_PROPOSAL" && (
               <Card className="print:hidden">
                 <CardHeader>
                   <CardTitle className="text-lg">Forma de Pago</CardTitle>
@@ -840,8 +840,8 @@ export default function AdminProposalPreviewPage() {
               </Card>
             )}
 
-            {/* Confirmation - Only show for PROPOSAL_CREATED status */}
-            {currentProposal?.status === "PROPOSAL_CREATED" && (
+            {/* Confirmation - Only show for NEW_PROPOSAL status */}
+            {currentProposal?.status === "NEW_PROPOSAL" && (
               <Card className="bg-yellow-50 border-yellow-200 print:hidden">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-3">
@@ -865,7 +865,7 @@ export default function AdminProposalPreviewPage() {
             )}
 
             {/* Status indicator for other statuses */}
-            {currentProposal?.status !== "PROPOSAL_CREATED" && (
+            {currentProposal?.status !== "NEW_PROPOSAL" && (
               <Card className="print:hidden">
                 <CardHeader>
                   <CardTitle className="text-lg">
@@ -903,8 +903,8 @@ export default function AdminProposalPreviewPage() {
 
             {/* Action Buttons - Hidden on print */}
             <div className="space-y-4 pt-6 border-t border-gray-200 print:hidden">
-              {/* PROPOSAL_CREATED Status Buttons */}
-              {currentProposal?.status === "PROPOSAL_CREATED" && (
+              {/* NEW_PROPOSAL Status Buttons */}
+              {currentProposal?.status === "NEW_PROPOSAL" && (
                 <div className="flex justify-between items-center">
                   <Link href={`/admin/proposals/${params.id}`}>
                     <Button variant="outline">
