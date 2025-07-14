@@ -24,9 +24,7 @@ import {
   useScheduleAppointments,
   useProposalsDisplayData,
 } from "@/hooks/usePatients";
-import {
-  ProposalDisplayData,
-} from "@/types/patients";
+import { ProposalDisplayData } from "@/types/patients";
 
 export default function PatientsPage() {
   const [filtro, setFiltro] = useState("Todos");

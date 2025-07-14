@@ -13,19 +13,23 @@ import {
   Printer,
   Download,
   Loader2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { RoleGuard } from "@/components/auth/role-guard";
 import { useProposals, useProposalServices } from "@/hooks/useProposals";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { toast } from "@/components/ui/use-toast";
 
 export default function AdminProposalPreviewPage() {
   const params = useParams();
+  const router = useRouter();
   const [paymentMethod, setPaymentMethod] = useState("");
   const [confirmation, setConfirmation] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Fetch real data from the cache (already loaded from previous page)
   const { data: proposals, isLoading: proposalsLoading } = useProposals();
@@ -124,17 +128,101 @@ export default function AdminProposalPreviewPage() {
     );
   }
 
-  const sendToCommercial = () => {
+  const sendToCommercial = async () => {
     if (!confirmation) {
-      alert("Debe confirmar que la información es correcta");
+      toast({
+        title: "Error",
+        description: "Debe confirmar que la información es correcta",
+        variant: "destructive",
+      });
       return;
     }
     if (!paymentMethod) {
-      alert("Debe seleccionar una forma de pago");
+      toast({
+        title: "Error",
+        description: "Debe seleccionar una forma de pago",
+        variant: "destructive",
+      });
       return;
     }
-    alert("Propuesta enviada al área comercial exitosamente");
-    // Logic to send the proposal would go here
+
+    setIsUpdatingStatus(true);
+    try {
+      const response = await fetch(
+        `/api/admin/patients/proposals/${params.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: "PAYMENT_PENDING",
+            paymentMethod,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al enviar propuesta a comercial");
+      }
+
+      toast({
+        title: "Propuesta enviada",
+        description:
+          "La propuesta ha sido enviada al área comercial exitosamente",
+      });
+
+      // Redirect back to proposals page
+      router.push("/admin/proposals");
+    } catch (error) {
+      console.error("Error sending proposal to commercial:", error);
+      toast({
+        title: "Error",
+        description: "Hubo un error al enviar la propuesta a comercial",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const cancelProposal = async () => {
+    setIsUpdatingStatus(true);
+    try {
+      const response = await fetch(
+        `/api/admin/patients/proposals/${params.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: "PROPOSAL_CREATED",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al cancelar propuesta");
+      }
+
+      toast({
+        title: "Propuesta cancelada",
+        description: "La propuesta ha sido devuelta al estado inicial",
+      });
+
+      // Redirect back to proposals page
+      router.push("/admin/proposals");
+    } catch (error) {
+      console.error("Error canceling proposal:", error);
+      toast({
+        title: "Error",
+        description: "Hubo un error al cancelar la propuesta",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   const printProposal = () => {
@@ -700,100 +788,203 @@ export default function AdminProposalPreviewPage() {
               </CardContent>
             </Card>
 
-            {/* Payment Method - Hidden on print */}
-            <Card className="print:hidden">
-              <CardHeader>
-                <CardTitle className="text-lg">Forma de Pago</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RadioGroup
-                  value={paymentMethod}
-                  onValueChange={setPaymentMethod}
-                  className="space-y-3"
-                >
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value="single" id="single" />
-                      <Label htmlFor="single" className="font-medium">
-                        Pago único (5% descuento):
-                      </Label>
-                    </div>
-                    <span className="font-bold text-green-600">
-                      Bs. {singlePayment.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value="monthly" id="monthly" />
-                      <Label htmlFor="monthly" className="font-medium">
-                        Pago mensual:
-                      </Label>
-                    </div>
-                    <span className="font-bold">
-                      Bs. {Math.round(monthlyPayment).toLocaleString()} x 6
-                      meses
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value="bimonthly" id="bimonthly" />
-                      <Label htmlFor="bimonthly" className="font-medium">
-                        Pago bimestral:
-                      </Label>
-                    </div>
-                    <span className="font-bold">
-                      Bs. {Math.round(bimonthlyPayment).toLocaleString()} x 3
-                      pagos
-                    </span>
-                  </div>
-                </RadioGroup>
-              </CardContent>
-            </Card>
-
-            {/* Confirmation - Hidden on print */}
-            <Card className="bg-yellow-50 border-yellow-200 print:hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="confirmation"
-                    checked={confirmation}
-                    onCheckedChange={(checked) =>
-                      setConfirmation(checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor="confirmation"
-                    className="text-sm font-medium text-yellow-900"
+            {/* Payment Method - Only show for PROPOSAL_CREATED status */}
+            {currentProposal?.status === "PROPOSAL_CREATED" && (
+              <Card className="print:hidden">
+                <CardHeader>
+                  <CardTitle className="text-lg">Forma de Pago</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RadioGroup
+                    value={paymentMethod}
+                    onValueChange={setPaymentMethod}
+                    className="space-y-3"
                   >
-                    Confirmo que la información es correcta y autorizo el envío
-                    de esta propuesta al área comercial
-                  </Label>
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="single" id="single" />
+                        <Label htmlFor="single" className="font-medium">
+                          Pago único (5% descuento):
+                        </Label>
+                      </div>
+                      <span className="font-bold text-green-600">
+                        Bs. {singlePayment.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="monthly" id="monthly" />
+                        <Label htmlFor="monthly" className="font-medium">
+                          Pago mensual:
+                        </Label>
+                      </div>
+                      <span className="font-bold">
+                        Bs. {Math.round(monthlyPayment).toLocaleString()} x 6
+                        meses
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="bimonthly" id="bimonthly" />
+                        <Label htmlFor="bimonthly" className="font-medium">
+                          Pago bimestral:
+                        </Label>
+                      </div>
+                      <span className="font-bold">
+                        Bs. {Math.round(bimonthlyPayment).toLocaleString()} x 3
+                        pagos
+                      </span>
+                    </div>
+                  </RadioGroup>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Confirmation - Only show for PROPOSAL_CREATED status */}
+            {currentProposal?.status === "PROPOSAL_CREATED" && (
+              <Card className="bg-yellow-50 border-yellow-200 print:hidden">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="confirmation"
+                      checked={confirmation}
+                      onCheckedChange={(checked) =>
+                        setConfirmation(checked === true)
+                      }
+                    />
+                    <Label
+                      htmlFor="confirmation"
+                      className="text-sm font-medium text-yellow-900"
+                    >
+                      Confirmo que la información es correcta y autorizo el
+                      envío de esta propuesta al área comercial
+                    </Label>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Status indicator for other statuses */}
+            {currentProposal?.status !== "PROPOSAL_CREATED" && (
+              <Card className="print:hidden">
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    Estado de la Propuesta
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-center p-6">
+                    {currentProposal?.status === "PAYMENT_PENDING" && (
+                      <div className="text-center">
+                        <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-orange-100 text-orange-800 mb-2">
+                          En Comercial
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Esta propuesta está siendo procesada por el área
+                          comercial
+                        </p>
+                      </div>
+                    )}
+                    {currentProposal?.status === "PAYMENT_CONFIRMED" && (
+                      <div className="text-center">
+                        <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800 mb-2">
+                          Pago Confirmado
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          El pago ha sido confirmado y la propuesta está en
+                          proceso
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Action Buttons - Hidden on print */}
             <div className="space-y-4 pt-6 border-t border-gray-200 print:hidden">
-              {/* Main buttons */}
-              <div className="flex justify-between items-center">
-                <Link href={`/admin/proposals/${params.id}`}>
-                  <Button variant="outline">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
+              {/* PROPOSAL_CREATED Status Buttons */}
+              {currentProposal?.status === "PROPOSAL_CREATED" && (
+                <div className="flex justify-between items-center">
+                  <Link href={`/admin/proposals/${params.id}`}>
+                    <Button variant="outline">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                  </Link>
+
+                  <Button
+                    onClick={sendToCommercial}
+                    disabled={
+                      !confirmation || !paymentMethod || isUpdatingStatus
+                    }
+                    className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdatingStatus ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Enviar a Comercial
+                      </>
+                    )}
                   </Button>
-                </Link>
+                </div>
+              )}
 
-                <Button
-                  onClick={sendToCommercial}
-                  disabled={!confirmation || !paymentMethod}
-                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Enviar a Comercial
-                </Button>
-              </div>
+              {/* PAYMENT_PENDING Status Buttons */}
+              {currentProposal?.status === "PAYMENT_PENDING" && (
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={cancelProposal}
+                      disabled={isUpdatingStatus}
+                      variant="outline"
+                      className="border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      {isUpdatingStatus ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Cancelando...
+                        </>
+                      ) : (
+                        <>
+                          <X className="h-4 w-4 mr-2" />
+                          Cancelar
+                        </>
+                      )}
+                    </Button>
+                    <Link href={`/admin/proposals/${params.id}`}>
+                      <Button variant="outline">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
+                    </Link>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Esta propuesta está siendo procesada por el área comercial
+                  </div>
+                </div>
+              )}
 
-              {/* Print and download buttons */}
+              {/* PAYMENT_CONFIRMED Status - Read-only */}
+              {currentProposal?.status === "PAYMENT_CONFIRMED" && (
+                <div className="flex justify-center">
+                  <div className="text-center">
+                    <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800 mb-2">
+                      Propuesta Confirmada
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Esta propuesta ha sido confirmada y está en proceso
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Print and download buttons - Always visible */}
               <div className="flex justify-center items-center space-x-4 pt-4 border-t border-gray-100">
                 <Button
                   variant="outline"

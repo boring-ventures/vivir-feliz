@@ -47,7 +47,7 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
               },
               {
                 title: "Nuevos pacientes",
-                url: "/admin/nuevos-pacientes",
+                url: "/admin/new-patients",
                 icon: UserPlus,
               },
               {
