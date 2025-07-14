@@ -50,7 +50,7 @@ export async function POST(
 
     // Check if this is a CONSULTA appointment with consultationRequestId
     let consultationRequestId = null;
-    let patientId = appointment.patientId; // Use existing patientId if available
+    const patientId = appointment.patientId; // Use existing patientId if available
 
     if (appointment.consultationRequestId) {
       consultationRequestId = appointment.consultationRequestId;

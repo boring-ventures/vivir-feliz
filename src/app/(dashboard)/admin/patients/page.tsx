@@ -37,9 +37,13 @@ export default function PatientsPage() {
   const [citasSeleccionadas, setCitasSeleccionadas] = useState<string[]>([]);
 
   // Fetch proposals data
-  const { data: proposals = [], isLoading, error } = useProposals();
+  const { data: response, isLoading, error } = useProposals();
   const confirmPaymentMutation = useConfirmPayment();
   const scheduleAppointmentsMutation = useScheduleAppointments();
+
+  // Extract proposals data from response
+  const proposals =
+    response && "data" in response ? response.data : response || [];
 
   // Convert proposals to display format
   const proposalsDisplayData = useProposalsDisplayData(proposals);

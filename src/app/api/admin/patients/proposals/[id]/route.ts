@@ -1,9 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+interface ConsultationRequestData {
+  id: string;
+  childName: string;
+  childGender: string;
+  childDateOfBirth: Date | string;
+  childAddress?: string | null;
+  motherName?: string | null;
+  motherPhone?: string | null;
+  motherEmail?: string | null;
+  fatherName?: string | null;
+  fatherPhone?: string | null;
+  fatherEmail?: string | null;
+  status: string;
+  [key: string]: unknown; // Allow additional properties from Prisma
+}
+
 // Helper function to find or create parent profile from consultation request data
 async function findOrCreateParentFromConsultationRequest(
-  consultationRequest: any
+  consultationRequest: ConsultationRequestData
 ) {
   // First, try to find existing parent by phone number
   const existingParent = await prisma.profile.findFirst({
@@ -56,7 +72,7 @@ async function findOrCreateParentFromConsultationRequest(
 
 // Helper function to create patient from consultation request data
 async function createPatientFromConsultationRequest(
-  consultationRequest: any,
+  consultationRequest: ConsultationRequestData,
   parentId: string
 ) {
   // Calculate age for patient

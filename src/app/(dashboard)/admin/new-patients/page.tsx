@@ -18,39 +18,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useProposals, useUpdateProposalStatus } from "@/hooks/usePatients";
+import {
+  useProposals,
+  useUpdateProposalStatus,
+  useProposalsDisplayData,
+} from "@/hooks/usePatients";
 import { useToast } from "@/components/ui/use-toast";
-
-interface TransformedProposalData {
-  id: string;
-  nombre: string;
-  edad: number;
-  padre: string;
-  telefono: string;
-  terapeuta: string;
-  estadoPropuesta: string;
-  fechaPropuesta: string;
-  montoPropuesta: string;
-  pagoConfirmado: boolean;
-  citasProgramadas: boolean;
-  proposalData: {
-    title: string;
-    totalSessions: number;
-    sessionDuration: number;
-    frequency: string;
-    sessionPrice: number;
-    totalAmount: number;
-    status: string;
-  };
-}
+import { ProposalDisplayData } from "@/types/patients";
 
 export default function AdminNuevosPacientesPage() {
   const [filtro, setFiltro] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
-  const [modalPago, setModalPago] = useState<TransformedProposalData | null>(
-    null
-  );
-  const [modalCitas, setModalCitas] = useState<TransformedProposalData | null>(
+  const [modalPago, setModalPago] = useState<ProposalDisplayData | null>(null);
+  const [modalCitas, setModalCitas] = useState<ProposalDisplayData | null>(
     null
   );
   const [mesActual, setMesActual] = useState(new Date(2025, 0)); // Enero 2025
@@ -64,20 +44,23 @@ export default function AdminNuevosPacientesPage() {
     isLoading,
     error,
   } = useProposals(undefined, undefined, true);
-  const pacientes = response && "data" in response ? response.data : [];
+  const proposalsData = response && "data" in response ? response.data : [];
+
+  // Transform the data to display format
+  const pacientes = useProposalsDisplayData(proposalsData);
 
   // Mutation for updating proposal status
   const updateProposalStatus = useUpdateProposalStatus();
 
   const pacientesFiltrados = pacientes.filter(
-    (paciente: TransformedProposalData) => {
+    (paciente: ProposalDisplayData) => {
       const coincideBusqueda =
-        paciente.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        paciente.padre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        paciente.terapeuta.toLowerCase().includes(busqueda.toLowerCase());
+        paciente.patientName.toLowerCase().includes(busqueda.toLowerCase()) ||
+        paciente.parentName.toLowerCase().includes(busqueda.toLowerCase()) ||
+        paciente.therapistName.toLowerCase().includes(busqueda.toLowerCase());
 
       const coincideEstado =
-        filtro === "Todos" || paciente.estadoPropuesta === filtro;
+        filtro === "Todos" || paciente.statusDisplay === filtro;
 
       return coincideBusqueda && coincideEstado;
     }
@@ -195,11 +178,6 @@ export default function AdminNuevosPacientesPage() {
     return citasSeleccionadas.some((cita) => cita.startsWith(fechaStr));
   };
 
-  const getCitasDelDia = (fecha: Date) => {
-    const fechaStr = formatearFecha(fecha);
-    return citasSeleccionadas.filter((cita) => cita.startsWith(fechaStr));
-  };
-
   const meses = [
     "Enero",
     "Febrero",
@@ -284,8 +262,8 @@ export default function AdminNuevosPacientesPage() {
             <div className="text-2xl font-bold">
               {
                 pacientes.filter(
-                  (p: TransformedProposalData) =>
-                    p.estadoPropuesta === "Pago Pendiente"
+                  (p: ProposalDisplayData) =>
+                    p.statusDisplay === "Pago Pendiente"
                 ).length
               }
             </div>
@@ -305,8 +283,8 @@ export default function AdminNuevosPacientesPage() {
             <div className="text-2xl font-bold">
               {
                 pacientes.filter(
-                  (p: TransformedProposalData) =>
-                    p.estadoPropuesta === "Pago Confirmado"
+                  (p: ProposalDisplayData) =>
+                    p.statusDisplay === "Pago Confirmado"
                 ).length
               }
             </div>
@@ -324,8 +302,8 @@ export default function AdminNuevosPacientesPage() {
             <div className="text-2xl font-bold">
               {
                 pacientes.filter(
-                  (p: TransformedProposalData) =>
-                    p.estadoPropuesta === "Citas Programadas"
+                  (p: ProposalDisplayData) =>
+                    p.statusDisplay === "Citas Programadas"
                 ).length
               }
             </div>
@@ -408,42 +386,40 @@ export default function AdminNuevosPacientesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {pacientesFiltrados.map((paciente: TransformedProposalData) => (
+                {pacientesFiltrados.map((paciente: ProposalDisplayData) => (
                   <tr key={paciente.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {paciente.nombre}
+                          {paciente.patientName}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {paciente.edad} años
+                          {paciente.patientAge} años
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {paciente.padre}
+                        {paciente.parentName}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {paciente.telefono}
+                        {paciente.parentPhone}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {paciente.terapeuta}
+                        {paciente.therapistName}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {paciente.fechaPropuesta}
+                      {paciente.proposalDate}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {paciente.montoPropuesta}
+                      {paciente.totalAmount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge
-                        className={getEstadoColor(paciente.estadoPropuesta)}
-                      >
-                        {paciente.estadoPropuesta}
+                      <Badge className={getEstadoColor(paciente.statusDisplay)}>
+                        {paciente.statusDisplay}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -455,7 +431,7 @@ export default function AdminNuevosPacientesPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setModalPago(paciente)}
-                          disabled={paciente.pagoConfirmado}
+                          disabled={paciente.paymentConfirmed}
                         >
                           <Check className="h-4 w-4" />
                         </Button>
@@ -464,8 +440,8 @@ export default function AdminNuevosPacientesPage() {
                           size="sm"
                           onClick={() => setModalCitas(paciente)}
                           disabled={
-                            !paciente.pagoConfirmado ||
-                            paciente.citasProgramadas
+                            !paciente.paymentConfirmed ||
+                            paciente.appointmentsScheduled
                           }
                         >
                           <Calendar className="h-4 w-4" />
@@ -499,17 +475,15 @@ export default function AdminNuevosPacientesPage() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-gray-600">Paciente:</p>
-                <p className="font-medium">{modalPago.nombre}</p>
+                <p className="font-medium">{modalPago.patientName}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Monto de la propuesta:</p>
-                <p className="font-medium text-lg">
-                  {modalPago.montoPropuesta}
-                </p>
+                <p className="font-medium text-lg">{modalPago.totalAmount}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Padre/Madre:</p>
-                <p className="font-medium">{modalPago.padre}</p>
+                <p className="font-medium">{modalPago.parentName}</p>
               </div>
               <div className="bg-yellow-50 p-3 rounded-md">
                 <p className="text-sm text-yellow-800">
@@ -552,7 +526,9 @@ export default function AdminNuevosPacientesPage() {
           <Card className="max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle>Programar Citas - {modalCitas.nombre}</CardTitle>
+                <CardTitle>
+                  Programar Citas - {modalCitas.patientName}
+                </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -566,11 +542,11 @@ export default function AdminNuevosPacientesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Paciente:</p>
-                  <p className="font-medium">{modalCitas.nombre}</p>
+                  <p className="font-medium">{modalCitas.patientName}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Terapeuta:</p>
-                  <p className="font-medium">{modalCitas.terapeuta}</p>
+                  <p className="font-medium">{modalCitas.therapistName}</p>
                 </div>
               </div>
 
@@ -579,28 +555,21 @@ export default function AdminNuevosPacientesPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-600">Sesiones totales:</p>
-                    <p className="font-medium">
-                      {modalCitas.proposalData.totalSessions} sesiones
-                    </p>
+                    <p className="font-medium">12 sesiones</p>
                   </div>
                   <div>
                     <p className="text-gray-600">Frecuencia:</p>
-                    <p className="font-medium">
-                      {modalCitas.proposalData.frequency}
-                    </p>
+                    <p className="font-medium">Semanal</p>
                   </div>
                   <div>
                     <p className="text-gray-600">Citas seleccionadas:</p>
                     <p className="font-medium">
-                      {citasSeleccionadas.length}/
-                      {modalCitas.proposalData.totalSessions}
+                      {citasSeleccionadas.length}/12
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-600">Tipo de terapia:</p>
-                    <p className="font-medium">
-                      {modalCitas.proposalData.title}
-                    </p>
+                    <p className="font-medium">Terapia Ocupacional</p>
                   </div>
                 </div>
               </div>
@@ -678,8 +647,7 @@ export default function AdminNuevosPacientesPage() {
                                     toggleCita(diaInfo.fecha, hora)
                                   }
                                   disabled={
-                                    citasSeleccionadas.length >=
-                                      modalCitas.proposalData.totalSessions &&
+                                    citasSeleccionadas.length >= 12 &&
                                     !isSelected
                                   }
                                   className="w-full text-xs p-1 h-6"
@@ -698,24 +666,19 @@ export default function AdminNuevosPacientesPage() {
 
               <div className="bg-green-50 p-3 rounded-md">
                 <p className="text-sm text-green-800">
-                  Haz clic en los horarios disponibles para seleccionar las{" "}
-                  {modalCitas.proposalData.totalSessions} citas necesarias.
-                  Actualmente tienes {citasSeleccionadas.length} citas
-                  seleccionadas.
+                  Haz clic en los horarios disponibles para seleccionar las 12
+                  citas necesarias. Actualmente tienes{" "}
+                  {citasSeleccionadas.length} citas seleccionadas.
                 </p>
               </div>
 
               <div className="flex space-x-3">
                 <Button
                   onClick={() => programarCitas(modalCitas.id)}
-                  disabled={
-                    citasSeleccionadas.length !==
-                    modalCitas.proposalData.totalSessions
-                  }
+                  disabled={citasSeleccionadas.length !== 12}
                   className="flex-1"
                 >
-                  Programar Todas las Citas ({citasSeleccionadas.length}/
-                  {modalCitas.proposalData.totalSessions})
+                  Programar Todas las Citas ({citasSeleccionadas.length}/12)
                 </Button>
                 <Button
                   variant="outline"

@@ -53,7 +53,8 @@ export function useProposals(
   if (forNewPatients) searchParams.set("forNewPatients", "true");
 
   return useQuery<
-    TreatmentProposalWithRelations[] | { success: boolean; data: any[] }
+    | TreatmentProposalWithRelations[]
+    | { success: boolean; data: TreatmentProposalWithRelations[] }
   >({
     queryKey: ["proposals", status, therapistId, forNewPatients],
     queryFn: async () => {

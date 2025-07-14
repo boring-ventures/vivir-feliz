@@ -19,7 +19,6 @@ import {
   FileText,
   CheckCircle,
   Loader2,
-  Send,
   Edit,
 } from "lucide-react";
 import Link from "next/link";
@@ -84,7 +83,7 @@ export default function AdminProposalsPage() {
 
       // Refresh the proposals list
       refetch();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "No se pudo actualizar el estado de la propuesta",
