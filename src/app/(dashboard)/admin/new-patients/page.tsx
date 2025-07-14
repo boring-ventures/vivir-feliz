@@ -44,10 +44,52 @@ export default function AdminNuevosPacientesPage() {
     isLoading,
     error,
   } = useProposals(undefined, undefined, true);
-  const proposalsData = response && "data" in response ? response.data : [];
 
-  // Transform the data to display format
-  const pacientes = useProposalsDisplayData(proposalsData);
+  // Handle the transformed data format from the API
+  const pacientes = (() => {
+    if (!response) return [];
+
+    try {
+      // If response has 'data' property, it's the transformed format
+      if ("data" in response && Array.isArray(response.data)) {
+        return response.data.map((item: any) => ({
+          id: item.id || "",
+          patientName: item.nombre || "Paciente",
+          patientAge: item.edad || 0,
+          parentName: item.padre || "Padre/Madre",
+          parentPhone: item.telefono || "",
+          therapistName: item.terapeuta || "Terapeuta",
+          proposalDate: item.fechaPropuesta || "",
+          totalAmount: item.montoPropuesta || "Bs. 0",
+          status: item.proposalData?.status || "PAYMENT_PENDING",
+          statusDisplay: item.estadoPropuesta || "Pago Pendiente",
+          statusColor:
+            item.estadoPropuesta === "Pago Pendiente"
+              ? "bg-red-100 text-red-800"
+              : item.estadoPropuesta === "Pago Confirmado"
+                ? "bg-green-100 text-green-800"
+                : item.estadoPropuesta === "Citas Programadas"
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-gray-100 text-gray-800",
+          paymentConfirmed: item.pagoConfirmado || false,
+          appointmentsScheduled: item.citasProgramadas || false,
+          canConfirmPayment: item.proposalData?.status === "PAYMENT_PENDING",
+          canScheduleAppointments:
+            item.proposalData?.status === "PAYMENT_CONFIRMED" &&
+            !item.citasProgramadas,
+        }));
+      }
+
+      // If response is an array, it's the raw format
+      if (Array.isArray(response)) {
+        return useProposalsDisplayData(response);
+      }
+    } catch (error) {
+      console.error("Error processing proposals data:", error);
+    }
+
+    return [];
+  })();
 
   // Mutation for updating proposal status
   const updateProposalStatus = useUpdateProposalStatus();

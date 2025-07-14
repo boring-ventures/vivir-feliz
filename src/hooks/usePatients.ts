@@ -260,13 +260,27 @@ export function useProposalsDisplayData(
   proposals: TreatmentProposalWithRelations[]
 ): ProposalDisplayData[] {
   return proposals.map((proposal) => {
-    const patientAge = Math.floor(
-      (Date.now() - new Date(proposal.patient.dateOfBirth).getTime()) /
-        (365.25 * 24 * 60 * 60 * 1000)
-    );
+    // Get date of birth from patient or fallback to consultation request
+    const dateOfBirth =
+      proposal.patient?.dateOfBirth ||
+      proposal.consultationRequest?.childDateOfBirth;
 
-    const parentName =
-      `${proposal.patient.parent.firstName || ""} ${proposal.patient.parent.lastName || ""}`.trim();
+    if (!dateOfBirth) {
+      console.warn(`No date of birth found for proposal ${proposal.id}`);
+    }
+
+    const patientAge = dateOfBirth
+      ? Math.floor(
+          (Date.now() - new Date(dateOfBirth).getTime()) /
+            (365.25 * 24 * 60 * 60 * 1000)
+        )
+      : 0;
+
+    // Get parent name from patient or fallback to consultation request
+    const parentName = proposal.patient?.parent
+      ? `${proposal.patient.parent.firstName || ""} ${proposal.patient.parent.lastName || ""}`.trim()
+      : `${proposal.consultationRequest?.motherName || proposal.consultationRequest?.fatherName || "Padre/Madre"}`;
+
     const therapistName =
       `${proposal.therapist.firstName || ""} ${proposal.therapist.lastName || ""}`.trim();
 
@@ -277,12 +291,24 @@ export function useProposalsDisplayData(
     const paymentConfirmed = totalPaid >= Number(proposal.totalAmount);
     const appointmentsScheduled = proposal.appointments.length > 0;
 
+    // Get patient name from patient or fallback to consultation request
+    const patientName = proposal.patient
+      ? `${proposal.patient.firstName} ${proposal.patient.lastName}`
+      : proposal.consultationRequest?.childName || "Paciente";
+
+    // Get parent phone from patient or fallback to consultation request
+    const parentPhone =
+      proposal.patient?.parent?.phone ||
+      proposal.consultationRequest?.motherPhone ||
+      proposal.consultationRequest?.fatherPhone ||
+      "";
+
     return {
       id: proposal.id,
-      patientName: `${proposal.patient.firstName} ${proposal.patient.lastName}`,
+      patientName,
       patientAge,
       parentName,
-      parentPhone: proposal.patient.parent.phone || "",
+      parentPhone,
       therapistName,
       proposalDate: (() => {
         const date = new Date(proposal.proposalDate);

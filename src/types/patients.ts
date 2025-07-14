@@ -22,6 +22,16 @@ export interface PatientWithRelations extends Patient {
 
 export interface TreatmentProposalWithRelations extends TreatmentProposal {
   patient: PatientWithRelations;
+  consultationRequest?: {
+    id: string;
+    childName: string;
+    childDateOfBirth: Date;
+    childGender: string;
+    motherName?: string | null;
+    motherPhone?: string | null;
+    fatherName?: string | null;
+    fatherPhone?: string | null;
+  };
   therapist: Profile;
   payments: Payment[];
   appointments: AppointmentWithRelations[];
