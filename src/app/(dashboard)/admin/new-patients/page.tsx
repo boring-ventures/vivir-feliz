@@ -71,13 +71,42 @@ export default function AdminNuevosPacientesPage() {
             citasProgramadas?: boolean;
             proposalData?: {
               status?: string;
+              consultationRequest?: {
+                childName: string;
+                childDateOfBirth: string;
+                motherName?: string;
+                fatherName?: string;
+                motherPhone?: string;
+                fatherPhone?: string;
+              };
             };
           }) => ({
             id: item.id || "",
-            patientName: item.nombre || "Paciente",
-            patientAge: item.edad || 0,
-            parentName: item.padre || "Padre/Madre",
-            parentPhone: item.telefono || "",
+            patientName:
+              item.nombre ||
+              item.proposalData?.consultationRequest?.childName ||
+              "Paciente",
+            patientAge:
+              item.edad ||
+              (item.proposalData?.consultationRequest?.childDateOfBirth
+                ? Math.floor(
+                    (Date.now() -
+                      new Date(
+                        item.proposalData.consultationRequest.childDateOfBirth
+                      ).getTime()) /
+                      (365.25 * 24 * 60 * 60 * 1000)
+                  )
+                : 0),
+            parentName:
+              item.padre ||
+              item.proposalData?.consultationRequest?.motherName ||
+              item.proposalData?.consultationRequest?.fatherName ||
+              "Padre/Madre",
+            parentPhone:
+              item.telefono ||
+              item.proposalData?.consultationRequest?.motherPhone ||
+              item.proposalData?.consultationRequest?.fatherPhone ||
+              "",
             therapistName: item.terapeuta || "Terapeuta",
             proposalDate: item.fechaPropuesta || "",
             totalAmount: item.montoPropuesta || "Bs. 0",
