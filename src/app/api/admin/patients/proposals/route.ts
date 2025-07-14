@@ -110,12 +110,28 @@ export async function GET(request: NextRequest) {
           id: proposal.id,
           nombre: patient
             ? `${patient.firstName} ${patient.lastName}`
-            : "Paciente no asignado",
-          edad: age,
+            : proposal.consultationRequest?.childName || "Paciente no asignado",
+          edad: patient
+            ? age
+            : proposal.consultationRequest?.childDateOfBirth
+              ? Math.floor(
+                  (new Date().getTime() -
+                    new Date(
+                      proposal.consultationRequest.childDateOfBirth
+                    ).getTime()) /
+                    (1000 * 60 * 60 * 24 * 365.25)
+                )
+              : 0,
           padre: parent
             ? `${parent.firstName} ${parent.lastName}`
-            : "Padre no asignado",
-          telefono: parent?.phone || "Sin teléfono",
+            : proposal.consultationRequest?.motherName ||
+              proposal.consultationRequest?.fatherName ||
+              "Padre no asignado",
+          telefono:
+            parent?.phone ||
+            proposal.consultationRequest?.motherPhone ||
+            proposal.consultationRequest?.fatherPhone ||
+            "Sin teléfono",
           terapeuta: `${proposal.therapist.firstName} ${proposal.therapist.lastName}`,
           estadoPropuesta,
           fechaPropuesta: (() => {
@@ -137,6 +153,17 @@ export async function GET(request: NextRequest) {
             sessionPrice: proposal.sessionPrice,
             totalAmount: proposal.totalAmount,
             status: proposal.status,
+            consultationRequest: proposal.consultationRequest
+              ? {
+                  childName: proposal.consultationRequest.childName,
+                  childDateOfBirth:
+                    proposal.consultationRequest.childDateOfBirth,
+                  motherName: proposal.consultationRequest.motherName,
+                  fatherName: proposal.consultationRequest.fatherName,
+                  motherPhone: proposal.consultationRequest.motherPhone,
+                  fatherPhone: proposal.consultationRequest.fatherPhone,
+                }
+              : undefined,
           },
         };
       });

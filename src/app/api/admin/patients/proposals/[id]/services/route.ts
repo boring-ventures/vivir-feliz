@@ -41,42 +41,59 @@ export async function PUT(
     console.log("Updating services for proposal ID:", id);
     console.log("Services to update:", services);
 
-    // First, delete existing services for this proposal
-    await prisma.proposalService.deleteMany({
-      where: { treatmentProposalId: id },
-    });
+    // Calculate total amount from services
+    const totalAmount = services.reduce(
+      (sum: number, service: { cost: number }) => sum + Number(service.cost),
+      0
+    );
 
-    // Then create the new services
-    if (services && services.length > 0) {
-      await prisma.proposalService.createMany({
-        data: services.map(
-          (service: {
-            type: string;
-            code: string;
-            service: string;
-            sessions: number;
-            cost: number;
-          }) => ({
-            treatmentProposalId: id,
-            type: service.type,
-            code: service.code,
-            service: service.service,
-            sessions: service.sessions,
-            cost: service.cost,
-          })
-        ),
+    // Use a transaction to update both services and proposal
+    const result = await prisma.$transaction(async (tx) => {
+      // First, delete existing services for this proposal
+      await tx.proposalService.deleteMany({
+        where: { treatmentProposalId: id },
       });
-    }
 
-    // Return updated services
-    const updatedServices = await prisma.proposalService.findMany({
-      where: { treatmentProposalId: id },
-      orderBy: { createdAt: "asc" },
+      // Then create the new services
+      if (services && services.length > 0) {
+        await tx.proposalService.createMany({
+          data: services.map(
+            (service: {
+              type: string;
+              code: string;
+              service: string;
+              sessions: number;
+              cost: number;
+            }) => ({
+              treatmentProposalId: id,
+              type: service.type,
+              code: service.code,
+              service: service.service,
+              sessions: service.sessions,
+              cost: service.cost,
+            })
+          ),
+        });
+      }
+
+      // Update the proposal's total amount
+      await tx.treatmentProposal.update({
+        where: { id },
+        data: {
+          totalAmount,
+        },
+      });
+
+      // Return updated services
+      return tx.proposalService.findMany({
+        where: { treatmentProposalId: id },
+        orderBy: { createdAt: "asc" },
+      });
     });
 
-    console.log("Updated services:", updatedServices);
+    console.log("Updated services:", result);
 
-    return NextResponse.json(updatedServices);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Error updating proposal services:", error);
     return NextResponse.json(

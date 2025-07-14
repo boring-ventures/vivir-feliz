@@ -122,7 +122,7 @@ export async function POST(
         sessionPrice,
         totalAmount,
         paymentPlan: "Por definir con administración",
-        status: "PROPOSAL_CREATED",
+        status: "NEW_PROPOSAL",
         notes: JSON.stringify({
           quienTomaConsulta,
           derivacion,
