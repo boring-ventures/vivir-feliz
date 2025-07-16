@@ -103,6 +103,7 @@ export interface ProposalService {
   service: string;
   sessions: number;
   cost?: number;
+  therapistId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -238,10 +239,11 @@ export function useDeleteProposal() {
 }
 
 // Fetch proposal services
-export function useProposalServices(proposalId: string) {
+export function useProposalServices(proposalId: string | null) {
   return useQuery<ProposalService[]>({
     queryKey: ["proposal-services", proposalId],
     queryFn: async () => {
+      if (!proposalId) return null;
       const response = await fetch(
         `/api/admin/patients/proposals/${proposalId}/services`
       );
@@ -291,6 +293,51 @@ export function useUpdateProposalServices() {
       });
       queryClient.invalidateQueries({
         queryKey: ["proposal", variables.proposalId],
+      });
+    },
+  });
+}
+
+// Schedule service-based appointments
+export function useScheduleServiceAppointments() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      proposalId,
+      serviceAppointments,
+    }: {
+      proposalId: string;
+      serviceAppointments: Record<string, string[]>;
+    }) => {
+      const response = await fetch(
+        `/api/admin/patients/proposals/${proposalId}/appointments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ serviceAppointments }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to schedule appointments");
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({
+        queryKey: ["proposals"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["proposal", variables.proposalId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["proposal-services", variables.proposalId],
       });
     },
   });

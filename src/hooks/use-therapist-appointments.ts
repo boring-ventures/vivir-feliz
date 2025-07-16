@@ -2,31 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export interface TherapistAppointment {
   id: string;
-  appointmentId: string;
-  patientName: string;
-  patientAge: number | null;
-  parentName: string;
-  parentPhone: string;
-  parentEmail: string;
-  appointmentDate: string;
-  appointmentTime: string;
-  type: "CONSULTA" | "ENTREVISTA";
-  status: "SCHEDULED" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
-  notes: string;
-  priority: "alta" | "media" | "baja";
-  therapist: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    specialty: string | null;
-  };
-  createdAt: string;
-  // Analysis-specific fields
-  analysisStatus: "pendiente" | "completado";
-  analysisDate: string | null;
-  diagnosis: string | null;
-  recommendations: string | null;
-  sentToAdmin: boolean;
+  therapist_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  type: string;
+  status: string;
 }
 
 export interface TherapistAppointmentsResponse {
@@ -152,3 +133,31 @@ export const useSendAnalysisToAdmin = () => {
     },
   });
 };
+
+export function useTherapistMonthlyAppointments(
+  therapistId: string | undefined,
+  year: number,
+  month: number
+) {
+  return useQuery({
+    queryKey: ["therapist-appointments", therapistId, year, month],
+    queryFn: async () => {
+      if (!therapistId) return [];
+
+      // Format month to ensure two digits
+      const monthStr = month.toString().padStart(2, "0");
+
+      const response = await fetch(
+        `/api/admin/therapists/${therapistId}/schedule?year=${year}&month=${monthStr}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch therapist appointments");
+      }
+
+      const data = await response.json();
+      return data as TherapistAppointment[];
+    },
+    enabled: !!therapistId,
+  });
+}
