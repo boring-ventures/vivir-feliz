@@ -147,6 +147,7 @@ export async function POST(
         service: service.servicio,
         sessions: service.sesiones,
         cost: sessionPrice * service.sesiones,
+        therapistId: service.terapeutaId,
       })),
       ...serviciosTratamiento.map((service: ServiceData) => ({
         treatmentProposalId: proposal.id,
@@ -155,6 +156,7 @@ export async function POST(
         service: service.servicio,
         sessions: service.sesiones,
         cost: sessionPrice * service.sesiones,
+        therapistId: service.terapeutaId,
       })),
     ];
 

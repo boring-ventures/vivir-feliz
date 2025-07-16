@@ -18,7 +18,19 @@ const calculateAge = (birthDate: Date): number => {
   return age;
 };
 
-// POST /api/admin/patients/proposals/[id]/appointments - Schedule appointments
+// Helper function to calculate end time based on start time and duration (in minutes)
+const calculateEndTime = (startTime: string, duration: number = 60): string => {
+  const [hours, minutes] = startTime.split(":").map(Number);
+  const startMinutes = hours * 60 + minutes;
+  const endMinutes = startMinutes + duration;
+
+  const endHours = Math.floor(endMinutes / 60);
+  const endMins = endMinutes % 60;
+
+  return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
+};
+
+// POST /api/admin/patients/proposals/[id]/appointments - Schedule service-based appointments
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,16 +38,16 @@ export async function POST(
   try {
     const { id: proposalId } = await params;
     const body = await request.json();
-    const { appointments } = body;
+    const { serviceAppointments } = body;
 
     // Validate required fields
     if (
-      !appointments ||
-      !Array.isArray(appointments) ||
-      appointments.length === 0
+      !serviceAppointments ||
+      typeof serviceAppointments !== "object" ||
+      Object.keys(serviceAppointments).length === 0
     ) {
       return NextResponse.json(
-        { error: "No appointments provided" },
+        { error: "No service appointments provided" },
         { status: 400 }
       );
     }
@@ -46,6 +58,7 @@ export async function POST(
       include: {
         patient: true,
         therapist: true,
+        consultationRequest: true,
       },
     });
 
@@ -63,48 +76,139 @@ export async function POST(
       );
     }
 
-    if (!proposal.patient) {
+    // Get proposal services
+    const proposalServices = await prisma.proposalService.findMany({
+      where: { treatmentProposalId: proposalId },
+    });
+
+    if (proposalServices.length === 0) {
       return NextResponse.json(
-        { error: "Patient information not found" },
+        { error: "No services found for this proposal" },
         { status: 400 }
       );
     }
 
-    // Validate appointment count matches proposal
-    if (appointments.length !== proposal.totalSessions) {
+    // Validate that all services have appointments scheduled
+    const totalRequiredAppointments = proposalServices.reduce(
+      (sum, service) => sum + service.sessions,
+      0
+    );
+
+    const totalProvidedAppointments = Object.values(serviceAppointments).reduce(
+      (sum: number, appointments: any) => sum + (appointments?.length || 0),
+      0
+    );
+
+    if (totalProvidedAppointments !== totalRequiredAppointments) {
       return NextResponse.json(
         {
-          error: `Expected ${proposal.totalSessions} appointments, received ${appointments.length}`,
+          error: `Expected ${totalRequiredAppointments} appointments total, received ${totalProvidedAppointments}`,
         },
         { status: 400 }
       );
     }
 
+    // Validate each service has the correct number of appointments
+    for (const service of proposalServices) {
+      const serviceSlots = serviceAppointments[service.id] || [];
+      if (serviceSlots.length !== service.sessions) {
+        return NextResponse.json(
+          {
+            error: `Service "${service.service}" requires ${service.sessions} appointments, received ${serviceSlots.length}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Get patient information
+    let patientName = "";
+    let patientAge = 0;
+    let parentName = "";
+    let parentPhone = "";
+    let parentEmail = "";
+
+    if (proposal.patient) {
+      patientName = `${proposal.patient.firstName} ${proposal.patient.lastName}`;
+      patientAge = calculateAge(proposal.patient.dateOfBirth);
+
+      // Get parent info if available
+      const parent = await prisma.profile.findUnique({
+        where: { id: proposal.patient.parentId || "" },
+      });
+
+      if (parent) {
+        parentName = `${parent.firstName} ${parent.lastName}`;
+        parentPhone = parent.phone || "";
+        // Note: Profile model doesn't have email field, we'll use patient email or consultation request email
+      }
+
+      // Use patient email if available
+      if (proposal.patient.email) {
+        parentEmail = proposal.patient.email;
+      }
+    } else if (proposal.consultationRequest) {
+      // Use consultation request data if no patient profile exists yet
+      patientName = proposal.consultationRequest.childName;
+
+      // Calculate age from birth date
+      const birthDate = new Date(proposal.consultationRequest.childDateOfBirth);
+      patientAge = calculateAge(birthDate);
+
+      parentName =
+        proposal.consultationRequest.motherName ||
+        proposal.consultationRequest.fatherName ||
+        "";
+      parentPhone =
+        proposal.consultationRequest.motherPhone ||
+        proposal.consultationRequest.fatherPhone ||
+        "";
+      parentEmail =
+        proposal.consultationRequest.motherEmail ||
+        proposal.consultationRequest.fatherEmail ||
+        "";
+    }
+
     // Create appointments in a transaction
     const createdAppointments = await prisma.$transaction(async (tx) => {
-      const appointmentData = appointments.map(
-        (apt: {
-          date: string;
-          startTime: string;
-          endTime: string;
-          type?: string;
-        }) => ({
-          proposalId,
-          therapistId: proposal.therapistId,
-          patientId: proposal.patientId,
-          patientName: `${proposal.patient!.firstName} ${proposal.patient!.lastName}`,
-          patientAge: calculateAge(proposal.patient!.dateOfBirth),
-          date: new Date(apt.date),
-          startTime: apt.startTime,
-          endTime: apt.endTime,
-          type: (apt.type || "TERAPIA") as AppointmentType,
-          status: "SCHEDULED" as AppointmentStatus,
-          price: proposal.sessionPrice,
-        })
-      );
+      const allAppointmentData = [];
 
+      // Process each service and its appointments
+      for (const service of proposalServices) {
+        const serviceSlots = serviceAppointments[service.id] || [];
+
+        for (const slot of serviceSlots) {
+          const [dateStr, timeStr] = slot.split("-");
+          const appointmentDate = new Date(dateStr + "T00:00:00.000Z");
+          const endTime = calculateEndTime(timeStr, 60); // Assuming 60-minute sessions
+
+          allAppointmentData.push({
+            proposalId,
+            therapistId: proposal.therapistId, // Use therapistId from proposal since all services should have the same therapist
+            patientId: proposal.patientId,
+            consultationRequestId: proposal.consultationRequestId,
+            patientName,
+            patientAge,
+            parentName,
+            parentPhone,
+            parentEmail,
+            date: appointmentDate,
+            startTime: timeStr,
+            endTime,
+            type:
+              service.type === "EVALUATION"
+                ? ("EVALUACION" as AppointmentType)
+                : ("TERAPIA" as AppointmentType),
+            status: "SCHEDULED" as AppointmentStatus,
+            price: proposal.sessionPrice,
+            notes: `${service.service} - Sesión programada`,
+          });
+        }
+      }
+
+      // Create all appointments
       await tx.appointment.createMany({
-        data: appointmentData,
+        data: allAppointmentData,
       });
 
       // Update proposal status to appointments scheduled
@@ -134,7 +238,7 @@ export async function POST(
             },
           },
         },
-        orderBy: { date: "asc" },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
       });
     });
 
@@ -163,15 +267,17 @@ export async function POST(
           },
         },
         appointments: {
-          orderBy: { date: "asc" },
+          orderBy: [{ date: "asc" }, { startTime: "asc" }],
         },
       },
     });
 
     return NextResponse.json(
       {
+        success: true,
         appointments: createdAppointments,
         proposal: updatedProposal,
+        message: "Appointments scheduled successfully",
       },
       { status: 201 }
     );

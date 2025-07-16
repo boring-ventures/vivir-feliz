@@ -64,6 +64,7 @@ export async function PUT(
               service: string;
               sessions: number;
               cost: number;
+              therapistId: string;
             }) => ({
               treatmentProposalId: id,
               type: service.type,
@@ -71,6 +72,7 @@ export async function PUT(
               service: service.service,
               sessions: service.sessions,
               cost: service.cost,
+              therapistId: service.therapistId,
             })
           ),
         });
