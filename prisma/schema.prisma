@@ -31,6 +31,7 @@ model Profile {
   treatmentProposals TreatmentProposal[] @relation("TherapistProposals")
   interviewRequests  InterviewRequest[]  @relation("TherapistInterviewRequests")
   consultationRequests ConsultationRequest[] @relation("TherapistConsultationRequests")
+  proposalServices   ProposalService[]   @relation("TherapistServices")
 
   @@index([userId])
   @@index([nationalId])
@@ -110,6 +111,7 @@ model TreatmentProposal {
 model ProposalService {
   id                   String            @id @default(cuid())
   treatmentProposalId  String            @map("treatment_proposal_id")
+  therapistId          String            @map("therapist_id")
   type                 ServiceType       @map("type")
   code                 String            @map("code")
   service              String            @map("service")
@@ -118,8 +120,11 @@ model ProposalService {
   createdAt            DateTime          @default(now()) @map("created_at")
   updatedAt            DateTime          @updatedAt @map("updated_at")
   treatmentProposal    TreatmentProposal @relation(fields: [treatmentProposalId], references: [id], onDelete: Cascade)
+  therapist            Profile           @relation("TherapistServices", fields: [therapistId], references: [id])
+
 
   @@index([treatmentProposalId])
+  @@index([therapistId])
   @@index([type])
   @@map("proposal_services")
 }
