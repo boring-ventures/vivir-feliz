@@ -258,6 +258,21 @@ export default function AdminNuevosPacientesPage() {
       return;
     }
 
+    // Add debugging to see what's being sent
+    console.log("📤 Sending appointment data:", {
+      proposalId: pacienteId,
+      serviceAppointments: citasSeleccionadasPorServicio,
+    });
+
+    // Log each service's appointments
+    Object.entries(citasSeleccionadasPorServicio).forEach(([serviceId, appointments]) => {
+      console.log(`Service ${serviceId}:`, appointments);
+      appointments.forEach((appointment, index) => {
+        const [dateStr, timeStr] = appointment.split("-");
+        console.log(`  Appointment ${index + 1}: date="${dateStr}", time="${timeStr}"`);
+      });
+    });
+
     try {
       await scheduleAppointments.mutateAsync({
         proposalId: pacienteId,
@@ -348,6 +363,15 @@ export default function AdminNuevosPacientesPage() {
     if (!currentService) return;
 
     const fechaHora = `${formatearFecha(fecha)}-${hora}`;
+    
+    // Add debugging
+    console.log("🔄 Toggle cita:", {
+      fecha: fecha.toISOString(),
+      hora,
+      fechaHora,
+      serviceId: currentService.id,
+      serviceName: currentService.service
+    });
 
     setCitasSeleccionadasPorServicio((prev) => {
       const serviceAppointments = prev[currentService.id] || [];
@@ -356,6 +380,13 @@ export default function AdminNuevosPacientesPage() {
         : serviceAppointments.length < currentService.sessions
           ? [...serviceAppointments, fechaHora]
           : serviceAppointments;
+
+      console.log("📝 Updated appointments for service:", {
+        serviceId: currentService.id,
+        oldAppointments: serviceAppointments,
+        newAppointments,
+        totalServices: Object.keys({...prev, [currentService.id]: newAppointments}).length
+      });
 
       return {
         ...prev,
