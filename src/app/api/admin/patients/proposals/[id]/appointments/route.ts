@@ -30,6 +30,13 @@ const calculateEndTime = (startTime: string, duration: number = 60): string => {
   return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
 };
 
+// Helper function to create date from string without timezone issues
+const createDateFromString = (dateStr: string): Date => {
+  // dateStr should be in format "YYYY-MM-DD"
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day); // month is 0-indexed in JS Date
+};
+
 // POST /api/admin/patients/proposals/[id]/appointments - Schedule service-based appointments
 export async function POST(
   request: NextRequest,
@@ -177,10 +184,58 @@ export async function POST(
       for (const service of proposalServices) {
         const serviceSlots = serviceAppointments[service.id] || [];
 
+        console.log(`📅 Processing service "${service.service}":`, {
+          serviceId: service.id,
+          sessions: service.sessions,
+          slots: serviceSlots
+        });
+
         for (const slot of serviceSlots) {
-          const [dateStr, timeStr] = slot.split("-");
-          const appointmentDate = new Date(dateStr + "T00:00:00.000Z");
+          console.log(`🔍 Processing slot: "${slot}"`);
+          
+          // Handle different possible formats
+          let dateStr, timeStr;
+          
+          if (slot.includes("-")) {
+            const parts = slot.split("-");
+            console.log(`🔍 Split parts:`, parts);
+            
+            // If we have more than 2 parts, it might be a date with time
+            if (parts.length > 2) {
+              // Could be something like "2025-01-01-09:00"
+              const timeIndex = parts.findIndex((part: string) => part.includes(":"));
+              if (timeIndex !== -1) {
+                timeStr = parts[timeIndex];
+                dateStr = parts.slice(0, timeIndex).join("-");
+              } else {
+                throw new Error(`Could not parse time from slot: ${slot}`);
+              }
+            } else {
+              [dateStr, timeStr] = parts;
+            }
+          } else {
+            throw new Error(`Invalid slot format: ${slot}. Expected format: YYYY-MM-DD-HH:MM`);
+          }
+          
+          console.log(`🔍 Parsed parts: dateStr="${dateStr}", timeStr="${timeStr}"`);
+          
+          // Validate time format
+          if (!timeStr || !timeStr.includes(":")) {
+            console.error(`❌ Invalid time format in slot: ${slot}, timeStr: ${timeStr}`);
+            console.error(`❌ Slot split result:`, slot.split("-"));
+            throw new Error(`Invalid time format: "${timeStr}". Expected format: HH:MM from slot: "${slot}"`);
+          }
+
+          // Use local timezone date creation to avoid timezone issues
+          const appointmentDate = createDateFromString(dateStr);
           const endTime = calculateEndTime(timeStr, 60); // Assuming 60-minute sessions
+
+          console.log(`📝 Creating appointment:`, {
+            date: dateStr,
+            time: timeStr,
+            appointmentDate: appointmentDate.toISOString(),
+            endTime
+          });
 
           allAppointmentData.push({
             proposalId,
@@ -197,14 +252,16 @@ export async function POST(
             endTime,
             type:
               service.type === "EVALUATION"
-                ? ("EVALUACION" as AppointmentType)
+                ? ("CONSULTA" as AppointmentType)  // Changed from EVALUACION to CONSULTA
                 : ("TERAPIA" as AppointmentType),
             status: "SCHEDULED" as AppointmentStatus,
-            price: proposal.sessionPrice,
+            price: null, // Set price to null as requested
             notes: `${service.service} - Sesión programada`,
           });
         }
       }
+
+      console.log(`💾 Creating ${allAppointmentData.length} appointments`);
 
       // Create all appointments
       await tx.appointment.createMany({
