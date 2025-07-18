@@ -32,6 +32,7 @@ model Profile {
   interviewRequests  InterviewRequest[]  @relation("TherapistInterviewRequests")
   consultationRequests ConsultationRequest[] @relation("TherapistConsultationRequests")
   proposalServices   ProposalService[]   @relation("TherapistServices")
+  therapistPatients  TherapistPatient[]  @relation("TherapistProfile")
 
   @@index([userId])
   @@index([nationalId])
@@ -62,10 +63,26 @@ model Patient {
   medicalRecords     MedicalRecord[]
   parent             Profile             @relation("ParentPatients", fields: [parentId], references: [id])
   treatmentProposals TreatmentProposal[]
+  therapistPatients TherapistPatient[] @relation("PatientTherapist")
 
   @@index([parentId])
   @@index([nationalId])
   @@map("patients")
+}
+
+model TherapistPatient {
+  id           String   @id @default(cuid())
+  therapistId  String   @map("therapist_id")
+  patientId    String   @map("patient_id")
+  startedAt    DateTime @default(now()) @map("started_at")
+  active       Boolean  @default(true)
+  
+  therapist    Profile  @relation("TherapistProfile", fields: [therapistId], references: [id])
+  patient      Patient  @relation("PatientTherapist", fields: [patientId], references: [id])
+
+  @@unique([therapistId, patientId]) // evita duplicados
+  @@index([patientId])
+  @@map("therapist_patients")
 }
 
 model TreatmentProposal {
