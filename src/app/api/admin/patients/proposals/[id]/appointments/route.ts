@@ -187,23 +187,25 @@ export async function POST(
         console.log(`📅 Processing service "${service.service}":`, {
           serviceId: service.id,
           sessions: service.sessions,
-          slots: serviceSlots
+          slots: serviceSlots,
         });
 
         for (const slot of serviceSlots) {
           console.log(`🔍 Processing slot: "${slot}"`);
-          
+
           // Handle different possible formats
           let dateStr, timeStr;
-          
+
           if (slot.includes("-")) {
             const parts = slot.split("-");
             console.log(`🔍 Split parts:`, parts);
-            
+
             // If we have more than 2 parts, it might be a date with time
             if (parts.length > 2) {
               // Could be something like "2025-01-01-09:00"
-              const timeIndex = parts.findIndex((part: string) => part.includes(":"));
+              const timeIndex = parts.findIndex((part: string) =>
+                part.includes(":")
+              );
               if (timeIndex !== -1) {
                 timeStr = parts[timeIndex];
                 dateStr = parts.slice(0, timeIndex).join("-");
@@ -214,16 +216,24 @@ export async function POST(
               [dateStr, timeStr] = parts;
             }
           } else {
-            throw new Error(`Invalid slot format: ${slot}. Expected format: YYYY-MM-DD-HH:MM`);
+            throw new Error(
+              `Invalid slot format: ${slot}. Expected format: YYYY-MM-DD-HH:MM`
+            );
           }
-          
-          console.log(`🔍 Parsed parts: dateStr="${dateStr}", timeStr="${timeStr}"`);
-          
+
+          console.log(
+            `🔍 Parsed parts: dateStr="${dateStr}", timeStr="${timeStr}"`
+          );
+
           // Validate time format
           if (!timeStr || !timeStr.includes(":")) {
-            console.error(`❌ Invalid time format in slot: ${slot}, timeStr: ${timeStr}`);
+            console.error(
+              `❌ Invalid time format in slot: ${slot}, timeStr: ${timeStr}`
+            );
             console.error(`❌ Slot split result:`, slot.split("-"));
-            throw new Error(`Invalid time format: "${timeStr}". Expected format: HH:MM from slot: "${slot}"`);
+            throw new Error(
+              `Invalid time format: "${timeStr}". Expected format: HH:MM from slot: "${slot}"`
+            );
           }
 
           // Use local timezone date creation to avoid timezone issues
@@ -234,7 +244,7 @@ export async function POST(
             date: dateStr,
             time: timeStr,
             appointmentDate: appointmentDate.toISOString(),
-            endTime
+            endTime,
           });
 
           allAppointmentData.push({
@@ -252,7 +262,7 @@ export async function POST(
             endTime,
             type:
               service.type === "EVALUATION"
-                ? ("CONSULTA" as AppointmentType)  // Changed from EVALUACION to CONSULTA
+                ? ("CONSULTA" as AppointmentType) // Changed from EVALUACION to CONSULTA
                 : ("TERAPIA" as AppointmentType),
             status: "SCHEDULED" as AppointmentStatus,
             price: null, // Set price to null as requested

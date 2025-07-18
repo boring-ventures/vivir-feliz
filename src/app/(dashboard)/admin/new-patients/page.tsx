@@ -265,13 +265,17 @@ export default function AdminNuevosPacientesPage() {
     });
 
     // Log each service's appointments
-    Object.entries(citasSeleccionadasPorServicio).forEach(([serviceId, appointments]) => {
-      console.log(`Service ${serviceId}:`, appointments);
-      appointments.forEach((appointment, index) => {
-        const [dateStr, timeStr] = appointment.split("-");
-        console.log(`  Appointment ${index + 1}: date="${dateStr}", time="${timeStr}"`);
-      });
-    });
+    Object.entries(citasSeleccionadasPorServicio).forEach(
+      ([serviceId, appointments]) => {
+        console.log(`Service ${serviceId}:`, appointments);
+        appointments.forEach((appointment, index) => {
+          const [dateStr, timeStr] = appointment.split("-");
+          console.log(
+            `  Appointment ${index + 1}: date="${dateStr}", time="${timeStr}"`
+          );
+        });
+      }
+    );
 
     try {
       await scheduleAppointments.mutateAsync({
@@ -363,14 +367,14 @@ export default function AdminNuevosPacientesPage() {
     if (!currentService) return;
 
     const fechaHora = `${formatearFecha(fecha)}-${hora}`;
-    
+
     // Add debugging
     console.log("🔄 Toggle cita:", {
       fecha: fecha.toISOString(),
       hora,
       fechaHora,
       serviceId: currentService.id,
-      serviceName: currentService.service
+      serviceName: currentService.service,
     });
 
     setCitasSeleccionadasPorServicio((prev) => {
@@ -385,7 +389,10 @@ export default function AdminNuevosPacientesPage() {
         serviceId: currentService.id,
         oldAppointments: serviceAppointments,
         newAppointments,
-        totalServices: Object.keys({...prev, [currentService.id]: newAppointments}).length
+        totalServices: Object.keys({
+          ...prev,
+          [currentService.id]: newAppointments,
+        }).length,
       });
 
       return {
