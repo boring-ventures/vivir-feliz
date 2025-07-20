@@ -326,21 +326,59 @@ export default function TerapeutaPacientesPage() {
       });
 
       if (result.success) {
-        toast({
-          title: "¡Documento subido exitosamente!",
-          description:
-            "El documento se ha subido correctamente al almacenamiento",
-        });
+        // After successful upload to storage, save to database
+        try {
+          const dbResponse = await fetch("/api/patient-documents/save-record", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              patientId: selectedPatientId,
+              therapistId: profile?.id || "",
+              title: tituloDocumento,
+              description: descripcionDocumento,
+              documentType: tipoDocumento,
+              fileName: selectedFile.name,
+              fileUrl: result.url,
+              fileSize: selectedFile.size,
+              fileType: selectedFile.type,
+            }),
+          });
 
-        // Reset form
-        setTituloDocumento("");
-        setTipoDocumento("");
-        setDescripcionDocumento("");
-        setSelectedFile(null);
-        setShowModal(false);
+          if (dbResponse.ok) {
+            toast({
+              title: "¡Documento subido exitosamente!",
+              description:
+                "El documento se ha subido correctamente al almacenamiento y guardado en la base de datos",
+            });
 
-        // Refresh documents list
-        refetchDocuments();
+            // Reset form
+            setTituloDocumento("");
+            setTipoDocumento("");
+            setDescripcionDocumento("");
+            setSelectedFile(null);
+            setShowModal(false);
+
+            // Refresh documents list
+            refetchDocuments();
+          } else {
+            toast({
+              title: "Documento subido pero error al guardar en base de datos",
+              description:
+                "El archivo se subió pero no se pudo guardar la información",
+              variant: "destructive",
+            });
+          }
+        } catch (dbError) {
+          console.error("Database save error:", dbError);
+          toast({
+            title: "Documento subido pero error al guardar en base de datos",
+            description:
+              "El archivo se subió pero no se pudo guardar la información",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Error al subir documento",
@@ -1126,7 +1164,7 @@ export default function TerapeutaPacientesPage() {
                                     }{" "}
                                     •{" "}
                                     {new Date(
-                                      documento.uploadedAt
+                                      documento.createdAt
                                     ).toLocaleDateString("es-ES")}
                                   </p>
                                   {documento.description && (

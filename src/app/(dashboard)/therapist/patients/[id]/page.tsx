@@ -28,16 +28,63 @@ import {
 import Link from "next/link";
 import { usePatientHistory } from "@/hooks/use-patient-history";
 import { usePatientObjectives } from "@/hooks/use-patient-objectives";
+import { usePatientDocuments } from "@/hooks/use-patient-documents";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useDocumentUpload } from "@/hooks/use-document-upload";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { DocumentType, DOCUMENT_TYPE_LABELS } from "@/types/documents";
+import { FileUpload } from "@/components/ui/file-upload";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Eye, Plus, Trash2, Upload } from "lucide-react";
 
 export default function PatientHistoryPage() {
   const params = useParams();
   const patientId = params.id as string;
+  const { profile } = useCurrentUser();
+
+  // Document upload states
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [tituloDocumento, setTituloDocumento] = useState("");
+  const [tipoDocumento, setTipoDocumento] = useState("");
+  const [descripcionDocumento, setDescripcionDocumento] = useState("");
 
   const { data: patientData, isLoading, error } = usePatientHistory(patientId);
   const { data: objectivesData, isLoading: objectivesLoading } =
     usePatientObjectives(patientId);
+
+  // Patient documents
+  const {
+    documents: patientDocuments,
+    isLoading: documentsLoading,
+    refetch: refetchDocuments,
+    deleteDocument,
+    isDeleting: isDeletingDocument,
+  } = usePatientDocuments({
+    patientId,
+    therapistId: profile?.id,
+    enabled: !!patientId && !!profile?.id,
+  });
+
+  // Document upload hook
+  const { uploadDocument, isUploading } = useDocumentUpload();
 
   if (isLoading) {
     return (
@@ -152,6 +199,111 @@ export default function PatientHistoryPage() {
       );
     }
     return <Badge className="bg-gray-100 text-gray-600">Básica</Badge>;
+  };
+
+  const handleSubirDocumento = async () => {
+    if (!selectedFile || !tituloDocumento || !tipoDocumento) {
+      toast({
+        title: "Error",
+        description: "Por favor completa todos los campos requeridos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Map the string value to DocumentType enum
+    const documentTypeMap: Record<string, DocumentType> = {
+      evaluacion: DocumentType.EVALUATION,
+      examen: DocumentType.MEDICAL_REPORT,
+      informe: DocumentType.SCHOOL_REPORT,
+      reporte: DocumentType.PROGRESS_REPORT,
+      otro: DocumentType.OTHER,
+    };
+
+    const mappedDocumentType =
+      documentTypeMap[tipoDocumento] || DocumentType.OTHER;
+
+    try {
+      const result = await uploadDocument({
+        patientId,
+        therapistId: profile?.id || "",
+        title: tituloDocumento,
+        description: descripcionDocumento,
+        documentType: mappedDocumentType,
+        file: selectedFile,
+      });
+
+      if (result.success) {
+        // After successful upload to storage, save to database
+        try {
+          const dbResponse = await fetch("/api/patient-documents/save-record", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              patientId,
+              therapistId: profile?.id || "",
+              title: tituloDocumento,
+              description: descripcionDocumento,
+              documentType: tipoDocumento,
+              fileName: selectedFile.name,
+              fileUrl: result.url,
+              fileSize: selectedFile.size,
+              fileType: selectedFile.type,
+            }),
+          });
+
+          if (dbResponse.ok) {
+            toast({
+              title: "¡Documento subido exitosamente!",
+              description:
+                "El documento se ha subido correctamente al almacenamiento y guardado en la base de datos",
+            });
+
+            // Reset form
+            setTituloDocumento("");
+            setTipoDocumento("");
+            setDescripcionDocumento("");
+            setSelectedFile(null);
+            setShowUploadModal(false);
+
+            // Refresh documents list
+            refetchDocuments();
+          } else {
+            toast({
+              title: "Documento subido pero error al guardar en base de datos",
+              description:
+                "El archivo se subió pero no se pudo guardar la información",
+              variant: "destructive",
+            });
+          }
+        } catch (dbError) {
+          console.error("Database save error:", dbError);
+          toast({
+            title: "Documento subido pero error al guardar en base de datos",
+            description:
+              "El archivo se subió pero no se pudo guardar la información",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Error al subir documento",
+          description: result.error || "Error desconocido",
+          variant: "destructive",
+        });
+      }
+
+      // Reset form
+      setTituloDocumento("");
+      setTipoDocumento("");
+      setDescripcionDocumento("");
+      setSelectedFile(null);
+      setShowUploadModal(false);
+    } catch (error) {
+      console.error("Upload error:", error);
+    }
   };
 
   return (
@@ -626,21 +778,176 @@ export default function PatientHistoryPage() {
         <TabsContent value="documents" className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-semibold">Documentos del Paciente</h3>
+            <Button
+              onClick={() => setShowUploadModal(true)}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Subir Documento
+            </Button>
           </div>
 
-          <Card>
-            <CardContent className="p-8 text-center">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-gray-600">
-                Funcionalidad de documentos en desarrollo
-              </p>
-              <p className="text-sm text-gray-500">
-                Próximamente podrás ver y gestionar documentos del paciente
-              </p>
-            </CardContent>
-          </Card>
+          {documentsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : patientDocuments && patientDocuments.length > 0 ? (
+            <div className="space-y-3">
+              {patientDocuments.map((documento) => (
+                <Card key={documento.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-8 w-8 text-blue-600" />
+                        <div>
+                          <p className="font-medium">{documento.title}</p>
+                          <p className="text-sm text-gray-600">
+                            {DOCUMENT_TYPE_LABELS[documento.documentType]} •{" "}
+                            {new Date(documento.createdAt).toLocaleDateString(
+                              "es-ES"
+                            )}
+                          </p>
+                          {documento.description && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {documento.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            window.open(documento.fileUrl, "_blank")
+                          }
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Ver
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                "¿Estás seguro de que quieres eliminar este documento?"
+                              )
+                            ) {
+                              deleteDocument({
+                                documentId: documento.id,
+                              });
+                            }
+                          }}
+                          disabled={isDeletingDocument}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-gray-600">No hay documentos subidos aún</p>
+                <p className="text-sm text-gray-500">
+                  Sube evaluaciones, exámenes u otros documentos importantes
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
+
+      {/* Document Upload Modal */}
+      <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Subir Documento</DialogTitle>
+            <DialogDescription>
+              Sube evaluaciones, exámenes u otros documentos importantes
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="titulo-documento">Título del documento</Label>
+              <Input
+                id="titulo-documento"
+                placeholder="Ej: Evaluación neuropsicológica, Examen médico..."
+                value={tituloDocumento}
+                onChange={(e) => setTituloDocumento(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="descripcion-documento">
+                Descripción (opcional)
+              </Label>
+              <Textarea
+                id="descripcion-documento"
+                placeholder="Describe el contenido del documento..."
+                value={descripcionDocumento}
+                onChange={(e) => setDescripcionDocumento(e.target.value)}
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="tipo-documento">Tipo de documento</Label>
+              <Select value={tipoDocumento} onValueChange={setTipoDocumento}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Selecciona el tipo de documento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="evaluacion">
+                    Evaluación Psicológica
+                  </SelectItem>
+                  <SelectItem value="examen">Reporte Médico</SelectItem>
+                  <SelectItem value="informe">Reporte Escolar</SelectItem>
+                  <SelectItem value="reporte">Reporte de Progreso</SelectItem>
+                  <SelectItem value="otro">Otro Documento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="archivo">Archivo</Label>
+              <FileUpload
+                onFileSelect={setSelectedFile}
+                disabled={isUploading}
+                className="mt-1"
+                selectedFile={selectedFile}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setShowUploadModal(false)}
+                disabled={isUploading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSubirDocumento}
+                disabled={isUploading || !selectedFile}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isUploading ? "Subiendo..." : "Subir Documento"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Toaster />
     </div>
