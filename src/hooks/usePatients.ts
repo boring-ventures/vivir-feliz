@@ -366,3 +366,17 @@ export function calculateAge(dateOfBirth: Date): number {
       (365.25 * 24 * 60 * 60 * 1000)
   );
 }
+
+// Fetch all patients with complete information for admin
+export function useAllPatients() {
+  return useQuery<PatientWithRelations[]>({
+    queryKey: ["all-patients"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/patients/all");
+      if (!response.ok) {
+        throw new Error("Failed to fetch all patients");
+      }
+      return response.json();
+    },
+  });
+}
