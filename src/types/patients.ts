@@ -298,6 +298,12 @@ export interface PatientWithSessions {
   objetivos: PatientObjective[];
   comentarios: PatientComment[];
   documentos: PatientDocument[];
+  rawData?: {
+    patient: any;
+    latestProposal: any;
+    latestAppointment: any;
+    therapistPatient: any;
+  };
 }
 
 export interface PatientEvaluation {
