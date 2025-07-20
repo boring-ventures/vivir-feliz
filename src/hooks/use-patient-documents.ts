@@ -42,9 +42,7 @@ export function usePatientDocuments({
         params.append("therapistId", therapistId);
       }
 
-      const response = await fetch(
-        `/api/therapist/patient-documents?${params}`
-      );
+      const response = await fetch(`/api/patient-documents?${params}`);
 
       if (!response.ok) {
         const errorData = await response.json();
