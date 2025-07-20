@@ -41,9 +41,15 @@ export async function PUT(
     console.log("Updating services for proposal ID:", id);
     console.log("Services to update:", services);
 
-    // Calculate total amount from services
+    // Calculate total amount and total sessions from services
     const totalAmount = services.reduce(
       (sum: number, service: { cost: number }) => sum + Number(service.cost),
+      0
+    );
+
+    const totalSessions = services.reduce(
+      (sum: number, service: { sessions: number }) =>
+        sum + Number(service.sessions),
       0
     );
 
@@ -78,11 +84,12 @@ export async function PUT(
         });
       }
 
-      // Update the proposal's total amount
+      // Update the proposal's total amount and total sessions
       await tx.treatmentProposal.update({
         where: { id },
         data: {
           totalAmount,
+          totalSessions,
         },
       });
 
