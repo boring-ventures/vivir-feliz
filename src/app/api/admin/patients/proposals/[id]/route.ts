@@ -245,6 +245,34 @@ export async function PUT(
       }
     }
 
+    // Create payment record when status is PAYMENT_CONFIRMED
+    if (status === "PAYMENT_CONFIRMED") {
+      // Check if payment record already exists
+      const existingPayment = await prisma.payment.findFirst({
+        where: {
+          proposalId: id,
+          status: "COMPLETED" as const,
+        },
+      });
+
+      if (!existingPayment) {
+        // Create payment record
+        await prisma.payment.create({
+          data: {
+            proposalId: id,
+            amount: proposal.totalAmount || 0,
+            paymentMethod: "TRANSFER", // Default method
+            status: "COMPLETED" as const,
+            referenceNumber: `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+            notes:
+              notes ||
+              `Pago confirmado el ${new Date().toLocaleDateString("es-ES")}`,
+            paymentDate: new Date(),
+          },
+        });
+      }
+    }
+
     const updatedProposal = await prisma.treatmentProposal.update({
       where: { id },
       data: {

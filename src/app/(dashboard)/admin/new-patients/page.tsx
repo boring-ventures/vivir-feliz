@@ -234,7 +234,7 @@ export default function AdminNuevosPacientesPage() {
       toast({
         title: "Pago confirmado",
         description:
-          "El pago ha sido confirmado exitosamente. Se ha creado el perfil del paciente automáticamente.",
+          "El pago ha sido confirmado exitosamente. Se ha creado el perfil del paciente y el registro de pago automáticamente.",
       });
 
       setModalPago(null);
