@@ -12,6 +12,26 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import {
+  calculateAgeFromBirthDate,
+  calculateTotalAgeInMonths,
+} from "@/lib/utils";
+
+// Helper function to format vivecon value for medical form
+const formatViveCon = (vivecon: string, otroViveCon?: string): string => {
+  const viveConMap: Record<string, string> = {
+    "ambos-padres": "Ambos padres",
+    "solo-madre": "Solo madre",
+    "solo-padre": "Solo padre",
+    "padres-adoptivos": "Padres adoptivos",
+    "algun-pariente": "Algún pariente",
+    "padre-madrastra": "Padre y madrastra",
+    "madre-padrastro": "Madre y padrastro",
+    otros: otroViveCon || "Otros",
+  };
+
+  return viveConMap[vivecon] || vivecon;
+};
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -370,8 +390,74 @@ export default function MedicalFormPage({
     const savedFormData = localStorage.getItem(`formData_${appointmentId}`);
     if (savedFormData) {
       setFormData(JSON.parse(savedFormData));
+    } else {
+      // Try to prefill with consultation data if no saved form data exists
+      const consultaData = sessionStorage.getItem("consultaData");
+      if (consultaData) {
+        try {
+          const parsedConsultaData = JSON.parse(consultaData);
+
+          // Calculate age from birth date
+          const age = calculateAgeFromBirthDate(
+            parsedConsultaData.fechaNacimiento
+          );
+          const totalMonths = calculateTotalAgeInMonths(
+            parsedConsultaData.fechaNacimiento
+          );
+
+          // Calculate siblings information
+          const siblings = parsedConsultaData.hijos || [];
+          const hasSiblings = siblings.length > 0;
+          const siblingsAges = siblings
+            .map((hijo: any) => {
+              if (hijo.fechaNacimiento) {
+                const siblingAge = calculateAgeFromBirthDate(
+                  hijo.fechaNacimiento
+                );
+                return `${siblingAge.years} años`;
+              }
+              return "";
+            })
+            .filter((age: string) => age)
+            .join(", ");
+
+          // Prefill the form with consultation data
+          const prefilledData = {
+            ...initialFormData,
+            nombreNino: parsedConsultaData.nombre || "",
+            fechaNacimiento: parsedConsultaData.fechaNacimiento || "",
+            edadAnos: age.years.toString(),
+            edadMeses: totalMonths.toString(),
+            // Map vivecon to viveConQuien if it exists
+            viveConQuien: formatViveCon(
+              parsedConsultaData.vivecon || "",
+              parsedConsultaData.otroViveCon
+            ),
+            // Prefill siblings information
+            tieneHermanos: hasSiblings ? "si" : "no",
+            cantidadHermanos: hasSiblings ? siblings.length.toString() : "",
+            edadesHermanos: siblingsAges,
+          };
+
+          setFormData(prefilledData);
+
+          // Save the prefilled data to localStorage
+          localStorage.setItem(
+            `formData_${appointmentId}`,
+            JSON.stringify(prefilledData)
+          );
+
+          // toast({
+          //   title: "Datos precargados",
+          //   description:
+          //     "Se han precargado los datos del formulario de consulta.",
+          // });
+        } catch (error) {
+          console.error("Error parsing consultation data:", error);
+        }
+      }
     }
-  }, [appointmentId]);
+  }, [appointmentId, toast]);
 
   const saveFormData = () => {
     localStorage.setItem(`formData_${formularioId}`, JSON.stringify(formData));
@@ -504,6 +590,14 @@ export default function MedicalFormPage({
                 Por favor complete la información básica antes de continuar con
                 el formulario médico
               </p>
+              {formData.nombreNino && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-700">
+                    ✅ Datos precargados del formulario de consulta. Puede
+                    modificar cualquier campo si es necesario.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -524,9 +618,25 @@ export default function MedicalFormPage({
                   id="fechaNacimiento"
                   type="date"
                   value={formData.fechaNacimiento}
-                  onChange={(e) =>
-                    updateFormData("fechaNacimiento", e.target.value)
-                  }
+                  onChange={(e) => {
+                    const birthDate = e.target.value;
+                    console.log("Date input changed to:", birthDate);
+                    updateFormData("fechaNacimiento", birthDate);
+
+                    // Auto-calculate age when birth date changes
+                    if (birthDate) {
+                      const age = calculateAgeFromBirthDate(birthDate);
+                      const totalMonths = calculateTotalAgeInMonths(birthDate);
+                      console.log(
+                        "Calculated age:",
+                        age,
+                        "Total months:",
+                        totalMonths
+                      );
+                      updateFormData("edadAnos", age.years.toString());
+                      updateFormData("edadMeses", totalMonths.toString());
+                    }
+                  }}
                   required
                 />
               </div>
@@ -545,7 +655,7 @@ export default function MedicalFormPage({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edadMeses">Edad actual (meses)</Label>
+                  <Label htmlFor="edadMeses">Edad total (meses)</Label>
                   <Input
                     id="edadMeses"
                     type="number"
@@ -555,7 +665,7 @@ export default function MedicalFormPage({
                     }
                     placeholder="0"
                     min="0"
-                    max="11"
+                    max="216"
                   />
                 </div>
               </div>
@@ -2342,6 +2452,14 @@ export default function MedicalFormPage({
             <div className="text-center mb-6">
               <Users className="h-12 w-12 mx-auto text-purple-600 mb-4" />
               <h2 className="text-xl font-semibold mb-2">Dinámica Familiar</h2>
+              {formData.tieneHermanos === "si" && formData.cantidadHermanos && (
+                <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-md">
+                  <p className="text-sm text-purple-700">
+                    ✅ Información de hermanos precargada del formulario de
+                    consulta. Puede modificar si es necesario.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-6">
@@ -2700,7 +2818,7 @@ export default function MedicalFormPage({
               <FileCheck className="h-5 w-5 mr-2 text-green-600" />
               Confirmar Envío
             </DialogTitle>
-            <DialogDescription className="space-y-2">
+            <div className="space-y-2">
               <span>¿Está seguro de que desea enviar el formulario?</span>
               <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-3">
                 <div className="text-sm text-amber-800">
@@ -2714,7 +2832,7 @@ export default function MedicalFormPage({
                   </li>
                 </ul>
               </div>
-            </DialogDescription>
+            </div>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setShowSubmitModal(false)}>
@@ -2749,7 +2867,7 @@ export default function MedicalFormPage({
               <CheckCircle className="h-6 w-6 mr-2" />
               ¡Formulario Enviado!
             </DialogTitle>
-            <DialogDescription className="space-y-3">
+            <div className="space-y-3">
               <span>Su formulario médico ha sido enviado exitosamente.</span>
               <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                 <div className="text-sm font-medium text-blue-900 mb-2">
@@ -2766,7 +2884,7 @@ export default function MedicalFormPage({
                   para proseguir con la consulta.
                 </div>
               </div>
-            </DialogDescription>
+            </div>
           </DialogHeader>
           <DialogFooter>
             <Button
