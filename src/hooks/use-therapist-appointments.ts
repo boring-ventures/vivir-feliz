@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export interface TherapistAppointment {
   id: string;
-  therapist_id: string;
   date: string;
   start_time: string;
   end_time: string;
