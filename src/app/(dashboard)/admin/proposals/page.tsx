@@ -145,74 +145,74 @@ export default function AdminProposalsPage() {
     : [];
 
   // Example data for pending and completed proposals
-  const pendingProposals: DisplayProposal[] = [
-    {
-      id: "example-1",
-      childName: "Juan Pérez González",
-      age: 8,
-      parentName: "María González",
-      consultationDate: "20/01/2025",
-      consultationReason: "Dificultades de atención en el colegio",
-      phone: "+591-7-123-4567",
-      email: "maria.gonzalez@email.com",
-      status: "PAYMENT_PENDING",
-    },
-    {
-      id: "example-2",
-      childName: "Ana García López",
-      age: 6,
-      parentName: "Carlos García",
-      consultationDate: "19/01/2025",
-      consultationReason: "Retraso en el desarrollo del lenguaje",
-      phone: "+591-7-234-5678",
-      email: "carlos.garcia@email.com",
-      status: "PAYMENT_PENDING",
-    },
-    {
-      id: "example-3",
-      childName: "Luis Morales Vega",
-      age: 7,
-      parentName: "Ana Morales",
-      consultationDate: "18/01/2025",
-      consultationReason: "Problemas de comportamiento y socialización",
-      phone: "+591-7-345-6789",
-      email: "ana.morales@email.com",
-      status: "PAYMENT_PENDING",
-    },
-    {
-      id: "example-4",
-      childName: "Carmen Silva Rojas",
-      age: 9,
-      parentName: "Roberto Silva",
-      consultationDate: "17/01/2025",
-      consultationReason: "Dificultades en matemáticas y lectura",
-      phone: "+591-7-456-7890",
-      email: "roberto.silva@email.com",
-      status: "NEW_PROPOSAL",
-    },
-  ];
+  // const pendingProposals: DisplayProposal[] = [
+  //   {
+  //     id: "example-1",
+  //     childName: "Juan Pérez González",
+  //     age: 8,
+  //     parentName: "María González",
+  //     consultationDate: "20/01/2025",
+  //     consultationReason: "Dificultades de atención en el colegio",
+  //     phone: "+591-7-123-4567",
+  //     email: "maria.gonzalez@email.com",
+  //     status: "PAYMENT_PENDING",
+  //   },
+  //   {
+  //     id: "example-2",
+  //     childName: "Ana García López",
+  //     age: 6,
+  //     parentName: "Carlos García",
+  //     consultationDate: "19/01/2025",
+  //     consultationReason: "Retraso en el desarrollo del lenguaje",
+  //     phone: "+591-7-234-5678",
+  //     email: "carlos.garcia@email.com",
+  //     status: "PAYMENT_PENDING",
+  //   },
+  //   {
+  //     id: "example-3",
+  //     childName: "Luis Morales Vega",
+  //     age: 7,
+  //     parentName: "Ana Morales",
+  //     consultationDate: "18/01/2025",
+  //     consultationReason: "Problemas de comportamiento y socialización",
+  //     phone: "+591-7-345-6789",
+  //     email: "ana.morales@email.com",
+  //     status: "PAYMENT_PENDING",
+  //   },
+  //   {
+  //     id: "example-4",
+  //     childName: "Carmen Silva Rojas",
+  //     age: 9,
+  //     parentName: "Roberto Silva",
+  //     consultationDate: "17/01/2025",
+  //     consultationReason: "Dificultades en matemáticas y lectura",
+  //     phone: "+591-7-456-7890",
+  //     email: "roberto.silva@email.com",
+  //     status: "NEW_PROPOSAL",
+  //   },
+  // ];
 
-  const completedProposals: DisplayProposal[] = [
-    {
-      id: "example-5",
-      childName: "Pedro Mamani Flores",
-      age: 7,
-      parentName: "Elena Mamani",
-      consultationDate: "15/01/2025",
-      analysisDate: "16/01/2025",
-      consultationReason: "Evaluación neuropsicológica",
-      diagnosis: "Trastorno del Espectro Autista",
-      phone: "+591-7-567-8901",
-      email: "elena.mamani@email.com",
-      status: "completed",
-    },
-  ];
+  // const completedProposals: DisplayProposal[] = [
+  //   {
+  //     id: "example-5",
+  //     childName: "Pedro Mamani Flores",
+  //     age: 7,
+  //     parentName: "Elena Mamani",
+  //     consultationDate: "15/01/2025",
+  //     analysisDate: "16/01/2025",
+  //     consultationReason: "Evaluación neuropsicológica",
+  //     diagnosis: "Trastorno del Espectro Autista",
+  //     phone: "+591-7-567-8901",
+  //     email: "elena.mamani@email.com",
+  //     status: "completed",
+  //   },
+  // ];
 
   // Combine example data with database data
   const allProposals = [
     ...databaseProposals,
-    ...pendingProposals,
-    ...completedProposals,
+    // ...pendingProposals,
+    // ...completedProposals,
   ];
 
   // Filter proposals based on search term and status

@@ -260,10 +260,7 @@ export async function POST(
             date: appointmentDate,
             startTime: timeStr,
             endTime,
-            type:
-              service.type === "EVALUATION"
-                ? ("CONSULTA" as AppointmentType) // Changed from EVALUACION to CONSULTA
-                : ("TERAPIA" as AppointmentType),
+            type: "TERAPIA" as AppointmentType,
             status: "SCHEDULED" as AppointmentStatus,
             price: null, // Set price to null as requested
             notes: `${service.service} - Sesión programada`,
@@ -277,6 +274,27 @@ export async function POST(
       await tx.appointment.createMany({
         data: allAppointmentData,
       });
+
+      // Create therapist-patient relationship if it doesn't exist
+      if (proposal.therapistId && proposal.patientId) {
+        await tx.therapistPatient.upsert({
+          where: {
+            therapistId_patientId: {
+              therapistId: proposal.therapistId,
+              patientId: proposal.patientId,
+            },
+          },
+          update: {
+            // Update existing relationship if needed
+            active: true,
+          },
+          create: {
+            therapistId: proposal.therapistId,
+            patientId: proposal.patientId,
+            active: true,
+          },
+        });
+      }
 
       // Update proposal status to appointments scheduled
       await tx.treatmentProposal.update({
