@@ -3,9 +3,50 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 
+// Type definitions for the response data
+interface SessionNote {
+  id: string;
+  sessionComment: string;
+  parentMessage: string | null;
+  createdAt: Date;
+}
+
+interface Objective {
+  id: string;
+  name: string;
+  type: string | null;
+}
+
+interface ObjectiveProgress {
+  id: string;
+  percentage: number;
+  comment: string | null;
+  createdAt: Date;
+  objective: Objective;
+}
+
+interface Appointment {
+  id: string;
+  date: Date;
+  startTime: string;
+  endTime: string;
+  status: string;
+  sessionNote: SessionNote | null;
+  objectiveProgress: ObjectiveProgress[];
+}
+
+interface TreatmentProposal {
+  id: string;
+  diagnosis: string | null;
+  totalSessions: number;
+  status: string;
+  notes: string | null;
+  createdAt: Date;
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
@@ -31,7 +72,7 @@ export async function GET(
       );
     }
 
-    const patientId = params.id;
+    const { id: patientId } = await params;
 
     // Fetch comprehensive patient data
     const patient = await prisma.patient.findFirst({
@@ -101,7 +142,7 @@ export async function GET(
         dateOfBirth: patient.dateOfBirth,
         gender: patient.gender,
         school: patient.address, // Using address as school for now
-        appointments: patient.appointments.map((appointment: any) => ({
+        appointments: patient.appointments.map((appointment: Appointment) => ({
           id: appointment.id,
           date: appointment.date.toISOString(),
           startTime: appointment.startTime,
@@ -116,22 +157,26 @@ export async function GET(
               }
             : undefined,
           objectiveProgress:
-            appointment.objectiveProgress?.map((progress: any) => ({
-              id: progress.id,
-              percentage: progress.percentage,
-              comment: progress.comment,
-              createdAt: progress.createdAt.toISOString(),
-              objective: progress.objective,
-            })) || [],
+            appointment.objectiveProgress?.map(
+              (progress: ObjectiveProgress) => ({
+                id: progress.id,
+                percentage: progress.percentage,
+                comment: progress.comment,
+                createdAt: progress.createdAt.toISOString(),
+                objective: progress.objective,
+              })
+            ) || [],
         })),
-        treatmentProposals: patient.treatmentProposals.map((proposal: any) => ({
-          id: proposal.id,
-          diagnosis: proposal.diagnosis,
-          totalSessions: proposal.totalSessions,
-          status: proposal.status,
-          notes: proposal.notes, // Using notes instead of recommendations
-          createdAt: proposal.createdAt.toISOString(),
-        })),
+        treatmentProposals: patient.treatmentProposals.map(
+          (proposal: TreatmentProposal) => ({
+            id: proposal.id,
+            diagnosis: proposal.diagnosis,
+            totalSessions: proposal.totalSessions,
+            status: proposal.status,
+            notes: proposal.notes, // Using notes instead of recommendations
+            createdAt: proposal.createdAt.toISOString(),
+          })
+        ),
       },
     };
 

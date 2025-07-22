@@ -18,9 +18,6 @@ import {
   AlertCircle,
   TrendingUp,
   User,
-  Phone,
-  Mail,
-  School,
   Heart,
   Brain,
   Activity,
@@ -52,7 +49,67 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Eye, Plus, Trash2, Upload } from "lucide-react";
+import { Eye, Plus, Trash2 } from "lucide-react";
+
+// Type definitions for appointment and objective data
+interface SessionNote {
+  id: string;
+  sessionComment: string;
+  parentMessage?: string | null;
+  createdAt: string;
+}
+
+interface PatientObjective {
+  id: string;
+  patientId: string;
+  therapistId: string;
+  proposalId: string | null;
+  name: string;
+  status: "COMPLETED" | "IN_PROGRESS" | "PAUSED" | "CANCELLED" | "PENDING";
+  type: string | null;
+  createdAt: string;
+  updatedAt: string;
+  progressEntries: ObjectiveProgress[];
+}
+
+interface ObjectiveProgress {
+  id: string;
+  objectiveId: string;
+  appointmentId: string;
+  therapistId: string;
+  percentage: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+  appointment: {
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+  };
+}
+
+type AppointmentObjectiveProgress = {
+  id: string;
+  percentage: number;
+  comment?: string | undefined;
+  createdAt: string;
+  objective: {
+    id: string;
+    name: string;
+    type?: string | undefined;
+  };
+};
+
+interface Appointment {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  sessionNote?: SessionNote | null;
+  objectiveProgress?: AppointmentObjectiveProgress[];
+}
 
 export default function PatientHistoryPage() {
   const params = useParams();
@@ -138,15 +195,16 @@ export default function PatientHistoryPage() {
   const { patient } = patientData;
   const appointments = patient.appointments || [];
   const completedSessions = appointments.filter(
-    (apt: any) => apt.status === "COMPLETED"
+    (apt: Appointment) => apt.status === "COMPLETED"
   );
   const upcomingSessions = appointments.filter(
-    (apt: any) => apt.status === "SCHEDULED"
+    (apt: Appointment) => apt.status === "SCHEDULED"
   );
 
   // Sort sessions by date
   const sortedCompletedSessions = completedSessions.sort(
-    (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    (a: Appointment, b: Appointment) =>
+      new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
   // Calculate treatment progress
@@ -171,9 +229,10 @@ export default function PatientHistoryPage() {
     });
   };
 
-  const getSessionIcon = (appointment: any) => {
+  const getSessionIcon = (appointment: Appointment) => {
     const hasComments = appointment.sessionNote;
-    const hasObjectiveProgress = appointment.objectiveProgress?.length > 0;
+    const hasObjectiveProgress =
+      (appointment.objectiveProgress?.length || 0) > 0;
 
     if (hasComments && hasObjectiveProgress) {
       return <CheckCircle className="h-5 w-5 text-green-600" />;
@@ -183,9 +242,10 @@ export default function PatientHistoryPage() {
     return <AlertCircle className="h-5 w-5 text-gray-400" />;
   };
 
-  const getSessionBadge = (appointment: any) => {
+  const getSessionBadge = (appointment: Appointment) => {
     const hasComments = appointment.sessionNote;
-    const hasObjectiveProgress = appointment.objectiveProgress?.length > 0;
+    const hasObjectiveProgress =
+      (appointment.objectiveProgress?.length || 0) > 0;
 
     if (hasComments && hasObjectiveProgress) {
       return <Badge className="bg-green-100 text-green-800">Completa</Badge>;
@@ -418,7 +478,7 @@ export default function PatientHistoryPage() {
           {sortedCompletedSessions.length > 0 ? (
             <div className="space-y-4">
               {sortedCompletedSessions.map(
-                (appointment: any, index: number) => (
+                (appointment: Appointment, index: number) => (
                   <Card key={appointment.id} className="relative">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-4">
@@ -476,7 +536,7 @@ export default function PatientHistoryPage() {
                               </div>
                               <div className="space-y-3">
                                 {appointment.objectiveProgress.map(
-                                  (progress: any) => (
+                                  (progress: AppointmentObjectiveProgress) => (
                                     <div
                                       key={progress.id}
                                       className="bg-white p-3 rounded border"
@@ -491,7 +551,7 @@ export default function PatientHistoryPage() {
                                       </div>
                                       {progress.comment && (
                                         <p className="text-xs text-gray-600 italic">
-                                          "{progress.comment}"
+                                          {`"${progress.comment}"`}
                                         </p>
                                       )}
                                       <Progress
@@ -548,7 +608,7 @@ export default function PatientHistoryPage() {
           ) : objectivesData?.objectives &&
             objectivesData.objectives.length > 0 ? (
             <div className="space-y-4">
-              {objectivesData.objectives.map((objective: any) => {
+              {objectivesData.objectives.map((objective: PatientObjective) => {
                 const progressHistory = objective.progressEntries || [];
                 const currentProgress = progressHistory[0]?.percentage || 0;
 
@@ -595,36 +655,38 @@ export default function PatientHistoryPage() {
                             Historial de Progreso
                           </h5>
                           <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {progressHistory.map((progress: any) => (
-                              <div
-                                key={progress.id}
-                                className="flex justify-between items-center p-3 bg-gray-50 rounded text-sm"
-                              >
-                                <div>
-                                  <span className="font-medium">
-                                    {progress.percentage}%
-                                  </span>
-                                  {progress.comment && (
-                                    <p className="text-xs text-gray-600 mt-1">
-                                      "{progress.comment}"
-                                    </p>
-                                  )}
+                            {progressHistory.map(
+                              (progress: ObjectiveProgress) => (
+                                <div
+                                  key={progress.id}
+                                  className="flex justify-between items-center p-3 bg-gray-50 rounded text-sm"
+                                >
+                                  <div>
+                                    <span className="font-medium">
+                                      {progress.percentage}%
+                                    </span>
+                                    {progress.comment && (
+                                      <p className="text-xs text-gray-600 mt-1">
+                                        {`"${progress.comment}"`}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="text-right text-xs text-gray-500">
+                                    {new Date(
+                                      progress.createdAt
+                                    ).toLocaleDateString("es-ES")}
+                                    {progress.appointment && (
+                                      <p>
+                                        Sesión del{" "}
+                                        {new Date(
+                                          progress.appointment.date
+                                        ).toLocaleDateString("es-ES")}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="text-right text-xs text-gray-500">
-                                  {new Date(
-                                    progress.createdAt
-                                  ).toLocaleDateString("es-ES")}
-                                  {progress.appointment && (
-                                    <p>
-                                      Sesión del{" "}
-                                      {new Date(
-                                        progress.appointment.date
-                                      ).toLocaleDateString("es-ES")}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                              )
+                            )}
                           </div>
                         </div>
                       )}

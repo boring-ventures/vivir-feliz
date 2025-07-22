@@ -159,24 +159,52 @@ export default function TherapistAgendaPage() {
 
     // Convert therapist appointments data to match the expected format
     const appointments =
-      appointmentsData?.appointments?.map((appointment: any) => ({
-        id: appointment.id,
-        therapistId: profile.id,
-        date: createDateFromString(appointment.appointmentDate),
-        startTime: appointment.appointmentTime,
-        endTime: calculateEndTime(appointment.appointmentTime, 60), // Calculate end time (60 min sessions)
-        type: appointment.type as any,
-        patientName: appointment.patientName || "Paciente",
-        patientAge: appointment.patientAge || null,
-        parentName: appointment.parentName || "",
-        parentPhone: appointment.parentPhone || "",
-        parentEmail: appointment.parentEmail || "",
-        status: appointment.status,
-        notes: appointment.notes || null,
-        price: null, // Not returned by this API
-        createdAt: new Date(appointment.createdAt || Date.now()),
-        updatedAt: new Date(appointment.createdAt || Date.now()),
-      })) || [];
+      appointmentsData?.appointments?.map(
+        (appointment: {
+          id: string;
+          appointmentId: string;
+          patientName: string;
+          patientAge: number | null;
+          parentName: string;
+          parentPhone: string;
+          parentEmail: string;
+          appointmentDate: string;
+          appointmentTime: string;
+          type: string;
+          status: string;
+          notes: string;
+          priority: string;
+          therapist: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            specialty: string;
+          };
+          createdAt: string;
+          analysisStatus: string;
+          analysisDate: string | null;
+          diagnosis: string | null;
+          recommendations: string | null;
+          sentToAdmin: boolean;
+        }) => ({
+          id: appointment.id,
+          therapistId: profile.id,
+          date: createDateFromString(appointment.appointmentDate),
+          startTime: appointment.appointmentTime,
+          endTime: calculateEndTime(appointment.appointmentTime, 60), // Calculate end time (60 min sessions)
+          type: appointment.type as "CONSULTA" | "ENTREVISTA",
+          patientName: appointment.patientName || "Paciente",
+          patientAge: appointment.patientAge || null,
+          parentName: appointment.parentName || "",
+          parentPhone: appointment.parentPhone || "",
+          parentEmail: appointment.parentEmail || "",
+          status: appointment.status,
+          notes: appointment.notes || null,
+          price: null, // Not returned by this API
+          createdAt: new Date(appointment.createdAt || Date.now()),
+          updatedAt: new Date(appointment.createdAt || Date.now()),
+        })
+      ) || [];
 
     return {
       ...therapistSchedule,

@@ -2,6 +2,36 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export interface TherapistAppointment {
   id: string;
+  appointmentId: string;
+  patientName: string;
+  patientAge: number | null;
+  parentName: string;
+  parentPhone: string;
+  parentEmail: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  type: string;
+  status: string;
+  notes: string;
+  priority: string;
+  therapist: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    specialty: string;
+  };
+  createdAt: string;
+  analysisStatus: string;
+  analysisDate: string | null;
+  diagnosis: string | null;
+  recommendations: string | null;
+  sentToAdmin: boolean;
+}
+
+// Interface for monthly appointments from admin API
+export interface TherapistMonthlyAppointment {
+  id: string;
+  therapist_id: string;
   date: string;
   start_time: string;
   end_time: string;
@@ -138,7 +168,7 @@ export function useTherapistMonthlyAppointments(
   year: number,
   month: number
 ) {
-  return useQuery({
+  return useQuery<TherapistMonthlyAppointment[]>({
     queryKey: ["therapist-appointments", therapistId, year, month],
     queryFn: async () => {
       if (!therapistId) return [];
@@ -155,7 +185,7 @@ export function useTherapistMonthlyAppointments(
       }
 
       const data = await response.json();
-      return data as TherapistAppointment[];
+      return data as TherapistMonthlyAppointment[];
     },
     enabled: !!therapistId,
   });

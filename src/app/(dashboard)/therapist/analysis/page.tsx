@@ -16,7 +16,6 @@ import {
   Calendar,
   CalendarDays,
   Clock4,
-  UserCheck,
   FileText,
 } from "lucide-react";
 import Link from "next/link";

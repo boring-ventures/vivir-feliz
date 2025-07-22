@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status") || "active";
 
     // Build where clause for patients
-    const patientWhere: any = {
+    const patientWhere: Prisma.PatientWhereInput = {
       therapistPatients: {
         some: {
           therapistId: therapist.id,
