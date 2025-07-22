@@ -299,10 +299,10 @@ export interface PatientWithSessions {
   comentarios: PatientComment[];
   documentos: PatientDocument[];
   rawData?: {
-    patient: any;
-    latestProposal: any;
-    latestAppointment: any;
-    therapistPatient: any;
+    patient: PatientWithRelations | null;
+    latestProposal: TreatmentProposalWithRelations | null;
+    latestAppointment: AppointmentWithRelations | null;
+    therapistPatient: PatientWithRelations | null;
   };
 }
 
