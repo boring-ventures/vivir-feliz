@@ -34,7 +34,6 @@ const formatViveCon = (vivecon: string, otroViveCon?: string): string => {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -58,6 +57,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Header from "@/components/views/landing-page/Header";
+
+interface Sibling {
+  nombre?: string;
+  fechaNacimiento?: string;
+  [key: string]: unknown;
+}
 
 interface FormData {
   // Datos básicos
@@ -406,10 +411,15 @@ export default function MedicalFormPage({
           );
 
           // Calculate siblings information
-          const siblings = parsedConsultaData.hijos || [];
+          // Filter out the main child (who this form is about) from siblings
+          const allChildren = parsedConsultaData.hijos || [];
+          const mainChildName = parsedConsultaData.nombre || "";
+          const siblings = allChildren.filter(
+            (hijo: Sibling) => hijo.nombre && hijo.nombre !== mainChildName
+          );
           const hasSiblings = siblings.length > 0;
           const siblingsAges = siblings
-            .map((hijo: any) => {
+            .map((hijo: Sibling) => {
               if (hijo.fechaNacimiento) {
                 const siblingAge = calculateAgeFromBirthDate(
                   hijo.fechaNacimiento

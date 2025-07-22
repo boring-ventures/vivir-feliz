@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
-import { ObjectiveStatus } from "@prisma/client";
 
 // GET /api/therapist/patient-objectives - Get objectives for a specific patient
 export async function GET(request: NextRequest) {

@@ -77,7 +77,7 @@ export function usePatientObjectives(patientId: string | null) {
 export function useCreateObjective() {
   const queryClient = useQueryClient();
 
-  return useMutation<any, Error, CreateObjectiveData>({
+  return useMutation<PatientObjective, Error, CreateObjectiveData>({
     mutationFn: async (data: CreateObjectiveData) => {
       const response = await fetch("/api/therapist/patient-objectives", {
         method: "POST",
@@ -110,7 +110,7 @@ export function useUpdateObjective() {
   const queryClient = useQueryClient();
 
   return useMutation<
-    any,
+    PatientObjective,
     Error,
     { objectiveId: string; data: UpdateObjectiveData }
   >({
@@ -145,7 +145,7 @@ export function useUpdateObjective() {
 export function useDeleteObjective() {
   const queryClient = useQueryClient();
 
-  return useMutation<any, Error, string>({
+  return useMutation<void, Error, string>({
     mutationFn: async (objectiveId: string) => {
       const response = await fetch(
         `/api/therapist/patient-objectives/${objectiveId}`,
@@ -173,7 +173,7 @@ export function useDeleteObjective() {
 export function useUpdateObjectiveProgress() {
   const queryClient = useQueryClient();
 
-  return useMutation<any, Error, UpdateProgressData>({
+  return useMutation<PatientObjective, Error, UpdateProgressData>({
     mutationFn: async (data: UpdateProgressData) => {
       const response = await fetch("/api/therapist/objective-progress", {
         method: "POST",
