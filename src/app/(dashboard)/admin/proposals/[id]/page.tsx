@@ -250,8 +250,7 @@ export default function AdminProposalEditPage() {
     useProposalServices(params.id as string);
   const updateServicesMutation = useUpdateProposalServices();
   const currentProposal = proposals?.find((p) => p.id === params.id);
-  const { data: allTherapists = [], isLoading: therapistsLoading } =
-    useTherapists();
+  const { data: allTherapists = [] } = useTherapists();
 
   // Helper function to get therapists by specialty for a specific service
   const getTherapistsByService = (codigo: string) => {

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { AppointmentType, AppointmentStatus } from "@prisma/client";
 import prisma from "@/lib/prisma";
 
+// Type for service appointments mapping
+interface ServiceAppointments {
+  [serviceId: string]: string[];
+}
+
 // Helper function to calculate age from date of birth
 const calculateAge = (birthDate: Date): number => {
   const today = new Date();
@@ -45,7 +50,9 @@ export async function POST(
   try {
     const { id: proposalId } = await params;
     const body = await request.json();
-    const { serviceAppointments } = body;
+    const { serviceAppointments } = body as {
+      serviceAppointments: ServiceAppointments;
+    };
 
     // Validate required fields
     if (
@@ -102,7 +109,7 @@ export async function POST(
     );
 
     const totalProvidedAppointments = Object.values(serviceAppointments).reduce(
-      (sum: number, appointments: any) => sum + (appointments?.length || 0),
+      (sum: number, appointments: string[]) => sum + appointments.length,
       0
     );
 

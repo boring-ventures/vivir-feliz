@@ -111,7 +111,7 @@ export async function PUT(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
@@ -129,9 +129,10 @@ export async function GET(
     const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
     const endDate = new Date(parseInt(year), parseInt(month), 0); // Last day of the month
 
+    const { id: therapistId } = await params;
     const appointments = await prisma.appointment.findMany({
       where: {
-        therapistId: params.id,
+        therapistId,
         date: {
           gte: startDate,
           lte: endDate,

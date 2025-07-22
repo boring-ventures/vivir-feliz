@@ -13,8 +13,6 @@ import {
   Loader2,
   User,
   Phone,
-  Mail,
-  MapPin,
   FileText,
   Target,
   DollarSign,
@@ -25,8 +23,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { useAllPatients } from "@/hooks/usePatients";
 import { PatientWithRelations } from "@/types/patients";
 
@@ -688,7 +684,7 @@ export default function PatientsPage() {
                     {modalInfo.rawData.treatmentProposals.length > 0 ? (
                       modalInfo.rawData.treatmentProposals
                         .slice(0, 3)
-                        .map((proposal, index) => (
+                        .map((proposal) => (
                           <div
                             key={proposal.id}
                             className="border-l-4 border-blue-500 pl-3 py-2 bg-gray-50 rounded"
@@ -728,7 +724,7 @@ export default function PatientsPage() {
                     {modalInfo.rawData.appointments.length > 0 ? (
                       modalInfo.rawData.appointments
                         .slice(0, 3)
-                        .map((appointment, index) => (
+                        .map((appointment) => (
                           <div
                             key={appointment.id}
                             className="border-l-4 border-green-500 pl-3 py-2 bg-gray-50 rounded"
