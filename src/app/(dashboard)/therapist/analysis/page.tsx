@@ -16,7 +16,6 @@ import {
   Calendar,
   CalendarDays,
   Clock4,
-  UserCheck,
   FileText,
 } from "lucide-react";
 import Link from "next/link";
@@ -40,18 +39,19 @@ export default function TherapistAnalysisPage() {
 
   const sendAnalysisToAdmin = useSendAnalysisToAdmin();
 
-  // Filter appointments based on search
+  // Filter appointments based on search and only show CONSULTA type
   const filteredAppointments =
     data?.appointments?.filter(
       (appointment) =>
-        appointment.patientName
+        appointment.type === "CONSULTA" &&
+        (appointment.patientName
           .toLowerCase()
           .includes(busqueda.toLowerCase()) ||
-        appointment.parentName.toLowerCase().includes(busqueda.toLowerCase()) ||
-        appointment.notes.toLowerCase().includes(busqueda.toLowerCase()) ||
-        (appointment.type === "CONSULTA" ? "consulta" : "entrevista").includes(
-          busqueda.toLowerCase()
-        )
+          appointment.parentName
+            .toLowerCase()
+            .includes(busqueda.toLowerCase()) ||
+          appointment.notes.toLowerCase().includes(busqueda.toLowerCase()) ||
+          "consulta".includes(busqueda.toLowerCase()))
     ) || [];
 
   const getPrioridadColor = (prioridad: string) => {
@@ -79,7 +79,12 @@ export default function TherapistAnalysisPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Parse date as local date to avoid timezone issues
+    const parts = dateString.split("T")[0].split("-"); // Get YYYY-MM-DD part
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1; // Month is 0-indexed in JS Date
+    const day = parseInt(parts[2]);
+    const date = new Date(year, month, day);
     return date.toLocaleDateString("es-ES", {
       day: "2-digit",
       month: "2-digit",
@@ -164,7 +169,7 @@ export default function TherapistAnalysisPage() {
                 Análisis de Consultas
               </h1>
               <p className="text-gray-600 mt-1">
-                Gestiona y analiza las consultas y entrevistas programadas
+                Gestiona y analiza las consultas programadas
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -241,14 +246,14 @@ export default function TherapistAnalysisPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
-                      Entrevistas
+                      Consultas
                     </p>
                     <p className="text-3xl font-bold text-purple-600">
-                      {data?.stats?.interviews || 0}
+                      {data?.stats?.consultations || 0}
                     </p>
                   </div>
                   <div className="p-3 bg-purple-100 rounded-lg">
-                    <UserCheck className="h-6 w-6 text-purple-600" />
+                    <FileText className="h-6 w-6 text-purple-600" />
                   </div>
                 </div>
               </CardContent>
@@ -352,14 +357,15 @@ export default function TherapistAnalysisPage() {
                                 <h3 className="text-lg font-semibold text-gray-900">
                                   {appointment.patientName}
                                 </h3>
-                                {appointment.patientAge && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    {appointment.patientAge} años
-                                  </Badge>
-                                )}
+                                {appointment.patientAge !== null &&
+                                  appointment.patientAge !== undefined && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {appointment.patientAge} años
+                                    </Badge>
+                                  )}
                                 <Badge
                                   className={`text-xs ${getTypeColor(appointment.type)}`}
                                 >

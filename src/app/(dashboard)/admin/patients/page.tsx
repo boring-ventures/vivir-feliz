@@ -5,204 +5,219 @@ import {
   Search,
   Filter,
   Eye,
-  UserPlus,
+  Trash2,
   Users,
-  Check,
+  Clock,
   Calendar,
   X,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
+  User,
+  Phone,
+  FileText,
+  Target,
+  DollarSign,
+  CheckCircle,
+  AlertCircle,
+  PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  useProposals,
-  useConfirmPayment,
-  useScheduleAppointments,
-  useProposalsDisplayData,
-} from "@/hooks/usePatients";
-import {
-  ProposalDisplayData,
-} from "@/types/patients";
+import { useAllPatients } from "@/hooks/usePatients";
+import { PatientWithRelations } from "@/types/patients";
+
+interface PatientDisplayData {
+  id: string;
+  nombre: string;
+  edad: number;
+  genero: string;
+  diagnostico: string;
+  fechaIngreso: string;
+  fechaUltimaCita: string;
+  padre: string;
+  telefono: string;
+  email: string;
+  terapeuta: string;
+  tipoTerapia: string;
+  sesionesCompletadas: number;
+  sesionesTotales: number;
+  estadoTratamiento: string;
+  estadoPago: string;
+  montoTotal: string;
+  montoPagado: string;
+  proximaCita: string;
+  rawData: PatientWithRelations;
+}
 
 export default function PatientsPage() {
   const [filtro, setFiltro] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
-  const [modalPago, setModalPago] = useState<ProposalDisplayData | null>(null);
-  const [modalCitas, setModalCitas] = useState<ProposalDisplayData | null>(
-    null
-  );
-  const [mesActual, setMesActual] = useState(new Date(2025, 0)); // Enero 2025
-  const [citasSeleccionadas, setCitasSeleccionadas] = useState<string[]>([]);
+  const [modalInfo, setModalInfo] = useState<PatientDisplayData | null>(null);
 
-  // Fetch proposals data
-  const { data: proposals = [], isLoading, error } = useProposals();
-  const confirmPaymentMutation = useConfirmPayment();
-  const scheduleAppointmentsMutation = useScheduleAppointments();
+  // Fetch all patients data
+  const { data: patients, isLoading, error } = useAllPatients();
 
-  // Convert proposals to display format
-  const proposalsDisplayData = useProposalsDisplayData(proposals);
+  // Transform patients data for display
+  const transformPatientData = (
+    patient: PatientWithRelations
+  ): PatientDisplayData => {
+    const latestProposal = patient.treatmentProposals[0];
+    const latestAppointment = patient.appointments[0];
+    const completedAppointments = patient.appointments.filter(
+      (apt) => apt.status === "COMPLETED"
+    );
+    const totalPayments =
+      latestProposal?.payments.reduce(
+        (sum, payment) => sum + Number(payment.amount),
+        0
+      ) || 0;
 
-  // Filter proposals
-  const proposalsFiltradas = proposalsDisplayData.filter((proposal) => {
-    const coincideBusqueda =
-      proposal.patientName.toLowerCase().includes(busqueda.toLowerCase()) ||
-      proposal.parentName.toLowerCase().includes(busqueda.toLowerCase()) ||
-      proposal.therapistName.toLowerCase().includes(busqueda.toLowerCase());
+    const getEstadoTratamiento = () => {
+      if (!latestProposal) return "Sin propuesta";
+      if (latestProposal.status === "NEW_PROPOSAL") return "Nueva propuesta";
+      if (latestProposal.status === "PAYMENT_PENDING") return "Pago pendiente";
+      if (latestProposal.status === "PAYMENT_CONFIRMED")
+        return "Pago confirmado";
+      if (latestProposal.status === "APPOINTMENTS_SCHEDULED")
+        return "Citas programadas";
+      if (latestProposal.status === "TREATMENT_ACTIVE") return "Activo";
+      if (latestProposal.status === "TREATMENT_COMPLETED") return "Completado";
+      if (latestProposal.status === "CANCELLED") return "Cancelado";
+      return "Desconocido";
+    };
 
-    const coincideEstado =
-      filtro === "Todos" || proposal.statusDisplay === filtro;
+    const getEstadoPago = () => {
+      if (!latestProposal) return "Sin propuesta";
+      if (totalPayments >= Number(latestProposal.totalAmount || 0))
+        return "Pagado";
+      if (totalPayments > 0) return "Pago parcial";
+      return "Pendiente";
+    };
 
-    return coincideBusqueda && coincideEstado;
-  });
+    const getProximaCita = () => {
+      const upcomingAppointment = patient.appointments
+        .filter(
+          (apt) => apt.status === "SCHEDULED" && new Date(apt.date) > new Date()
+        )
+        .sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        )[0];
 
-  const confirmarPago = async (proposalId: string) => {
-    if (!modalPago) return;
+      return upcomingAppointment
+        ? new Date(upcomingAppointment.date).toLocaleDateString("es-ES")
+        : "Sin programar";
+    };
 
-    try {
-      await confirmPaymentMutation.mutateAsync({
-        proposalId,
-        amount: parseFloat(
-          modalPago.totalAmount.replace("Bs. ", "").replace(",", "")
-        ),
-        paymentMethod: "TRANSFER", // Default method
-        notes: "Pago confirmado desde panel administrativo",
-      });
-      setModalPago(null);
-    } catch (error) {
-      console.error("Error confirming payment:", error);
-      // TODO: Show error toast
+    return {
+      id: patient.id,
+      nombre: `${patient.firstName} ${patient.lastName}`,
+      edad: calculateAge(patient.dateOfBirth),
+      genero: patient.gender || "No especificado",
+      diagnostico: latestProposal?.description || "Sin diagnóstico",
+      fechaIngreso: new Date(patient.createdAt).toLocaleDateString("es-ES"),
+      fechaUltimaCita: latestAppointment
+        ? new Date(latestAppointment.date).toLocaleDateString("es-ES")
+        : "Sin citas",
+      padre:
+        `${patient.parent.firstName || ""} ${patient.parent.lastName || ""}`.trim() ||
+        "No especificado",
+      telefono: patient.parent.phone || "No especificado",
+      email: patient.email || "No especificado",
+      terapeuta: latestProposal?.therapist
+        ? `${latestProposal.therapist.firstName || ""} ${latestProposal.therapist.lastName || ""}`.trim()
+        : "Sin asignar",
+      tipoTerapia: latestProposal?.title || "Sin especificar",
+      sesionesCompletadas: completedAppointments.length,
+      sesionesTotales: latestProposal?.totalSessions || 0,
+      estadoTratamiento: getEstadoTratamiento(),
+      estadoPago: getEstadoPago(),
+      montoTotal: latestProposal
+        ? `Bs. ${latestProposal.totalAmount?.toLocaleString()}`
+        : "Bs. 0",
+      montoPagado: `Bs. ${totalPayments.toLocaleString()}`,
+      proximaCita: getProximaCita(),
+      rawData: patient,
+    };
+  };
+
+  const calculateAge = (dateOfBirth: Date): number => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  };
+
+  const calcularProgreso = (completadas: number, totales: number): number => {
+    if (totales === 0) return 0;
+    return Math.round((completadas / totales) * 100);
+  };
+
+  const getEstadoColor = (estado: string) => {
+    switch (estado.toLowerCase()) {
+      case "activo":
+        return "bg-green-100 text-green-800";
+      case "pendiente":
+        return "bg-yellow-100 text-yellow-800";
+      case "completado":
+        return "bg-blue-100 text-blue-800";
+      case "cancelado":
+        return "bg-red-100 text-red-800";
+      case "sin propuesta":
+        return "bg-gray-100 text-gray-600";
+      default:
+        return "bg-gray-100 text-gray-600";
     }
   };
 
-  const programarCitas = async (proposalId: string) => {
-    if (!modalCitas || citasSeleccionadas.length !== 24) return;
-
-    try {
-      const appointments = citasSeleccionadas.map((cita) => {
-        const [dateStr, time] = cita.split("-");
-        const date = new Date(dateStr);
-        const endTime = `${(parseInt(time.split(":")[0]) + 1).toString().padStart(2, "0")}:${time.split(":")[1]}`;
-
-        return {
-          date,
-          startTime: time,
-          endTime,
-          type: "TERAPIA" as const,
-        };
-      });
-
-      await scheduleAppointmentsMutation.mutateAsync({
-        proposalId,
-        appointments,
-      });
-
-      setModalCitas(null);
-      setCitasSeleccionadas([]);
-    } catch (error) {
-      console.error("Error scheduling appointments:", error);
-      // TODO: Show error toast
+  const getPagoColor = (estado: string) => {
+    switch (estado.toLowerCase()) {
+      case "pagado":
+        return "bg-green-100 text-green-800";
+      case "pago parcial":
+        return "bg-yellow-100 text-yellow-800";
+      case "pendiente":
+        return "bg-red-100 text-red-800";
+      case "sin propuesta":
+        return "bg-gray-100 text-gray-600";
+      default:
+        return "bg-gray-100 text-gray-600";
     }
   };
 
-  // Calendar functions
-  const getDiasDelMes = (fecha: Date) => {
-    const año = fecha.getFullYear();
-    const mes = fecha.getMonth();
-    const primerDia = new Date(año, mes, 1);
-    const ultimoDia = new Date(año, mes + 1, 0);
-    const diasEnMes = ultimoDia.getDate();
-    const primerDiaSemana = primerDia.getDay();
+  // Transform and filter patients
+  const pacientesFiltrados =
+    patients?.map(transformPatientData).filter((paciente) => {
+      const coincideBusqueda =
+        paciente.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        paciente.padre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        paciente.terapeuta.toLowerCase().includes(busqueda.toLowerCase()) ||
+        paciente.diagnostico.toLowerCase().includes(busqueda.toLowerCase());
 
-    const dias = [];
+      const coincideEstado =
+        filtro === "Todos" || paciente.estadoTratamiento === filtro;
 
-    // Días del mes anterior para completar la primera semana
-    for (let i = primerDiaSemana; i > 0; i--) {
-      const diaAnterior = new Date(año, mes, 1 - i);
-      dias.push({
-        fecha: diaAnterior,
-        esDelMes: false,
-        dia: diaAnterior.getDate(),
-      });
-    }
-
-    // Días del mes actual
-    for (let dia = 1; dia <= diasEnMes; dia++) {
-      const fechaDia = new Date(año, mes, dia);
-      dias.push({
-        fecha: fechaDia,
-        esDelMes: true,
-        dia: dia,
-      });
-    }
-
-    // Días del mes siguiente para completar la última semana
-    const diasRestantes = 42 - dias.length; // 6 semanas * 7 días
-    for (let dia = 1; dia <= diasRestantes; dia++) {
-      const fechaSiguiente = new Date(año, mes + 1, dia);
-      dias.push({
-        fecha: fechaSiguiente,
-        esDelMes: false,
-        dia: dia,
-      });
-    }
-
-    return dias;
-  };
-
-  const formatearFecha = (fecha: Date) => {
-    return fecha.toISOString().split("T")[0];
-  };
-
-  const toggleCita = (fecha: Date, hora: string) => {
-    const fechaHora = `${formatearFecha(fecha)}-${hora}`;
-    setCitasSeleccionadas((prev) => {
-      if (prev.includes(fechaHora)) {
-        return prev.filter((c) => c !== fechaHora);
-      } else if (prev.length < 24) {
-        // Máximo 24 citas
-        return [...prev, fechaHora];
-      }
-      return prev;
-    });
-  };
-
-  const esDiaSeleccionado = (fecha: Date) => {
-    const fechaStr = formatearFecha(fecha);
-    return citasSeleccionadas.some((cita) => cita.startsWith(fechaStr));
-  };
-
-  const meses = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre",
-  ];
-
-  const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-  const horarios = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
+      return coincideBusqueda && coincideEstado;
+    }) || [];
 
   // Calculate statistics
-  const totalProposals = proposalsDisplayData.length;
-  const paymentsPending = proposalsDisplayData.filter(
-    (p) => p.status === "PAYMENT_PENDING"
+  const totalPacientes = pacientesFiltrados.length;
+  const pacientesActivos = pacientesFiltrados.filter(
+    (p) => p.estadoTratamiento === "Activo"
   ).length;
-  const paymentsConfirmed = proposalsDisplayData.filter(
-    (p) => p.paymentConfirmed
+  const pagosPendientes = pacientesFiltrados.filter(
+    (p) => p.estadoPago === "Pendiente" || p.estadoPago === "Pago parcial"
   ).length;
-  const appointmentsScheduled = proposalsDisplayData.filter(
-    (p) => p.appointmentsScheduled
+  const pagosCompletados = pacientesFiltrados.filter(
+    (p) => p.estadoPago === "Pagado"
   ).length;
 
   if (isLoading) {
@@ -238,9 +253,9 @@ export default function PatientsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Nuevos Pacientes</h1>
+          <h1 className="text-3xl font-bold">Pacientes</h1>
           <p className="text-gray-600">
-            Gestiona las propuestas de tratamiento y programación de citas
+            Gestiona toda la información de los pacientes del sistema
           </p>
         </div>
       </div>
@@ -250,13 +265,29 @@ export default function PatientsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Propuestas Enviadas
+              Total Pacientes
             </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalProposals}</div>
-            <p className="text-xs text-muted-foreground">Total de propuestas</p>
+            <div className="text-2xl font-bold">{totalPacientes}</div>
+            <p className="text-xs text-muted-foreground">
+              Pacientes registrados
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Tratamientos Activos
+            </CardTitle>
+            <PlayCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pacientesActivos}</div>
+            <p className="text-xs text-muted-foreground">
+              En tratamiento actual
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -264,10 +295,10 @@ export default function PatientsPage() {
             <CardTitle className="text-sm font-medium">
               Pagos Pendientes
             </CardTitle>
-            <UserPlus className="h-4 w-4 text-muted-foreground" />
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{paymentsPending}</div>
+            <div className="text-2xl font-bold">{pagosPendientes}</div>
             <p className="text-xs text-muted-foreground">
               Esperando confirmación
             </p>
@@ -276,27 +307,13 @@ export default function PatientsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Pagos Confirmados
+              Pagos Completados
             </CardTitle>
-            <div className="h-4 w-4 bg-green-500 rounded-full" />
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{paymentsConfirmed}</div>
-            <p className="text-xs text-muted-foreground">Listos para citas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Citas Programadas
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{appointmentsScheduled}</div>
-            <p className="text-xs text-muted-foreground">
-              Tratamientos activos
-            </p>
+            <div className="text-2xl font-bold">{pagosCompletados}</div>
+            <p className="text-xs text-muted-foreground">Pagos confirmados</p>
           </CardContent>
         </Card>
       </div>
@@ -311,7 +328,7 @@ export default function PatientsPage() {
               </div>
               <Input
                 type="text"
-                placeholder="Buscar paciente, padre o terapeuta..."
+                placeholder="Buscar paciente, padre, terapeuta o diagnóstico..."
                 className="pl-10"
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
@@ -323,9 +340,13 @@ export default function PatientsPage() {
               <div className="flex space-x-1">
                 {[
                   "Todos",
-                  "Pago Pendiente",
-                  "Pago Confirmado",
-                  "Citas Programadas",
+                  "Activo",
+                  "Pago pendiente",
+                  "Pago confirmado",
+                  "Citas programadas",
+                  "Completado",
+                  "Cancelado",
+                  "Sin propuesta",
                 ].map((estado) => (
                   <Button
                     key={estado}
@@ -359,10 +380,13 @@ export default function PatientsPage() {
                     Terapeuta
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha Propuesta
+                    Fecha Ingreso
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto
+                    Progreso
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Estado Tratamiento
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado Pago
@@ -373,63 +397,105 @@ export default function PatientsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {proposalsFiltradas.map((proposal) => (
-                  <tr key={proposal.id} className="hover:bg-gray-50">
+                {pacientesFiltrados.map((paciente) => (
+                  <tr key={paciente.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {proposal.patientName}
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span className="text-sm font-medium text-blue-600">
+                              {paciente.nombre
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .substring(0, 2)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {proposal.patientAge} años
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {paciente.nombre}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {paciente.edad} años
+                          </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {proposal.parentName}
+                        {paciente.padre}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {proposal.parentPhone}
+                        {paciente.telefono}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {proposal.therapistName}
+                        {paciente.terapeuta}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {paciente.tipoTerapia}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {proposal.proposalDate}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {proposal.totalAmount}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {paciente.fechaIngreso}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        <Clock className="inline w-3 h-3 mr-1" />
+                        {paciente.fechaUltimaCita}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge className={proposal.statusColor}>
-                        {proposal.statusDisplay}
-                      </Badge>
+                      <div className="text-sm text-gray-900">
+                        {paciente.sesionesCompletadas}/
+                        {paciente.sesionesTotales} sesiones
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{
+                            width: `${calcularProgreso(paciente.sesionesCompletadas, paciente.sesionesTotales)}%`,
+                          }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {calcularProgreso(
+                          paciente.sesionesCompletadas,
+                          paciente.sesionesTotales
+                        )}
+                        %
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getEstadoColor(paciente.estadoTratamiento)}`}
+                      >
+                        {paciente.estadoTratamiento}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPagoColor(paciente.estadoPago)}`}
+                      >
+                        {paciente.estadoPago}
+                      </span>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {paciente.montoPagado} / {paciente.montoTotal}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setModalPago(proposal)}
-                          disabled={!proposal.canConfirmPayment}
+                        <button
+                          className="text-blue-600 hover:text-blue-900"
+                          onClick={() => setModalInfo(paciente)}
                         >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setModalCitas(proposal)}
-                          disabled={!proposal.canScheduleAppointments}
-                        >
-                          <Calendar className="h-4 w-4" />
-                        </Button>
+                          <Eye className="h-5 w-5" />
+                        </button>
+                        <button className="text-red-600 hover:text-red-900">
+                          <Trash2 className="h-5 w-5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -440,241 +506,259 @@ export default function PatientsPage() {
         </CardContent>
       </Card>
 
-      {/* Payment confirmation modal */}
-      {modalPago && (
+      {/* Patient Information Modal */}
+      {modalInfo && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="max-w-md w-full mx-4">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Confirmar Pago</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setModalPago(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600">Paciente:</p>
-                <p className="font-medium">{modalPago.patientName}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Monto de la propuesta:</p>
-                <p className="font-medium text-lg">{modalPago.totalAmount}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Padre/Madre:</p>
-                <p className="font-medium">{modalPago.parentName}</p>
-              </div>
-              <div className="bg-yellow-50 p-3 rounded-md">
-                <p className="text-sm text-yellow-800">
-                  ¿Confirmas que el padre/madre ha realizado el pago completo de
-                  la propuesta?
-                </p>
-              </div>
-              <div className="flex space-x-3">
-                <Button
-                  onClick={() => confirmarPago(modalPago.id)}
-                  disabled={confirmPaymentMutation.isPending}
-                  className="flex-1"
-                >
-                  {confirmPaymentMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : null}
-                  Confirmar Pago
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setModalPago(null)}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">
+                Información Completa del Paciente
+              </h3>
+              <button
+                onClick={() => setModalInfo(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
 
-      {/* Appointment scheduling modal with calendar */}
-      {modalCitas && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>
-                  Programar Citas - {modalCitas.patientName}
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setModalCitas(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                {/* Patient Information */}
                 <div>
-                  <p className="text-sm text-gray-600">Paciente:</p>
-                  <p className="font-medium">{modalCitas.patientName}</p>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <User className="w-4 h-4 mr-2" />
+                    Datos del Paciente
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Nombre:</span>
+                      <span>{modalInfo.nombre}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Edad:</span>
+                      <span>{modalInfo.edad} años</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Género:</span>
+                      <span>{modalInfo.genero}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Diagnóstico:</span>
+                      <span className="text-right max-w-xs">
+                        {modalInfo.diagnostico}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Fecha de Ingreso:</span>
+                      <span>{modalInfo.fechaIngreso}</span>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Contact Information */}
                 <div>
-                  <p className="text-sm text-gray-600">Terapeuta:</p>
-                  <p className="font-medium">{modalCitas.therapistName}</p>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Phone className="w-4 h-4 mr-2" />
+                    Información de Contacto
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Padre/Madre:</span>
+                      <span>{modalInfo.padre}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Teléfono:</span>
+                      <span>{modalInfo.telefono}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Email:</span>
+                      <span>{modalInfo.email}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Treatment Information */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Target className="w-4 h-4 mr-2" />
+                    Información del Tratamiento
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Terapeuta:</span>
+                      <span>{modalInfo.terapeuta}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Tipo de Terapia:</span>
+                      <span className="text-right max-w-xs">
+                        {modalInfo.tipoTerapia}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Estado:</span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${getEstadoColor(modalInfo.estadoTratamiento)}`}
+                      >
+                        {modalInfo.estadoTratamiento}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Última Cita:</span>
+                      <span>{modalInfo.fechaUltimaCita}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Próxima Cita:</span>
+                      <span>{modalInfo.proximaCita}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-blue-50 p-4 rounded-md">
-                <h4 className="font-medium mb-2">Plan de Tratamiento</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600">Sesiones totales:</p>
-                    <p className="font-medium">24 sesiones</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Frecuencia:</p>
-                    <p className="font-medium">2 veces por semana</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Citas seleccionadas:</p>
-                    <p className="font-medium">
-                      {citasSeleccionadas.length}/24
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Tipo de terapia:</p>
-                    <p className="font-medium">Psicología Infantil</p>
+              <div className="space-y-6">
+                {/* Progress and Sessions */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Progreso y Sesiones
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Sesiones:</span>
+                      <span>
+                        {modalInfo.sesionesCompletadas}/
+                        {modalInfo.sesionesTotales}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-blue-600 h-3 rounded-full"
+                        style={{
+                          width: `${calcularProgreso(modalInfo.sesionesCompletadas, modalInfo.sesionesTotales)}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <div className="text-center text-xs text-gray-500">
+                      {calcularProgreso(
+                        modalInfo.sesionesCompletadas,
+                        modalInfo.sesionesTotales
+                      )}
+                      % completado
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Calendar */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setMesActual(
-                          new Date(
-                            mesActual.getFullYear(),
-                            mesActual.getMonth() - 1
-                          )
-                        )
-                      }
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <h3 className="text-lg font-semibold">
-                      {meses[mesActual.getMonth()]} {mesActual.getFullYear()}
-                    </h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setMesActual(
-                          new Date(
-                            mesActual.getFullYear(),
-                            mesActual.getMonth() + 1
-                          )
-                        )
-                      }
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+                {/* Payment Information */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Información de Pagos
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Monto Total:</span>
+                      <span>{modalInfo.montoTotal}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Monto Pagado:</span>
+                      <span>{modalInfo.montoPagado}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Estado Pago:</span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${getPagoColor(modalInfo.estadoPago)}`}
+                      >
+                        {modalInfo.estadoPago}
+                      </span>
+                    </div>
                   </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="grid grid-cols-7 gap-0">
-                    {diasSemana.map((dia) => (
-                      <div
-                        key={dia}
-                        className="p-2 text-center text-sm font-medium text-gray-500 border-b"
-                      >
-                        {dia}
-                      </div>
-                    ))}
+                </div>
 
-                    {getDiasDelMes(mesActual).map((diaInfo, index) => (
-                      <div
-                        key={index}
-                        className={`min-h-[80px] border-r border-b p-1 ${
-                          !diaInfo.esDelMes ? "bg-gray-50 text-gray-400" : ""
-                        } ${esDiaSeleccionado(diaInfo.fecha) ? "bg-blue-50" : ""}`}
-                      >
-                        <div className="text-sm font-medium mb-1">
-                          {diaInfo.dia}
-                        </div>
-                        {diaInfo.esDelMes && (
-                          <div className="space-y-1">
-                            {horarios.map((hora) => {
-                              const fechaHora = `${formatearFecha(diaInfo.fecha)}-${hora}`;
-                              const isSelected =
-                                citasSeleccionadas.includes(fechaHora);
-                              return (
-                                <Button
-                                  key={hora}
-                                  size="sm"
-                                  variant={isSelected ? "default" : "outline"}
-                                  onClick={() =>
-                                    toggleCita(diaInfo.fecha, hora)
-                                  }
-                                  disabled={
-                                    citasSeleccionadas.length >= 24 &&
-                                    !isSelected
-                                  }
-                                  className="w-full text-xs p-1 h-6"
-                                >
-                                  {hora}
-                                </Button>
-                              );
-                            })}
+                {/* Treatment Proposals */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Propuestas de Tratamiento
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    {modalInfo.rawData.treatmentProposals.length > 0 ? (
+                      modalInfo.rawData.treatmentProposals
+                        .slice(0, 3)
+                        .map((proposal) => (
+                          <div
+                            key={proposal.id}
+                            className="border-l-4 border-blue-500 pl-3 py-2 bg-gray-50 rounded"
+                          >
+                            <div className="font-medium">{proposal.title}</div>
+                            <div className="text-gray-600">
+                              {new Date(proposal.createdAt).toLocaleDateString(
+                                "es-ES"
+                              )}{" "}
+                              •
+                              <span
+                                className={`ml-2 px-2 py-1 rounded-full text-xs ${getEstadoColor(proposal.status)}`}
+                              >
+                                {proposal.status}
+                              </span>
+                            </div>
+                            <div className="text-gray-500 text-xs">
+                              Bs. {proposal.totalAmount?.toLocaleString()}
+                            </div>
                           </div>
-                        )}
+                        ))
+                    ) : (
+                      <div className="text-gray-500 italic">
+                        No hay propuestas de tratamiento
                       </div>
-                    ))}
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              <div className="bg-green-50 p-3 rounded-md">
-                <p className="text-sm text-green-800">
-                  Haz clic en los horarios disponibles para seleccionar las 24
-                  citas necesarias. Actualmente tienes{" "}
-                  {citasSeleccionadas.length} citas seleccionadas.
-                </p>
+                {/* Recent Appointments */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Citas Recientes
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    {modalInfo.rawData.appointments.length > 0 ? (
+                      modalInfo.rawData.appointments
+                        .slice(0, 3)
+                        .map((appointment) => (
+                          <div
+                            key={appointment.id}
+                            className="border-l-4 border-green-500 pl-3 py-2 bg-gray-50 rounded"
+                          >
+                            <div className="font-medium">
+                              {new Date(appointment.date).toLocaleDateString(
+                                "es-ES"
+                              )}
+                            </div>
+                            <div className="text-gray-600">
+                              {appointment.startTime} - {appointment.endTime}
+                            </div>
+                            <div className="text-gray-500 text-xs">
+                              {appointment.status} • {appointment.type}
+                            </div>
+                          </div>
+                        ))
+                    ) : (
+                      <div className="text-gray-500 italic">
+                        No hay citas registradas
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
+            </div>
 
-              <div className="flex space-x-3">
-                <Button
-                  onClick={() => programarCitas(modalCitas.id)}
-                  disabled={
-                    citasSeleccionadas.length !== 24 ||
-                    scheduleAppointmentsMutation.isPending
-                  }
-                  className="flex-1"
-                >
-                  {scheduleAppointmentsMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : null}
-                  Programar Todas las Citas ({citasSeleccionadas.length}/24)
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setModalCitas(null)}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="flex justify-end space-x-3 mt-6 pt-6 border-t">
+              <Button variant="outline" onClick={() => setModalInfo(null)}>
+                Cerrar
+              </Button>
+              <Button>Editar Paciente</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+// Helper function to format date without timezone issues
+const formatDateLocal = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to create Date object from date string without timezone issues
+const createDateFromString = (dateString: string): Date => {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day); // month is 0-indexed
+};
+
+// Helper function to calculate age from date of birth
+const calculateAge = (birthDate: Date | string): number => {
+  let date: Date;
+
+  if (typeof birthDate === "string") {
+    const parts = birthDate.split("T")[0].split("-"); // Get YYYY-MM-DD part
+    const birthYear = parseInt(parts[0]);
+    const birthMonth = parseInt(parts[1]) - 1; // Month is 0-indexed in JS Date
+    const birthDay = parseInt(parts[2]);
+    date = new Date(birthYear, birthMonth, birthDay);
+  } else {
+    date = birthDate;
+  }
+
+  const today = new Date();
+  let age = today.getFullYear() - date.getFullYear();
+  const monthDiff = today.getMonth() - date.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+    age--;
+  }
+
+  return age;
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -57,7 +96,7 @@ export async function POST(request: NextRequest) {
     const existingAppointment = await prisma.appointment.findFirst({
       where: {
         therapistId,
-        date: new Date(appointmentDate),
+        date: createDateFromString(appointmentDate),
         startTime: appointmentTime,
         status: {
           in: ["SCHEDULED", "CONFIRMED"],
@@ -110,6 +149,7 @@ export async function POST(request: NextRequest) {
     if (appointmentType === "CONSULTATION") {
       const consultationRequest = requestData as {
         childName: string;
+        childDateOfBirth: Date;
         motherName?: string;
         fatherName?: string;
         motherPhone?: string;
@@ -119,12 +159,14 @@ export async function POST(request: NextRequest) {
       };
       appointmentData = {
         type: "CONSULTA" as const,
-        date: new Date(appointmentDate),
+        date: createDateFromString(appointmentDate),
         startTime: appointmentTime,
         endTime,
         status: "SCHEDULED" as const,
         therapistId,
+        consultationRequestId: requestId, // 🔗 Link to consultation request
         patientName: consultationRequest.childName,
+        patientAge: calculateAge(consultationRequest.childDateOfBirth),
         parentName:
           consultationRequest.motherName ||
           consultationRequest.fatherName ||
@@ -144,18 +186,20 @@ export async function POST(request: NextRequest) {
       const interviewRequest = requestData as {
         childFirstName: string;
         childLastName: string;
+        childDateOfBirth: Date;
         parentName: string;
         parentPhone: string;
         parentEmail: string;
       };
       appointmentData = {
         type: "ENTREVISTA" as const,
-        date: new Date(appointmentDate),
+        date: createDateFromString(appointmentDate),
         startTime: appointmentTime,
         endTime,
         status: "SCHEDULED" as const,
         therapistId,
         patientName: `${interviewRequest.childFirstName} ${interviewRequest.childLastName}`,
+        patientAge: calculateAge(interviewRequest.childDateOfBirth),
         parentName: interviewRequest.parentName,
         parentPhone: interviewRequest.parentPhone,
         parentEmail: interviewRequest.parentEmail,
@@ -227,10 +271,15 @@ export async function POST(request: NextRequest) {
         id: appointment.id,
         appointmentId,
         type: appointment.type,
-        date: appointment.date.toISOString().split("T")[0],
+        date: formatDateLocal(appointment.date),
         time: appointment.startTime,
         status: appointment.status,
-        therapist: appointment.therapist,
+        therapist: {
+          id: therapist.id,
+          firstName: therapist.firstName,
+          lastName: therapist.lastName,
+          phone: therapist.phone,
+        },
         childName: appointment.patientName,
         parentContact: {
           phone: appointment.parentPhone,

@@ -10,23 +10,33 @@ export interface TherapistAppointment {
   parentEmail: string;
   appointmentDate: string;
   appointmentTime: string;
-  type: "CONSULTA" | "ENTREVISTA";
-  status: "SCHEDULED" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+  type: string;
+  status: string;
   notes: string;
-  priority: "alta" | "media" | "baja";
+  priority: string;
   therapist: {
     id: string;
     firstName: string;
     lastName: string;
-    specialty: string | null;
+    specialty: string;
   };
   createdAt: string;
-  // Analysis-specific fields
-  analysisStatus: "pendiente" | "completado";
+  analysisStatus: string;
   analysisDate: string | null;
   diagnosis: string | null;
   recommendations: string | null;
   sentToAdmin: boolean;
+}
+
+// Interface for monthly appointments from admin API
+export interface TherapistMonthlyAppointment {
+  id: string;
+  therapist_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  type: string;
+  status: string;
 }
 
 export interface TherapistAppointmentsResponse {
@@ -152,3 +162,31 @@ export const useSendAnalysisToAdmin = () => {
     },
   });
 };
+
+export function useTherapistMonthlyAppointments(
+  therapistId: string | undefined,
+  year: number,
+  month: number
+) {
+  return useQuery<TherapistMonthlyAppointment[]>({
+    queryKey: ["therapist-appointments", therapistId, year, month],
+    queryFn: async () => {
+      if (!therapistId) return [];
+
+      // Format month to ensure two digits
+      const monthStr = month.toString().padStart(2, "0");
+
+      const response = await fetch(
+        `/api/admin/therapists/${therapistId}/schedule?year=${year}&month=${monthStr}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch therapist appointments");
+      }
+
+      const data = await response.json();
+      return data as TherapistMonthlyAppointment[];
+    },
+    enabled: !!therapistId,
+  });
+}

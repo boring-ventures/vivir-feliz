@@ -108,3 +108,70 @@ export async function PUT(
     );
   }
 }
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const year = searchParams.get("year");
+    const month = searchParams.get("month");
+
+    if (!year || !month) {
+      return NextResponse.json(
+        { error: "Year and month are required" },
+        { status: 400 }
+      );
+    }
+
+    // Get the first and last day of the month
+    const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+    const endDate = new Date(parseInt(year), parseInt(month), 0); // Last day of the month
+
+    const { id: therapistId } = await params;
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        therapistId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+        status: {
+          notIn: ["CANCELLED", "RESCHEDULED"],
+        },
+      },
+      select: {
+        id: true,
+        therapistId: true,
+        date: true,
+        startTime: true,
+        endTime: true,
+        type: true,
+        status: true,
+      },
+      orderBy: {
+        date: "asc",
+      },
+    });
+
+    // Transform the data to match the expected interface
+    const transformedAppointments = appointments.map((apt) => ({
+      id: apt.id,
+      therapist_id: apt.therapistId,
+      date: apt.date.toISOString().split("T")[0],
+      start_time: apt.startTime,
+      end_time: apt.endTime,
+      type: apt.type,
+      status: apt.status,
+    }));
+
+    return NextResponse.json(transformedAppointments);
+  } catch (error) {
+    console.error("Error fetching therapist schedule:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch therapist schedule" },
+      { status: 500 }
+    );
+  }
+}

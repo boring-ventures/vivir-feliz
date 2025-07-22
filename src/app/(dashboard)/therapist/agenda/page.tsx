@@ -25,6 +25,7 @@ import {
   useTherapistsWithSchedule,
   useUpdateTherapistSchedule,
 } from "@/hooks/useTherapists";
+import { useTherapistAppointments } from "@/hooks/use-therapist-appointments";
 import {
   TherapistProfile,
   WeeklyAvailability,
@@ -44,6 +45,36 @@ const getSpecialtyDisplay = (specialty: SpecialtyType | null): string => {
     COORDINATOR: "Coordinación",
   };
   return specialty ? specialtyMap[specialty] : "Sin especialidad";
+};
+
+// Helper function to create Date object from date string without timezone issues
+const createDateFromString = (dateString: string): Date => {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day); // month is 0-indexed
+};
+
+// Helper function to format date without timezone issues
+const formatDateLocal = (date: Date | string): string => {
+  // Handle both Date objects and date strings
+  const dateObj =
+    typeof date === "string" ? createDateFromString(date.split("T")[0]) : date;
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to calculate end time from start time and duration
+const calculateEndTime = (
+  startTime: string,
+  durationMinutes: number
+): string => {
+  const [hours, minutes] = startTime.split(":").map(Number);
+  const startMinutes = hours * 60 + minutes;
+  const endMinutes = startMinutes + durationMinutes;
+  const endHours = Math.floor(endMinutes / 60);
+  const endMins = endMinutes % 60;
+  return `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`;
 };
 
 // Day mapping
@@ -103,19 +134,83 @@ export default function TherapistAgendaPage() {
 
   const { profile, isLoading: authLoading } = useCurrentUser();
 
-  // Fetch therapists data (to get current therapist's data)
+  // Fetch therapist schedule data
   const {
     data: therapists = [],
-    isLoading,
-    error,
+    isLoading: scheduleLoading,
+    error: scheduleError,
   } = useTherapistsWithSchedule();
+
+  // Fetch therapist appointments (all appointments, not filtered by date)
+  const {
+    data: appointmentsData,
+    isLoading: appointmentsLoading,
+    error: appointmentsError,
+  } = useTherapistAppointments({ status: "all", limit: 1000 });
+
   const updateScheduleMutation = useUpdateTherapistSchedule();
 
-  // Find current therapist's profile
+  // Find current therapist's profile and merge with appointments
   const currentTherapist = useMemo(() => {
     if (!profile?.id || !therapists.length) return null;
-    return therapists.find((t) => t.id === profile.id) || null;
-  }, [profile?.id, therapists]);
+
+    const therapistSchedule = therapists.find((t) => t.id === profile.id);
+    if (!therapistSchedule) return null;
+
+    // Convert therapist appointments data to match the expected format
+    const appointments =
+      appointmentsData?.appointments?.map(
+        (appointment: {
+          id: string;
+          appointmentId: string;
+          patientName: string;
+          patientAge: number | null;
+          parentName: string;
+          parentPhone: string;
+          parentEmail: string;
+          appointmentDate: string;
+          appointmentTime: string;
+          type: string;
+          status: string;
+          notes: string;
+          priority: string;
+          therapist: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            specialty: string;
+          };
+          createdAt: string;
+          analysisStatus: string;
+          analysisDate: string | null;
+          diagnosis: string | null;
+          recommendations: string | null;
+          sentToAdmin: boolean;
+        }) => ({
+          id: appointment.id,
+          therapistId: profile.id,
+          date: createDateFromString(appointment.appointmentDate),
+          startTime: appointment.appointmentTime,
+          endTime: calculateEndTime(appointment.appointmentTime, 60), // Calculate end time (60 min sessions)
+          type: appointment.type as "CONSULTA" | "ENTREVISTA",
+          patientName: appointment.patientName || "Paciente",
+          patientAge: appointment.patientAge || null,
+          parentName: appointment.parentName || "",
+          parentPhone: appointment.parentPhone || "",
+          parentEmail: appointment.parentEmail || "",
+          status: appointment.status,
+          notes: appointment.notes || null,
+          price: null, // Not returned by this API
+          createdAt: new Date(appointment.createdAt || Date.now()),
+          updatedAt: new Date(appointment.createdAt || Date.now()),
+        })
+      ) || [];
+
+    return {
+      ...therapistSchedule,
+      appointments,
+    };
+  }, [profile?.id, therapists, appointmentsData]);
 
   // Helper function to convert time string to minutes
   const timeToMinutes = (time: string): number => {
@@ -311,7 +406,7 @@ export default function TherapistAgendaPage() {
     });
   };
 
-  // Get appointment for specific time slot
+  // Get appointment for specific time slot - FIXED VERSION
   const getAppointmentForSlot = (day: string, time: string) => {
     if (!currentTherapist) return null;
 
@@ -324,12 +419,14 @@ export default function TherapistAgendaPage() {
     const timeMinutes = timeToMinutes(time);
 
     return currentTherapist.appointments.find((appointment) => {
-      const appointmentDate = new Date(appointment.date);
+      // Convert both dates to local format strings for comparison to avoid timezone issues
+      const appointmentDateStr = formatDateLocal(appointment.date);
+      const targetDateStr = formatDateLocal(targetDate);
+
       const appointmentStartMinutes = timeToMinutes(appointment.startTime);
       const appointmentEndMinutes = timeToMinutes(appointment.endTime);
 
-      const isSameDate =
-        appointmentDate.toDateString() === targetDate.toDateString();
+      const isSameDate = appointmentDateStr === targetDateStr;
 
       const timeOverlaps =
         timeMinutes >= appointmentStartMinutes &&
@@ -545,7 +642,7 @@ export default function TherapistAgendaPage() {
 
   const nextAppointment = getNextAppointment();
 
-  if (authLoading || isLoading) {
+  if (authLoading || scheduleLoading || appointmentsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex items-center space-x-2">
@@ -556,7 +653,7 @@ export default function TherapistAgendaPage() {
     );
   }
 
-  if (error) {
+  if (scheduleError || appointmentsError) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center py-8">

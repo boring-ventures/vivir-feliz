@@ -31,6 +31,12 @@ model Profile {
   treatmentProposals TreatmentProposal[] @relation("TherapistProposals")
   interviewRequests  InterviewRequest[]  @relation("TherapistInterviewRequests")
   consultationRequests ConsultationRequest[] @relation("TherapistConsultationRequests")
+  proposalServices   ProposalService[]   @relation("TherapistServices")
+  therapistPatients  TherapistPatient[]  @relation("TherapistProfile")
+  sessionNotes       SessionNote[]       @relation("TherapistSessionNotes")
+  patientObjectives  PatientObjective[]  @relation("TherapistObjectives")
+  objectiveProgress  ObjectiveProgress[] @relation("TherapistObjectiveProgress")
+  patientDocuments   PatientDocument[]   @relation("TherapistDocuments")
 
   @@index([userId])
   @@index([nationalId])
@@ -61,46 +67,90 @@ model Patient {
   medicalRecords     MedicalRecord[]
   parent             Profile             @relation("ParentPatients", fields: [parentId], references: [id])
   treatmentProposals TreatmentProposal[]
+  therapistPatients TherapistPatient[] @relation("PatientTherapist")
+  patientObjectives  PatientObjective[]
+  documents          PatientDocument[]
 
   @@index([parentId])
   @@index([nationalId])
   @@map("patients")
 }
 
+model TherapistPatient {
+  id           String   @id @default(cuid())
+  therapistId  String   @map("therapist_id")
+  patientId    String   @map("patient_id")
+  startedAt    DateTime @default(now()) @map("started_at")
+  active       Boolean  @default(true)
+  
+  therapist    Profile  @relation("TherapistProfile", fields: [therapistId], references: [id])
+  patient      Patient  @relation("PatientTherapist", fields: [patientId], references: [id])
+
+  @@unique([therapistId, patientId]) // evita duplicados
+  @@index([patientId])
+  @@map("therapist_patients")
+}
+
 model TreatmentProposal {
-  id                String         @id @default(cuid())
-  patientId         String         @map("patient_id")
-  therapistId       String         @map("therapist_id")
-  title             String
-  description       String?
-  diagnosis         String?
-  objectives        String[]
-  methodology       String?
-  totalSessions     Int            @map("total_sessions")
-  sessionDuration   Int            @map("session_duration")
-  frequency         String
-  estimatedDuration String?        @map("estimated_duration")
-  sessionPrice      Decimal        @map("session_price") @db.Decimal(10, 2)
-  totalAmount       Decimal        @map("total_amount") @db.Decimal(10, 2)
-  paymentPlan       String?        @map("payment_plan")
-  status            ProposalStatus @default(PAYMENT_PENDING)
-  proposalDate      DateTime       @default(now()) @map("proposal_date")
-  approvedDate      DateTime?      @map("approved_date")
-  startDate         DateTime?      @map("start_date")
-  endDate           DateTime?      @map("end_date")
-  notes             String?
-  parentNotes       String?        @map("parent_notes")
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
-  appointments      Appointment[]
-  payments          Payment[]
-  patient           Patient        @relation(fields: [patientId], references: [id])
-  therapist         Profile        @relation("TherapistProposals", fields: [therapistId], references: [id])
+  id                    String              @id @default(cuid())
+  patientId             String?             @map("patient_id")
+  consultationRequestId String?             @map("consultation_request_id")
+  therapistId           String              @map("therapist_id")
+  title                 String
+  description           String?
+  diagnosis             String?
+  objectives            String[]
+  methodology           String?
+  totalSessions         Int                 @map("total_sessions")
+  sessionDuration       Int                 @map("session_duration")
+  frequency             String
+  estimatedDuration     String?             @map("estimated_duration")
+  sessionPrice          Decimal             @map("session_price") @db.Decimal(10, 2)
+  totalAmount           Decimal             @map("total_amount") @db.Decimal(10, 2)
+  paymentPlan           String?             @map("payment_plan")
+  status                ProposalStatus      @default(NEW_PROPOSAL)
+  proposalDate          DateTime            @default(now()) @map("proposal_date")
+  approvedDate          DateTime?           @map("approved_date")
+  startDate             DateTime?           @map("start_date")
+  endDate               DateTime?           @map("end_date")
+  notes                 String?
+  parentNotes           String?             @map("parent_notes")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+  appointments          Appointment[]
+  payments              Payment[]
+  patient               Patient?            @relation(fields: [patientId], references: [id])
+  consultationRequest   ConsultationRequest? @relation(fields: [consultationRequestId], references: [id])
+  therapist             Profile             @relation("TherapistProposals", fields: [therapistId], references: [id])
+  services              ProposalService[]
+  patientObjectives     PatientObjective[]
 
   @@index([patientId])
+  @@index([consultationRequestId])
   @@index([therapistId])
   @@index([status])
   @@map("treatment_proposals")
+}
+
+model ProposalService {
+  id                   String            @id @default(cuid())
+  treatmentProposalId  String            @map("treatment_proposal_id")
+  therapistId          String            @map("therapist_id")
+  type                 ServiceType       @map("type")
+  code                 String            @map("code")
+  service              String            @map("service")
+  sessions             Int               @map("sessions")
+  cost                 Decimal?          @map("cost") @db.Decimal(10, 2)
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+  treatmentProposal    TreatmentProposal @relation(fields: [treatmentProposalId], references: [id], onDelete: Cascade)
+  therapist            Profile           @relation("TherapistServices", fields: [therapistId], references: [id])
+
+
+  @@index([treatmentProposalId])
+  @@index([therapistId])
+  @@index([type])
+  @@map("proposal_services")
 }
 
 model Payment {
@@ -240,23 +290,28 @@ model Appointment {
   cancelledBy        String?            @map("cancelled_by")
   homework           String?
   nextSessionPlan    String?            @map("next_session_plan")
-  patientId          String?            @map("patient_id")
-  proposalId         String?            @map("proposal_id")
-  rescheduledFrom    DateTime?          @map("rescheduled_from")
+  patientId             String?            @map("patient_id")
+  proposalId            String?            @map("proposal_id")
+  consultationRequestId String?            @map("consultation_request_id")
+  rescheduledFrom       DateTime?          @map("rescheduled_from")
   rescheduledTo      DateTime?          @map("rescheduled_to")
   sessionNotes       String?            @map("session_notes")
   status             AppointmentStatus  @default(SCHEDULED)
   patient            Patient?           @relation(fields: [patientId], references: [id])
   proposal           TreatmentProposal? @relation(fields: [proposalId], references: [id])
+  consultationRequest ConsultationRequest? @relation(fields: [consultationRequestId], references: [id])
   therapist          Profile            @relation("TherapistAppointments", fields: [therapistId], references: [id])
   medicalRecords     MedicalRecord[]
   medicalForm        MedicalForm?
   payments           Payment[]
   analysis           Analysis?
+  sessionNote        SessionNote?
+  objectiveProgress  ObjectiveProgress[]
 
   @@index([therapistId])
   @@index([patientId])
   @@index([proposalId])
+  @@index([consultationRequestId])
   @@index([date])
   @@index([status])
   @@map("appointments")
@@ -459,6 +514,8 @@ model ConsultationRequest {
   // Relations
   children              ConsultationChild[]
   assignedTherapist     Profile?                  @relation("TherapistConsultationRequests", fields: [assignedTherapistId], references: [id])
+  appointments          Appointment[]
+  treatmentProposals    TreatmentProposal[]
   payments              Payment[]
 
   @@index([status])
@@ -526,6 +583,97 @@ model Analysis {
   @@map("analyses")
 }
 
+model SessionNote {
+  id                String      @id @default(cuid())
+  appointmentId     String      @unique @map("appointment_id")
+  therapistId       String      @map("therapist_id")
+  sessionComment    String      @map("session_comment")
+  parentMessage     String?     @map("parent_message")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+  
+  // Relations
+  appointment       Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  therapist         Profile     @relation("TherapistSessionNotes", fields: [therapistId], references: [id])
+
+  @@index([appointmentId])
+  @@index([therapistId])
+  @@map("session_notes")
+}
+
+model PatientObjective {
+  id                String      @id @default(cuid())
+  patientId         String      @map("patient_id")
+  therapistId       String      @map("therapist_id")
+  proposalId        String?     @map("proposal_id")
+  name              String      @map("name")
+  status            ObjectiveStatus @default(PENDING) @map("status")
+  type              String?     @map("type") // Optional: communication, behavioral, etc.
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+  
+  // Relations
+  patient           Patient     @relation(fields: [patientId], references: [id])
+  therapist         Profile     @relation("TherapistObjectives", fields: [therapistId], references: [id])
+  proposal          TreatmentProposal? @relation(fields: [proposalId], references: [id])
+  progressEntries   ObjectiveProgress[]
+
+  @@index([patientId])
+  @@index([therapistId])
+  @@index([proposalId])
+  @@index([status])
+  @@map("patient_objectives")
+}
+
+model ObjectiveProgress {
+  id                String      @id @default(cuid())
+  objectiveId       String      @map("objective_id")
+  appointmentId     String      @map("appointment_id")
+  therapistId       String      @map("therapist_id")
+  percentage        Int         @map("percentage") // 0-100
+  comment           String?     @map("comment") // Optional context for the percentage
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+  
+  // Relations
+  objective         PatientObjective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  appointment       Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  therapist         Profile     @relation("TherapistObjectiveProgress", fields: [therapistId], references: [id])
+
+  @@unique([objectiveId, appointmentId])
+  @@index([objectiveId])
+  @@index([appointmentId])
+  @@index([therapistId])
+  @@map("objective_progress")
+}
+
+model PatientDocument {
+  id            String       @id @default(cuid())
+  patientId     String       @map("patient_id")
+  therapistId   String       @map("therapist_id")
+  title         String
+  description   String?
+  fileName      String       @map("file_name")
+  fileUrl       String       @map("file_url")
+  fileSize      Int          @map("file_size")
+  fileType      String       @map("file_type")
+  documentType  DocumentType @map("document_type")
+  uploadedAt    DateTime     @default(now()) @map("uploaded_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  
+  // Relations
+  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  therapist     Profile      @relation("TherapistDocuments", fields: [therapistId], references: [id])
+  
+  @@index([patientId])
+  @@index([therapistId])
+  @@index([documentType])
+  @@index([uploadedAt])
+  @@map("patient_documents")
+}
+
+
 enum UserRole {
   ADMIN
   PARENT
@@ -559,6 +707,7 @@ enum AppointmentType {
 }
 
 enum ProposalStatus {
+  NEW_PROPOSAL
   PAYMENT_PENDING
   PAYMENT_CONFIRMED
   APPOINTMENTS_SCHEDULED
@@ -609,4 +758,27 @@ enum MedicalFormStatus {
   DRAFT
   SUBMITTED
   REVIEWED
+}
+
+enum ServiceType {
+  EVALUATION
+  TREATMENT
+}
+
+enum ObjectiveStatus {
+  COMPLETED
+  IN_PROGRESS
+  PAUSED
+  CANCELLED
+  PENDING
+}
+
+enum DocumentType {
+  EVALUATION
+  MEDICAL_REPORT
+  SCHOOL_REPORT
+  SESSION_NOTE
+  PROGRESS_REPORT
+  PRESCRIPTION
+  OTHER
 }

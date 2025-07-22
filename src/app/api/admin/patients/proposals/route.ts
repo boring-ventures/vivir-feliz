@@ -8,13 +8,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const therapistId = searchParams.get("therapistId");
+    const forNewPatients = searchParams.get("forNewPatients");
 
     const where: {
-      status?: ProposalStatus;
+      status?: ProposalStatus | { in: ProposalStatus[] };
       therapistId?: string;
     } = {};
 
-    if (status) {
+    // If forNewPatients is true, filter for specific statuses
+    if (forNewPatients === "true") {
+      where.status = {
+        in: ["PAYMENT_PENDING", "PAYMENT_CONFIRMED", "APPOINTMENTS_SCHEDULED"],
+      };
+    } else if (status) {
       where.status = status as ProposalStatus;
     }
 
@@ -37,6 +43,18 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        consultationRequest: {
+          select: {
+            id: true,
+            childName: true,
+            childDateOfBirth: true,
+            childGender: true,
+            motherName: true,
+            motherPhone: true,
+            fatherName: true,
+            fatherPhone: true,
+          },
+        },
         therapist: {
           select: {
             id: true,
@@ -54,6 +72,107 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // If forNewPatients is true, transform the data to match the expected format
+    if (forNewPatients === "true") {
+      const transformedData = proposals.map((proposal) => {
+        const patient = proposal.patient;
+        const parent = patient?.parent;
+
+        // Calculate age
+        const age = patient?.dateOfBirth
+          ? Math.floor(
+              (new Date().getTime() - new Date(patient.dateOfBirth).getTime()) /
+                (1000 * 60 * 60 * 24 * 365.25)
+            )
+          : 0;
+
+        // Determine status for display
+        let estadoPropuesta = "";
+        let pagoConfirmado = false;
+        let citasProgramadas = false;
+
+        if (proposal.status === "PAYMENT_PENDING") {
+          estadoPropuesta = "Pago Pendiente";
+          pagoConfirmado = false;
+          citasProgramadas = false;
+        } else if (proposal.status === "PAYMENT_CONFIRMED") {
+          estadoPropuesta = "Pago Confirmado";
+          pagoConfirmado = true;
+          citasProgramadas = false;
+        } else if (proposal.status === "APPOINTMENTS_SCHEDULED") {
+          estadoPropuesta = "Citas Programadas";
+          pagoConfirmado = true;
+          citasProgramadas = true;
+        }
+
+        return {
+          id: proposal.id,
+          nombre: patient
+            ? `${patient.firstName} ${patient.lastName}`
+            : proposal.consultationRequest?.childName || "Paciente no asignado",
+          edad: patient
+            ? age
+            : proposal.consultationRequest?.childDateOfBirth
+              ? Math.floor(
+                  (new Date().getTime() -
+                    new Date(
+                      proposal.consultationRequest.childDateOfBirth
+                    ).getTime()) /
+                    (1000 * 60 * 60 * 24 * 365.25)
+                )
+              : 0,
+          padre: parent
+            ? `${parent.firstName} ${parent.lastName}`
+            : proposal.consultationRequest?.motherName ||
+              proposal.consultationRequest?.fatherName ||
+              "Padre no asignado",
+          telefono:
+            parent?.phone ||
+            proposal.consultationRequest?.motherPhone ||
+            proposal.consultationRequest?.fatherPhone ||
+            "Sin teléfono",
+          terapeuta: `${proposal.therapist.firstName} ${proposal.therapist.lastName}`,
+          estadoPropuesta,
+          fechaPropuesta: (() => {
+            const date = new Date(proposal.proposalDate);
+            const day = String(date.getDate()).padStart(2, "0");
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+          })(),
+          montoPropuesta: `Bs. ${proposal.totalAmount.toFixed(2)}`,
+          pagoConfirmado,
+          citasProgramadas,
+          // Additional data for the proposal
+          proposalData: {
+            title: proposal.title,
+            totalSessions: proposal.totalSessions,
+            sessionDuration: proposal.sessionDuration,
+            frequency: proposal.frequency,
+            sessionPrice: proposal.sessionPrice,
+            totalAmount: proposal.totalAmount,
+            status: proposal.status,
+            consultationRequest: proposal.consultationRequest
+              ? {
+                  childName: proposal.consultationRequest.childName,
+                  childDateOfBirth:
+                    proposal.consultationRequest.childDateOfBirth,
+                  motherName: proposal.consultationRequest.motherName,
+                  fatherName: proposal.consultationRequest.fatherName,
+                  motherPhone: proposal.consultationRequest.motherPhone,
+                  fatherPhone: proposal.consultationRequest.fatherPhone,
+                }
+              : undefined,
+          },
+        };
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: transformedData,
+      });
+    }
 
     return NextResponse.json(proposals);
   } catch (error) {

@@ -22,6 +22,16 @@ export interface PatientWithRelations extends Patient {
 
 export interface TreatmentProposalWithRelations extends TreatmentProposal {
   patient: PatientWithRelations;
+  consultationRequest?: {
+    id: string;
+    childName: string;
+    childDateOfBirth: Date;
+    childGender: string;
+    motherName?: string | null;
+    motherPhone?: string | null;
+    fatherName?: string | null;
+    fatherPhone?: string | null;
+  };
   therapist: Profile;
   payments: Payment[];
   appointments: AppointmentWithRelations[];
@@ -221,6 +231,7 @@ export {
 
 // Status mapping utilities
 export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
+  NEW_PROPOSAL: "Nueva Propuesta",
   PAYMENT_PENDING: "Pago Pendiente",
   PAYMENT_CONFIRMED: "Pago Confirmado",
   APPOINTMENTS_SCHEDULED: "Citas Programadas",
@@ -230,6 +241,7 @@ export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
 };
 
 export const PROPOSAL_STATUS_COLORS: Record<ProposalStatus, string> = {
+  NEW_PROPOSAL: "bg-yellow-100 text-yellow-800",
   PAYMENT_PENDING: "bg-red-100 text-red-800",
   PAYMENT_CONFIRMED: "bg-green-100 text-green-800",
   APPOINTMENTS_SCHEDULED: "bg-blue-100 text-blue-800",
@@ -286,6 +298,12 @@ export interface PatientWithSessions {
   objetivos: PatientObjective[];
   comentarios: PatientComment[];
   documentos: PatientDocument[];
+  rawData?: {
+    patient: PatientWithRelations | null;
+    latestProposal: TreatmentProposalWithRelations | null;
+    latestAppointment: AppointmentWithRelations | null;
+    therapistPatient: PatientWithRelations | null;
+  };
 }
 
 export interface PatientEvaluation {

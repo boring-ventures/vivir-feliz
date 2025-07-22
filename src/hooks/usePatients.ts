@@ -42,13 +42,21 @@ export function usePatients(params?: PatientSearchParams) {
 }
 
 // Fetch treatment proposals
-export function useProposals(status?: string, therapistId?: string) {
+export function useProposals(
+  status?: string,
+  therapistId?: string,
+  forNewPatients?: boolean
+) {
   const searchParams = new URLSearchParams();
   if (status) searchParams.set("status", status);
   if (therapistId) searchParams.set("therapistId", therapistId);
+  if (forNewPatients) searchParams.set("forNewPatients", "true");
 
-  return useQuery<TreatmentProposalWithRelations[]>({
-    queryKey: ["proposals", status, therapistId],
+  return useQuery<
+    | TreatmentProposalWithRelations[]
+    | { success: boolean; data: TreatmentProposalWithRelations[] }
+  >({
+    queryKey: ["proposals", status, therapistId, forNewPatients],
     queryFn: async () => {
       const response = await fetch(
         `/api/admin/patients/proposals?${searchParams}`
@@ -252,13 +260,27 @@ export function useProposalsDisplayData(
   proposals: TreatmentProposalWithRelations[]
 ): ProposalDisplayData[] {
   return proposals.map((proposal) => {
-    const patientAge = Math.floor(
-      (Date.now() - new Date(proposal.patient.dateOfBirth).getTime()) /
-        (365.25 * 24 * 60 * 60 * 1000)
-    );
+    // Get date of birth from patient or fallback to consultation request
+    const dateOfBirth =
+      proposal.patient?.dateOfBirth ||
+      proposal.consultationRequest?.childDateOfBirth;
 
-    const parentName =
-      `${proposal.patient.parent.firstName || ""} ${proposal.patient.parent.lastName || ""}`.trim();
+    if (!dateOfBirth) {
+      console.warn(`No date of birth found for proposal ${proposal.id}`);
+    }
+
+    const patientAge = dateOfBirth
+      ? Math.floor(
+          (Date.now() - new Date(dateOfBirth).getTime()) /
+            (365.25 * 24 * 60 * 60 * 1000)
+        )
+      : 0;
+
+    // Get parent name from patient or fallback to consultation request
+    const parentName = proposal.patient?.parent
+      ? `${proposal.patient.parent.firstName || ""} ${proposal.patient.parent.lastName || ""}`.trim()
+      : `${proposal.consultationRequest?.motherName || proposal.consultationRequest?.fatherName || "Padre/Madre"}`;
+
     const therapistName =
       `${proposal.therapist.firstName || ""} ${proposal.therapist.lastName || ""}`.trim();
 
@@ -269,14 +291,32 @@ export function useProposalsDisplayData(
     const paymentConfirmed = totalPaid >= Number(proposal.totalAmount);
     const appointmentsScheduled = proposal.appointments.length > 0;
 
+    // Get patient name from patient or fallback to consultation request
+    const patientName = proposal.patient
+      ? `${proposal.patient.firstName} ${proposal.patient.lastName}`
+      : proposal.consultationRequest?.childName || "Paciente";
+
+    // Get parent phone from patient or fallback to consultation request
+    const parentPhone =
+      proposal.patient?.parent?.phone ||
+      proposal.consultationRequest?.motherPhone ||
+      proposal.consultationRequest?.fatherPhone ||
+      "";
+
     return {
       id: proposal.id,
-      patientName: `${proposal.patient.firstName} ${proposal.patient.lastName}`,
+      patientName,
       patientAge,
       parentName,
-      parentPhone: proposal.patient.parent.phone || "",
+      parentPhone,
       therapistName,
-      proposalDate: proposal.proposalDate.toLocaleDateString(),
+      proposalDate: (() => {
+        const date = new Date(proposal.proposalDate);
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      })(),
       totalAmount: `Bs. ${Number(proposal.totalAmount).toLocaleString()}`,
       status: proposal.status,
       statusDisplay: PROPOSAL_STATUS_LABELS[proposal.status],
@@ -325,4 +365,18 @@ export function calculateAge(dateOfBirth: Date): number {
     (Date.now() - new Date(dateOfBirth).getTime()) /
       (365.25 * 24 * 60 * 60 * 1000)
   );
+}
+
+// Fetch all patients with complete information for admin
+export function useAllPatients() {
+  return useQuery<PatientWithRelations[]>({
+    queryKey: ["all-patients"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/patients/all");
+      if (!response.ok) {
+        throw new Error("Failed to fetch all patients");
+      }
+      return response.json();
+    },
+  });
 }

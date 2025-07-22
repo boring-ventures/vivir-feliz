@@ -6,57 +6,223 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, Edit, Send, Printer, Download } from "lucide-react";
+import {
+  ChevronLeft,
+  Edit,
+  Send,
+  Printer,
+  Download,
+  Loader2,
+  X,
+} from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { RoleGuard } from "@/components/auth/role-guard";
+import { useProposals, useProposalServices } from "@/hooks/useProposals";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { toast } from "@/components/ui/use-toast";
 
 export default function AdminProposalPreviewPage() {
   const params = useParams();
+  const router = useRouter();
   const [paymentMethod, setPaymentMethod] = useState("");
   const [confirmation, setConfirmation] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  // Mock proposal data
-  const proposalData = {
-    patient: "Juan Pérez González",
-    date: "15 de Enero, 2025",
-    therapist: "Dr. Carlos Mendoza",
-    evaluations: [
-      { name: "Evaluación Integral", sessions: 4, cost: 800 },
-      { name: "Evaluación Fonoaudiológica", sessions: 2, cost: 400 },
-    ],
-    treatments: [
-      { name: "Terapia Psicológica", sessions: 16, cost: 3200 },
-      { name: "Terapia Fonoaudiológica", sessions: 8, cost: 1600 },
-      { name: "Taller Psicológico", sessions: 4, cost: 800 },
-    ],
-  };
+  // Fetch real data from the cache (already loaded from previous page)
+  const { data: proposals, isLoading: proposalsLoading } = useProposals();
+  const { data: proposalServices, isLoading: servicesLoading } =
+    useProposalServices(params.id as string);
 
-  const totalEvaluations = proposalData.evaluations.reduce(
-    (sum, item) => sum + item.cost,
-    0
-  );
-  const totalTreatments = proposalData.treatments.reduce(
-    (sum, item) => sum + item.cost,
-    0
-  );
+  const currentProposal = proposals?.find((p) => p.id === params.id);
+
+  // Helper function to calculate age
+  function calculateAge(birthDate: Date): number {
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  }
+
+  // Prepare proposal data from database using consultation request data
+  const proposalData =
+    currentProposal && proposalServices
+      ? {
+          patient: currentProposal.consultationRequest.childName,
+          age: calculateAge(
+            new Date(currentProposal.consultationRequest.childDateOfBirth)
+          ),
+          parentName:
+            currentProposal.consultationRequest.motherName ||
+            currentProposal.consultationRequest.fatherName ||
+            "Sin nombre",
+          phone:
+            currentProposal.consultationRequest.motherPhone ||
+            currentProposal.consultationRequest.fatherPhone ||
+            "Sin teléfono",
+          consultationDate: new Date(
+            currentProposal.createdAt
+          ).toLocaleDateString("es-ES"),
+          consultationReason: currentProposal.title,
+          date: new Date(currentProposal.createdAt).toLocaleDateString(
+            "es-ES",
+            {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }
+          ),
+          therapist: `${currentProposal.therapist.firstName} ${currentProposal.therapist.lastName}`,
+          observations: currentProposal.description || "",
+          evaluations: proposalServices
+            .filter((service) => service.type === "EVALUATION")
+            .map((service) => ({
+              name: service.service,
+              sessions: Number(service.sessions),
+              cost: Number(service.cost || 0),
+            })),
+          treatments: proposalServices
+            .filter((service) => service.type === "TREATMENT")
+            .map((service) => ({
+              name: service.service,
+              sessions: Number(service.sessions),
+              cost: Number(service.cost || 0),
+            })),
+        }
+      : null;
+
+  const totalEvaluations =
+    proposalData?.evaluations.reduce((sum, item) => sum + item.cost, 0) || 0;
+  const totalTreatments =
+    proposalData?.treatments.reduce((sum, item) => sum + item.cost, 0) || 0;
   const grandTotal = totalEvaluations + totalTreatments;
 
   const singlePayment = grandTotal * 0.95; // 5% discount
   const monthlyPayment = grandTotal / 6;
   const bimonthlyPayment = grandTotal / 3;
 
-  const sendToCommercial = () => {
+  // Show loading state while data is being fetched
+  if (proposalsLoading || servicesLoading || !proposalData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-16 w-16 animate-spin mx-auto text-gray-400" />
+          <h3 className="mt-4 text-lg font-medium text-gray-900">
+            Cargando vista previa...
+          </h3>
+          <p className="mt-2 text-sm text-gray-500">
+            Por favor espere mientras cargamos los datos de la propuesta
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const sendToCommercial = async () => {
     if (!confirmation) {
-      alert("Debe confirmar que la información es correcta");
+      toast({
+        title: "Error",
+        description: "Debe confirmar que la información es correcta",
+        variant: "destructive",
+      });
       return;
     }
     if (!paymentMethod) {
-      alert("Debe seleccionar una forma de pago");
+      toast({
+        title: "Error",
+        description: "Debe seleccionar una forma de pago",
+        variant: "destructive",
+      });
       return;
     }
-    alert("Propuesta enviada al área comercial exitosamente");
-    // Logic to send the proposal would go here
+
+    setIsUpdatingStatus(true);
+    try {
+      const response = await fetch(
+        `/api/admin/patients/proposals/${params.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: "PAYMENT_PENDING",
+            paymentMethod,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al enviar propuesta a comercial");
+      }
+
+      toast({
+        title: "Propuesta enviada",
+        description:
+          "La propuesta ha sido enviada al área comercial exitosamente",
+      });
+
+      // Redirect back to proposals page
+      router.push("/admin/proposals");
+    } catch (error) {
+      console.error("Error sending proposal to commercial:", error);
+      toast({
+        title: "Error",
+        description: "Hubo un error al enviar la propuesta a comercial",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const cancelProposal = async () => {
+    setIsUpdatingStatus(true);
+    try {
+      const response = await fetch(
+        `/api/admin/patients/proposals/${params.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: "NEW_PROPOSAL",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al cancelar propuesta");
+      }
+
+      toast({
+        title: "Propuesta cancelada",
+        description: "La propuesta ha sido devuelta al estado inicial",
+      });
+
+      // Redirect back to proposals page
+      router.push("/admin/proposals");
+    } catch (error) {
+      console.error("Error canceling proposal:", error);
+      toast({
+        title: "Error",
+        description: "Hubo un error al cancelar la propuesta",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   const printProposal = () => {
@@ -64,20 +230,346 @@ export default function AdminProposalPreviewPage() {
     window.print();
   };
 
-  const downloadPDF = () => {
-    // Create temporary element for printing
-    const printContent = document.documentElement.outerHTML;
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
+  const downloadPDF = async () => {
+    try {
+      setIsGeneratingPDF(true);
 
-      // Simulate PDF download
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 250);
+      // Get the print content element to render as PDF
+      const printContent = document.querySelector(
+        ".print-content"
+      ) as HTMLElement;
+      if (!printContent) {
+        throw new Error("No se encontró el contenido para imprimir");
+      }
+
+      // Clone the content to avoid modifying the original
+      const contentClone = printContent.cloneNode(true) as HTMLElement;
+
+      // Create a temporary container for PDF generation
+      const tempContainer = document.createElement("div");
+      tempContainer.style.position = "absolute";
+      tempContainer.style.left = "-9999px";
+      tempContainer.style.top = "0";
+      tempContainer.style.width = "216mm"; // Letter width
+      tempContainer.style.minHeight = "279mm"; // Letter height
+      tempContainer.style.backgroundColor = "transparent";
+      tempContainer.style.padding = "20px";
+      contentClone.style.marginTop = "0px";
+      tempContainer.style.fontFamily = "Arial, sans-serif";
+      tempContainer.style.fontSize = "12px";
+      tempContainer.style.lineHeight = "1.4";
+      tempContainer.appendChild(contentClone);
+
+      // Remove print:hidden elements
+      const hiddenElements = tempContainer.querySelectorAll(".print\\:hidden");
+      hiddenElements.forEach((el) => el.remove());
+
+      // Show print-only elements
+      const printOnlyElements =
+        tempContainer.querySelectorAll(".print\\:block");
+      printOnlyElements.forEach((el) => {
+        (el as HTMLElement).style.display = "block";
+      });
+
+      // Style the content for better PDF output
+      const cardElements = tempContainer.querySelectorAll(
+        ".card, [class*='card']"
+      );
+      cardElements.forEach((el) => {
+        (el as HTMLElement).style.border = "1px solid #e5e7eb";
+        (el as HTMLElement).style.borderRadius = "8px";
+        (el as HTMLElement).style.marginBottom = "16px";
+        (el as HTMLElement).style.padding = "16px";
+        (el as HTMLElement).style.backgroundColor = "white";
+        (el as HTMLElement).style.boxShadow = "none";
+      });
+
+      // Style the blue patient information section
+      const patientInfoSection = tempContainer.querySelector(".bg-blue-50");
+      if (patientInfoSection) {
+        (patientInfoSection as HTMLElement).style.backgroundColor = "#eff6ff";
+        (patientInfoSection as HTMLElement).style.border = "1px solid #bfdbfe";
+        (patientInfoSection as HTMLElement).style.borderRadius = "12px";
+        (patientInfoSection as HTMLElement).style.padding = "24px";
+      }
+
+      // Style the financial summary section
+      const financialSection = tempContainer.querySelector(".bg-gray-50");
+      if (financialSection) {
+        (financialSection as HTMLElement).style.backgroundColor = "#f9fafb";
+        (financialSection as HTMLElement).style.border = "1px solid #e5e7eb";
+        (financialSection as HTMLElement).style.borderRadius = "8px";
+        (financialSection as HTMLElement).style.padding = "16px";
+      }
+
+      // Add page break styles for better PDF rendering
+      const style = document.createElement("style");
+      style.textContent = `
+        .page-break {
+          page-break-before: always;
+          break-before: page;
+        }
+        .avoid-break {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        .print-header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 60px;
+          background: white;
+          border-bottom: 1px solid #e5e7eb;
+          padding: 16px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .print-footer {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 60px;
+          background: white;
+          border-top: 1px solid #e5e7eb;
+          padding: 16px 20px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 10px;
+          line-height: 1.2;
+        }
+        .print-content {
+          margin-top: 80px;
+          margin-bottom: 80px;
+          padding: 0 20px;
+        }
+        .avoid-break {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        @media print {
+          .print-header, .print-footer {
+            position: fixed;
+          }
+          .print-content {
+            margin-top: 80px;
+            margin-bottom: 80px;
+          }
+        }
+      `;
+      tempContainer.appendChild(style);
+
+      // Remove any existing print headers to avoid duplication
+      const existingHeaders = tempContainer.querySelectorAll(
+        ".print-header, .hidden.print\\:block"
+      );
+      existingHeaders.forEach((header) => header.remove());
+
+      // Add print footer
+      const printFooter = document.createElement("div");
+      printFooter.className = "print-footer";
+      printFooter.innerHTML = `
+        <div style="opacity: 0.6;">
+          <p style="margin: 0; font-weight: 500;">Centro Vivir Feliz - Terapias Especializadas</p>
+          <p style="margin: 0;">Teléfono: +591-4-123-4567 | Email: info@vivirfeliz.bo</p>
+          <p style="margin: 0;">Dirección: Av. Principal 123, Cochabamba, Bolivia</p>
+        </div>
+      `;
+      tempContainer.appendChild(printFooter);
+
+      // Add service section styling to avoid page breaks
+      const serviceRows = tempContainer.querySelectorAll(".space-y-3 > div");
+      serviceRows.forEach((el) => {
+        (el as HTMLElement).classList.add("avoid-break");
+      });
+
+      // Add to DOM temporarily
+      document.body.appendChild(tempContainer);
+
+      // Wait for styles to be applied
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Generate canvas from the content with higher quality
+      const canvas = await html2canvas(tempContainer, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        width: tempContainer.offsetWidth,
+        height: tempContainer.offsetHeight,
+        logging: false,
+        onclone: (clonedDoc) => {
+          // Ensure all styles are applied in the clone
+          const clonedContainer = clonedDoc.querySelector(
+            '[style*="position: absolute"]'
+          );
+          if (clonedContainer) {
+            (clonedContainer as HTMLElement).style.position = "relative";
+            (clonedContainer as HTMLElement).style.left = "0";
+            (clonedContainer as HTMLElement).style.top = "0";
+          }
+        },
+      });
+
+      // Remove temporary container
+      document.body.removeChild(tempContainer);
+
+      // Create PDF with letter size
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "letter", // 216 x 279 mm
+      });
+
+      // Calculate dimensions to fit letter size
+      const pageWidth = 216; // Letter width in mm
+      const pageHeight = 279; // Letter height in mm
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      // Helper function to add header to each page
+      const addPageHeader = () => {
+        // Header background
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, 0, pageWidth, 25, "F");
+
+        // Company name
+        pdf.setFontSize(16);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(31, 41, 55); // Gray-900
+        pdf.text("Centro Vivir Feliz", 10, 12);
+
+        // Subtitle
+        pdf.setFontSize(12);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(107, 114, 128); // Gray-500
+        pdf.text("Propuesta Terapéutica", 10, 18);
+
+        // Date and therapist (right aligned)
+        pdf.setFontSize(10);
+        pdf.setTextColor(107, 114, 128); // Gray-500
+        const dateText = `Fecha: ${proposalData?.date}`;
+        const therapistText = `Terapeuta: ${proposalData?.therapist}`;
+
+        pdf.text(dateText, pageWidth - 10 - pdf.getTextWidth(dateText), 12);
+        pdf.text(
+          therapistText,
+          pageWidth - 10 - pdf.getTextWidth(therapistText),
+          18
+        );
+
+        // Header separator line
+        pdf.setLineWidth(0.5);
+        pdf.setDrawColor(229, 231, 235); // Gray-200
+        pdf.line(10, 22, pageWidth - 10, 22);
+
+        // Reset text color
+        pdf.setTextColor(0, 0, 0);
+      };
+
+      // Helper function to add footer to each page
+      const addPageFooter = () => {
+        const footerY = pageHeight - 20;
+        pdf.setFontSize(9);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(128, 128, 128); // Gray color with opacity
+
+        const footerLines = [
+          "Centro Vivir Feliz - Terapias Especializadas",
+          "Teléfono: +591-4-123-4567 | Email: info@vivirfeliz.bo",
+          "Dirección: Av. Principal 123, Cochabamba, Bolivia",
+        ];
+
+        footerLines.forEach((line, index) => {
+          const textWidth = pdf.getTextWidth(line);
+          const centerX = (pageWidth - textWidth) / 2;
+          pdf.text(line, centerX, footerY + index * 4);
+        });
+
+        // Reset text color
+        pdf.setTextColor(0, 0, 0);
+      };
+
+      // If content is longer than one page, split into multiple pages
+      if (imgHeight > pageHeight - 42.5) {
+        // Account for header and footer space with minimal section-like spacing
+        const availableHeight = pageHeight - 42.5; // Space for header and footer
+        const totalPages = Math.ceil(imgHeight / availableHeight);
+
+        for (let i = 0; i < totalPages; i++) {
+          if (i > 0) {
+            pdf.addPage();
+          }
+
+          // Add header to each page
+          addPageHeader();
+
+          const sourceY = (i * availableHeight * canvas.width) / imgWidth;
+          const sourceHeight = Math.min(
+            (availableHeight * canvas.width) / imgWidth,
+            canvas.height - sourceY
+          );
+
+          // Create canvas for this page
+          const pageCanvas = document.createElement("canvas");
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+
+          const pageCtx = pageCanvas.getContext("2d");
+          if (pageCtx) {
+            pageCtx.drawImage(
+              canvas,
+              0,
+              sourceY,
+              canvas.width,
+              sourceHeight,
+              0,
+              0,
+              canvas.width,
+              sourceHeight
+            );
+
+            const pageImgData = pageCanvas.toDataURL("image/png");
+            const pageImgHeight = (sourceHeight * imgWidth) / canvas.width;
+
+            // Add content below header - minimal spacing like between sections
+            const contentStartY = i === 0 ? 22.5 : 25;
+            pdf.addImage(
+              pageImgData,
+              "PNG",
+              0,
+              contentStartY,
+              imgWidth,
+              pageImgHeight
+            );
+          }
+
+          // Add footer to each page
+          addPageFooter();
+        }
+      } else {
+        // Single page
+        addPageHeader();
+
+        const imgData = canvas.toDataURL("image/png");
+        // Add content below header - minimal spacing like between sections
+        pdf.addImage(imgData, "PNG", 0, 22.5, imgWidth, imgHeight);
+
+        addPageFooter();
+      }
+
+      // Generate filename
+      const filename = `propuesta-${proposalData?.patient?.replace(/\s+/g, "-").toLowerCase()}-${new Date().toISOString().split("T")[0]}.pdf`;
+
+      // Download PDF
+      pdf.save(filename);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Error al generar el PDF. Por favor, intente nuevamente.");
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -163,30 +655,53 @@ export default function AdminProposalPreviewPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="font-medium text-blue-900 print:text-gray-900">
-                    Para:
+                    Paciente:
                   </span>
                   <p className="text-blue-800 print:text-gray-800 font-semibold">
                     {proposalData.patient}
                   </p>
-                </div>
-                <div>
-                  <span className="font-medium text-blue-900 print:text-gray-900">
-                    Fecha:
-                  </span>
-                  <p className="text-blue-800 print:text-gray-800">
-                    {proposalData.date}
+                  <p className="text-blue-700 print:text-gray-700">
+                    {proposalData.age} años
                   </p>
                 </div>
                 <div>
                   <span className="font-medium text-blue-900 print:text-gray-900">
-                    Terapeuta:
+                    Padre/Madre:
                   </span>
                   <p className="text-blue-800 print:text-gray-800">
-                    {proposalData.therapist}
+                    {proposalData.parentName}
+                  </p>
+                  <p className="text-blue-700 print:text-gray-700 text-xs">
+                    {proposalData.phone}
+                  </p>
+                </div>
+                <div>
+                  <span className="font-medium text-blue-900 print:text-gray-900">
+                    Consulta:
+                  </span>
+                  <p className="text-blue-800 print:text-gray-800">
+                    {proposalData.consultationDate}
+                  </p>
+                  <p className="text-blue-700 print:text-gray-700 text-xs">
+                    {proposalData.consultationReason}
                   </p>
                 </div>
               </div>
             </div>
+
+            {/* Observations */}
+            {proposalData.observations && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Observaciones</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    {proposalData.observations}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Proposed Services */}
             <Card>
@@ -273,100 +788,203 @@ export default function AdminProposalPreviewPage() {
               </CardContent>
             </Card>
 
-            {/* Payment Method - Hidden on print */}
-            <Card className="print:hidden">
-              <CardHeader>
-                <CardTitle className="text-lg">Forma de Pago</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RadioGroup
-                  value={paymentMethod}
-                  onValueChange={setPaymentMethod}
-                  className="space-y-3"
-                >
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value="single" id="single" />
-                      <Label htmlFor="single" className="font-medium">
-                        Pago único (5% descuento):
-                      </Label>
-                    </div>
-                    <span className="font-bold text-green-600">
-                      Bs. {singlePayment.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value="monthly" id="monthly" />
-                      <Label htmlFor="monthly" className="font-medium">
-                        Pago mensual:
-                      </Label>
-                    </div>
-                    <span className="font-bold">
-                      Bs. {Math.round(monthlyPayment).toLocaleString()} x 6
-                      meses
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value="bimonthly" id="bimonthly" />
-                      <Label htmlFor="bimonthly" className="font-medium">
-                        Pago bimestral:
-                      </Label>
-                    </div>
-                    <span className="font-bold">
-                      Bs. {Math.round(bimonthlyPayment).toLocaleString()} x 3
-                      pagos
-                    </span>
-                  </div>
-                </RadioGroup>
-              </CardContent>
-            </Card>
-
-            {/* Confirmation - Hidden on print */}
-            <Card className="bg-yellow-50 border-yellow-200 print:hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="confirmation"
-                    checked={confirmation}
-                    onCheckedChange={(checked) =>
-                      setConfirmation(checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor="confirmation"
-                    className="text-sm font-medium text-yellow-900"
+            {/* Payment Method - Only show for NEW_PROPOSAL status */}
+            {currentProposal?.status === "NEW_PROPOSAL" && (
+              <Card className="print:hidden">
+                <CardHeader>
+                  <CardTitle className="text-lg">Forma de Pago</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RadioGroup
+                    value={paymentMethod}
+                    onValueChange={setPaymentMethod}
+                    className="space-y-3"
                   >
-                    Confirmo que la información es correcta y autorizo el envío
-                    de esta propuesta al área comercial
-                  </Label>
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="single" id="single" />
+                        <Label htmlFor="single" className="font-medium">
+                          Pago único (5% descuento):
+                        </Label>
+                      </div>
+                      <span className="font-bold text-green-600">
+                        Bs. {singlePayment.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="monthly" id="monthly" />
+                        <Label htmlFor="monthly" className="font-medium">
+                          Pago mensual:
+                        </Label>
+                      </div>
+                      <span className="font-bold">
+                        Bs. {Math.round(monthlyPayment).toLocaleString()} x 6
+                        meses
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <RadioGroupItem value="bimonthly" id="bimonthly" />
+                        <Label htmlFor="bimonthly" className="font-medium">
+                          Pago bimestral:
+                        </Label>
+                      </div>
+                      <span className="font-bold">
+                        Bs. {Math.round(bimonthlyPayment).toLocaleString()} x 3
+                        pagos
+                      </span>
+                    </div>
+                  </RadioGroup>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Confirmation - Only show for NEW_PROPOSAL status */}
+            {currentProposal?.status === "NEW_PROPOSAL" && (
+              <Card className="bg-yellow-50 border-yellow-200 print:hidden">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="confirmation"
+                      checked={confirmation}
+                      onCheckedChange={(checked) =>
+                        setConfirmation(checked === true)
+                      }
+                    />
+                    <Label
+                      htmlFor="confirmation"
+                      className="text-sm font-medium text-yellow-900"
+                    >
+                      Confirmo que la información es correcta y autorizo el
+                      envío de esta propuesta al área comercial
+                    </Label>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Status indicator for other statuses */}
+            {currentProposal?.status !== "NEW_PROPOSAL" && (
+              <Card className="print:hidden">
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    Estado de la Propuesta
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-center p-6">
+                    {currentProposal?.status === "PAYMENT_PENDING" && (
+                      <div className="text-center">
+                        <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-orange-100 text-orange-800 mb-2">
+                          En Comercial
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Esta propuesta está siendo procesada por el área
+                          comercial
+                        </p>
+                      </div>
+                    )}
+                    {currentProposal?.status === "PAYMENT_CONFIRMED" && (
+                      <div className="text-center">
+                        <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800 mb-2">
+                          Pago Confirmado
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          El pago ha sido confirmado y la propuesta está en
+                          proceso
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Action Buttons - Hidden on print */}
             <div className="space-y-4 pt-6 border-t border-gray-200 print:hidden">
-              {/* Main buttons */}
-              <div className="flex justify-between items-center">
-                <Link href={`/admin/proposals/${params.id}`}>
-                  <Button variant="outline">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
+              {/* NEW_PROPOSAL Status Buttons */}
+              {currentProposal?.status === "NEW_PROPOSAL" && (
+                <div className="flex justify-between items-center">
+                  <Link href={`/admin/proposals/${params.id}`}>
+                    <Button variant="outline">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                  </Link>
+
+                  <Button
+                    onClick={sendToCommercial}
+                    disabled={
+                      !confirmation || !paymentMethod || isUpdatingStatus
+                    }
+                    className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdatingStatus ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Enviar a Comercial
+                      </>
+                    )}
                   </Button>
-                </Link>
+                </div>
+              )}
 
-                <Button
-                  onClick={sendToCommercial}
-                  disabled={!confirmation || !paymentMethod}
-                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Enviar a Comercial
-                </Button>
-              </div>
+              {/* PAYMENT_PENDING Status Buttons */}
+              {currentProposal?.status === "PAYMENT_PENDING" && (
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={cancelProposal}
+                      disabled={isUpdatingStatus}
+                      variant="outline"
+                      className="border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      {isUpdatingStatus ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Cancelando...
+                        </>
+                      ) : (
+                        <>
+                          <X className="h-4 w-4 mr-2" />
+                          Cancelar
+                        </>
+                      )}
+                    </Button>
+                    <Link href={`/admin/proposals/${params.id}`}>
+                      <Button variant="outline">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
+                    </Link>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Esta propuesta está siendo procesada por el área comercial
+                  </div>
+                </div>
+              )}
 
-              {/* Print and download buttons */}
+              {/* PAYMENT_CONFIRMED Status - Read-only */}
+              {currentProposal?.status === "PAYMENT_CONFIRMED" && (
+                <div className="flex justify-center">
+                  <div className="text-center">
+                    <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800 mb-2">
+                      Propuesta Confirmada
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Esta propuesta ha sido confirmada y está en proceso
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Print and download buttons - Always visible */}
               <div className="flex justify-center items-center space-x-4 pt-4 border-t border-gray-100">
                 <Button
                   variant="outline"
@@ -380,10 +998,20 @@ export default function AdminProposalPreviewPage() {
                 <Button
                   variant="outline"
                   onClick={downloadPDF}
-                  className="border-green-200 text-green-600 hover:bg-green-50"
+                  disabled={isGeneratingPDF}
+                  className="border-green-200 text-green-600 hover:bg-green-50 disabled:opacity-50"
                 >
-                  <Download className="h-4 w-4 mr-2" />
-                  Descargar PDF
+                  {isGeneratingPDF ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generando PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Descargar PDF
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

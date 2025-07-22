@@ -182,6 +182,17 @@ export async function POST(
       },
     });
 
+    // Update appointment status when analysis is sent to admin
+    if (status === "SENT_TO_ADMIN") {
+      await prisma.appointment.update({
+        where: { id: appointmentId },
+        data: {
+          status: "COMPLETED",
+          updatedAt: new Date(),
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: analysis,

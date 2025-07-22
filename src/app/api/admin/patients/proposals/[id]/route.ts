@@ -1,6 +1,114 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+interface ConsultationRequestData {
+  id: string;
+  childName: string;
+  childGender: string;
+  childDateOfBirth: Date | string;
+  childAddress?: string | null;
+  motherName?: string | null;
+  motherPhone?: string | null;
+  motherEmail?: string | null;
+  fatherName?: string | null;
+  fatherPhone?: string | null;
+  fatherEmail?: string | null;
+  status: string;
+  [key: string]: unknown; // Allow additional properties from Prisma
+}
+
+// Helper function to find or create parent profile from consultation request data
+async function findOrCreateParentFromConsultationRequest(
+  consultationRequest: ConsultationRequestData
+) {
+  // First, try to find existing parent by phone number
+  const existingParent = await prisma.profile.findFirst({
+    where: {
+      OR: [
+        { phone: consultationRequest.motherPhone },
+        { phone: consultationRequest.fatherPhone },
+      ],
+      role: "PARENT",
+    },
+  });
+
+  if (existingParent) {
+    console.log("Found existing parent profile:", existingParent.id);
+    return existingParent;
+  }
+
+  // If no existing parent found, create a new one
+  // Generate a unique userId for now (parent can claim this account later)
+  const uniqueUserId = `pending_parent_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  // Parse parent name (prefer mother's data, fallback to father's)
+  const parentName =
+    consultationRequest.motherName ||
+    consultationRequest.fatherName ||
+    "Padre/Madre";
+  const nameParts = parentName.trim().split(" ");
+  const firstName = nameParts[0] || "Padre/Madre";
+  const lastName = nameParts.slice(1).join(" ") || "";
+
+  const parentData = {
+    userId: uniqueUserId,
+    firstName,
+    lastName,
+    phone:
+      consultationRequest.motherPhone || consultationRequest.fatherPhone || "",
+    role: "PARENT" as const,
+    active: true,
+  };
+
+  console.log("Creating new parent profile with data:", parentData);
+
+  const newParent = await prisma.profile.create({
+    data: parentData,
+  });
+
+  console.log("Created new parent profile:", newParent.id);
+  return newParent;
+}
+
+// Helper function to create patient from consultation request data
+async function createPatientFromConsultationRequest(
+  consultationRequest: ConsultationRequestData,
+  parentId: string
+) {
+  // Calculate age for patient
+  const birthDate = new Date(consultationRequest.childDateOfBirth);
+
+  // Parse child name (assuming format "FirstName LastName")
+  const nameParts = consultationRequest.childName.split(" ");
+  const firstName = nameParts[0] || consultationRequest.childName;
+  const lastName = nameParts.slice(1).join(" ") || "";
+
+  const patientData = {
+    parentId,
+    firstName,
+    lastName,
+    dateOfBirth: birthDate,
+    gender: consultationRequest.childGender,
+    address: consultationRequest.childAddress || "",
+  };
+
+  const newPatient = await prisma.patient.create({
+    data: patientData,
+    include: {
+      parent: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+        },
+      },
+    },
+  });
+
+  return newPatient;
+}
+
 // GET /api/admin/patients/proposals/[id] - Get single proposal
 export async function GET(
   request: NextRequest,
@@ -46,6 +154,7 @@ export async function GET(
             },
           },
         },
+        consultationRequest: true, // Include consultation request data
       },
     });
 
@@ -78,6 +187,9 @@ export async function PUT(
 
     const proposal = await prisma.treatmentProposal.findUnique({
       where: { id },
+      include: {
+        consultationRequest: true,
+      },
     });
 
     if (!proposal) {
@@ -87,11 +199,86 @@ export async function PUT(
       );
     }
 
+    // Handle patient creation when payment is confirmed
+    let patientId = proposal.patientId;
+
+    if (
+      status === "PAYMENT_CONFIRMED" &&
+      !proposal.patientId &&
+      proposal.consultationRequestId &&
+      proposal.consultationRequest
+    ) {
+      try {
+        console.log("Creating patient from consultation request data...");
+
+        // Validate required data exists
+        if (
+          !proposal.consultationRequest.childName ||
+          !proposal.consultationRequest.childDateOfBirth
+        ) {
+          console.error("Missing required child data in consultation request");
+          throw new Error("Missing required child data for patient creation");
+        }
+
+        // Create parent profile
+        const parent = await findOrCreateParentFromConsultationRequest(
+          proposal.consultationRequest
+        );
+        console.log("Parent created/found:", parent.id);
+
+        // Create patient
+        const patient = await createPatientFromConsultationRequest(
+          proposal.consultationRequest,
+          parent.id
+        );
+        console.log("Patient created:", patient.id);
+
+        patientId = patient.id;
+
+        console.log(
+          `Successfully linked patient ${patient.id} to proposal ${proposal.id}`
+        );
+      } catch (error) {
+        console.error("Error creating patient:", error);
+        // Continue with proposal update even if patient creation fails
+        // Admin can manually create patient later if needed
+      }
+    }
+
+    // Create payment record when status is PAYMENT_CONFIRMED
+    if (status === "PAYMENT_CONFIRMED") {
+      // Check if payment record already exists
+      const existingPayment = await prisma.payment.findFirst({
+        where: {
+          proposalId: id,
+          status: "COMPLETED" as const,
+        },
+      });
+
+      if (!existingPayment) {
+        // Create payment record
+        await prisma.payment.create({
+          data: {
+            proposalId: id,
+            amount: proposal.totalAmount || 0,
+            paymentMethod: "TRANSFER", // Default method
+            status: "COMPLETED" as const,
+            referenceNumber: `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+            notes:
+              notes ||
+              `Pago confirmado el ${new Date().toLocaleDateString("es-ES")}`,
+            paymentDate: new Date(),
+          },
+        });
+      }
+    }
+
     const updatedProposal = await prisma.treatmentProposal.update({
       where: { id },
       data: {
         status,
         notes,
+        patientId, // Link the patient if created
         approvedDate:
           status === "PAYMENT_CONFIRMED" ? new Date() : proposal.approvedDate,
         startDate:
@@ -122,6 +309,7 @@ export async function PUT(
         },
         payments: true,
         appointments: true,
+        consultationRequest: true,
       },
     });
 
@@ -133,4 +321,12 @@ export async function PUT(
       { status: 500 }
     );
   }
+}
+
+// PATCH /api/admin/patients/proposals/[id] - Update proposal status (alias for PUT)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return PUT(request, { params });
 }

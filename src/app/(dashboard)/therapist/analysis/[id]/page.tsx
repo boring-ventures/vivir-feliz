@@ -217,25 +217,47 @@ export default function TherapistAnalysisDetailPage() {
 
     const medicalForm = analysisData.medicalForm;
 
-    // Check if medical form has essential fields completed
-    const requiredMedicalFields = [
-      "childName",
-      "childBirthDate",
-      "pregnancyType",
-      "deliveryType",
-      "currentCommunication",
-      "comprehension",
+    // Check if medical form has essential fields completed using correct nested paths
+    const requiredMedicalChecks = [
+      { path: medicalForm.basicInfo?.childName, name: "Nombre del niño" },
+      {
+        path: medicalForm.basicInfo?.childBirthDate,
+        name: "Fecha de nacimiento",
+      },
+      {
+        path: medicalForm.perinatalHistory?.pregnancyType,
+        name: "Tipo de embarazo",
+      },
+      {
+        path: medicalForm.perinatalHistory?.deliveryType,
+        name: "Tipo de parto",
+      },
+      {
+        path: medicalForm.languageCognition?.currentCommunication,
+        name: "Comunicación actual",
+      },
+      {
+        path: medicalForm.languageCognition?.comprehension,
+        name: "Comprensión",
+      },
     ];
 
-    const missingMedicalFields = requiredMedicalFields.filter(
-      (field) => !medicalForm[field as keyof typeof medicalForm]
+    const missingMedicalFields = requiredMedicalChecks.filter(
+      (check) =>
+        !check.path ||
+        (typeof check.path === "string" && check.path.trim() === "")
     );
 
     if (missingMedicalFields.length > 0 || medicalForm.status === "DRAFT") {
+      const missingFieldNames = missingMedicalFields
+        .map((field) => field.name)
+        .join(", ");
       toast({
         title: "Formulario médico incompleto",
         description:
-          "El formulario médico debe estar completamente lleno y revisado antes de finalizar el análisis. Por favor, complete el formulario médico primero.",
+          missingMedicalFields.length > 0
+            ? `Faltan campos en el formulario médico: ${missingFieldNames}. El formulario debe estar completamente lleno y revisado antes de finalizar el análisis.`
+            : "El formulario médico debe estar completamente lleno y revisado antes de finalizar el análisis. Por favor, complete el formulario médico primero.",
         variant: "destructive",
       });
       return false;
@@ -374,7 +396,44 @@ export default function TherapistAnalysisDetailPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES");
+    // Parse date as local date to avoid timezone issues
+    const parts = dateString.split("T")[0].split("-"); // Get YYYY-MM-DD part
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1; // Month is 0-indexed in JS Date
+    const day = parseInt(parts[2]);
+    const date = new Date(year, month, day);
+    return date.toLocaleDateString("es-ES");
+  };
+
+  const calculateAge = (birthDateString: string) => {
+    // Parse birthdate as local date to avoid timezone issues
+    const parts = birthDateString.split("T")[0].split("-"); // Get YYYY-MM-DD part
+    const birthYear = parseInt(parts[0]);
+    const birthMonth = parseInt(parts[1]) - 1; // Month is 0-indexed in JS Date
+    const birthDay = parseInt(parts[2]);
+    const birthDate = new Date(birthYear, birthMonth, birthDay);
+
+    const today = new Date();
+
+    let years = today.getFullYear() - birthDate.getFullYear();
+    let months = today.getMonth() - birthDate.getMonth();
+
+    // Adjust if current month/day is before birth month/day
+    if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
+      years--;
+      months += 12;
+    }
+
+    // Adjust months if current day is before birth day
+    if (today.getDate() < birthDate.getDate()) {
+      months--;
+      if (months < 0) {
+        months += 12;
+        years--;
+      }
+    }
+
+    return { years, months };
   };
 
   if (loading || analysisLoading) {
@@ -553,8 +612,12 @@ export default function TherapistAnalysisDetailPage() {
                         </p>
                         <p>
                           <strong>Edad:</strong>{" "}
-                          {medicalForm.basicInfo.childAgeYears} años{" "}
-                          {medicalForm.basicInfo.childAgeMonths} meses
+                          {(() => {
+                            const age = calculateAge(
+                              medicalForm.basicInfo.childBirthDate
+                            );
+                            return `${age.years} años${age.months > 0 ? ` ${age.months} meses` : ""}`;
+                          })()}
                         </p>
                       </div>
                     </div>

@@ -7,7 +7,6 @@ const nextConfig = {
       "xqakfzhkeiongvzgbhji.supabase.co",
     ],
   },
-  output: "standalone",
   // Security headers configuration
   async headers() {
     return [
