@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Upload, File, X } from "lucide-react";
 import { UPLOAD_LIMITS, MIME_TYPE_LABELS } from "@/types/documents";
 
@@ -11,6 +10,7 @@ interface FileUploadProps {
   className?: string;
   selectedFile?: File | null;
 }
+type AllowedMimeTypes = (typeof UPLOAD_LIMITS.allowedTypes)[number];
 
 export function FileUpload({
   onFileSelect,
@@ -22,7 +22,7 @@ export function FileUpload({
 
   const handleFileSelect = (file: File) => {
     // Validate file type
-    if (!UPLOAD_LIMITS.allowedTypes.includes(file.type as any)) {
+    if (!UPLOAD_LIMITS.allowedTypes.includes(file.type as AllowedMimeTypes)) {
       alert(
         `Tipo de archivo no permitido. Tipos permitidos: ${UPLOAD_LIMITS.allowedTypes.map((type) => MIME_TYPE_LABELS[type]).join(", ")}`
       );

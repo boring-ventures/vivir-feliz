@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { DocumentType } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Map frontend document type to database enum
-    const documentTypeMap: Record<string, string> = {
+    const documentTypeMap: Record<string, DocumentType> = {
       evaluacion: "EVALUATION",
       examen: "MEDICAL_REPORT",
       informe: "SCHOOL_REPORT",
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
         fileUrl,
         fileSize,
         fileType,
-        documentType: dbDocumentType as any,
+        documentType: dbDocumentType,
       },
     });
 

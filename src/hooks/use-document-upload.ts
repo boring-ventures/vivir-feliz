@@ -63,7 +63,7 @@ export function useDocumentUpload() {
       const fileName = `patient-documents/${patientId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
       // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from("documents")
         .upload(fileName, file, {
           cacheControl: "3600",

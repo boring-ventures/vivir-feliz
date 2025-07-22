@@ -16,7 +16,7 @@ export interface UploadDocumentResult {
 export async function uploadDocument({
   file,
   patientId,
-  therapistId,
+  //therapistId,
 }: UploadDocumentParams): Promise<UploadDocumentResult> {
   const supabase = createClientComponentClient();
 
@@ -26,7 +26,7 @@ export async function uploadDocument({
   const filePath = `documents/${patientId}/${fileName}`;
 
   // Upload file to Supabase Storage
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from("documents")
     .upload(filePath, file);
 

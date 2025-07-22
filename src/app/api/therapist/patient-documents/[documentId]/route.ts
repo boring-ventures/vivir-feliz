@@ -6,7 +6,7 @@ import { DocumentType } from "@/types/documents";
 // PUT - Update a document
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
     const currentUser = await getCurrentUser();
@@ -17,7 +17,7 @@ export async function PUT(
       );
     }
 
-    const { documentId } = params;
+    const { documentId } = await params;
     const body = await request.json();
     const { title, description, documentType } = body;
 
@@ -86,7 +86,7 @@ export async function PUT(
 // DELETE - Delete a document
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
     const currentUser = await getCurrentUser();
@@ -97,7 +97,7 @@ export async function DELETE(
       );
     }
 
-    const { documentId } = params;
+    const { documentId } = await params;
 
     // Find the document and verify ownership
     const existingDocument = await prisma.patientDocument.findFirst({
@@ -137,7 +137,7 @@ export async function DELETE(
 // GET - Get a specific document
 export async function GET(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
     const currentUser = await getCurrentUser();
@@ -148,7 +148,7 @@ export async function GET(
       );
     }
 
-    const { documentId } = params;
+    const { documentId } = await params;
 
     // Find the document and verify ownership
     const document = await prisma.patientDocument.findFirst({
