@@ -21,6 +21,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
   useProposals,
   useUpdateProposalStatus,
   useProposalsDisplayData,
@@ -29,9 +48,24 @@ import {
   useProposalServices,
   useScheduleServiceAppointments,
 } from "@/hooks/useProposals";
+import { useCreateUser } from "@/hooks/use-admin-users";
 import { useToast } from "@/components/ui/use-toast";
 import { ProposalDisplayData, ProposalStatus } from "@/types/patients";
 import { useTherapistMonthlyAppointments } from "@/hooks/use-therapist-appointments";
+
+// Parent creation schema
+const createParentSchema = z.object({
+  firstName: z.string().min(1, "Nombres son requeridos"),
+  lastName: z.string().min(1, "Apellidos son requeridos"),
+  email: z.string().email("Email inválido"),
+  phone: z.string().min(7, "Teléfono debe tener al menos 7 dígitos"),
+  nationalId: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  address: z.string().optional(),
+  password: z.string().min(8, "Contraseña debe tener al menos 8 caracteres"),
+});
+
+type ParentFormData = z.infer<typeof createParentSchema>;
 
 export default function AdminNuevosPacientesPage() {
   const [filtro, setFiltro] = useState("Todos");
@@ -47,7 +81,42 @@ export default function AdminNuevosPacientesPage() {
   // Add state for current service index
   const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
 
+  // Parent creation modal states
+  const [showParentCreationModal, setShowParentCreationModal] = useState(false);
+  const [parentCreationData, setParentCreationData] = useState<{
+    patientName: string;
+    parentName: string;
+    parentPhone: string;
+    parentEmail: string;
+  } | null>(null);
+  const [showParentForm, setShowParentForm] = useState(false);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [createdUserCredentials, setCreatedUserCredentials] = useState<{
+    email: string;
+    password: string;
+    parentName: string;
+  } | null>(null);
+
   const { toast } = useToast();
+
+  // Parent creation mutation
+  const createParentMutation = useCreateUser();
+
+  // Parent creation form
+  const parentForm = useForm<ParentFormData>({
+    resolver: zodResolver(createParentSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      nationalId: "",
+      dateOfBirth: "",
+      address: "",
+      password: "",
+    },
+    mode: "onChange",
+  });
 
   // Fetch treatment proposals data
   const {
@@ -89,6 +158,8 @@ export default function AdminNuevosPacientesPage() {
                 fatherName?: string;
                 motherPhone?: string;
                 fatherPhone?: string;
+                motherEmail?: string;
+                fatherEmail?: string;
               };
             };
           }) => ({
@@ -117,6 +188,10 @@ export default function AdminNuevosPacientesPage() {
               item.telefono ||
               item.proposalData?.consultationRequest?.motherPhone ||
               item.proposalData?.consultationRequest?.fatherPhone ||
+              "",
+            parentEmail:
+              item.proposalData?.consultationRequest?.motherEmail ||
+              item.proposalData?.consultationRequest?.fatherEmail ||
               "",
             therapistName: item.terapeuta || "Terapeuta",
             proposalDate: item.fechaPropuesta || "",
@@ -236,6 +311,17 @@ export default function AdminNuevosPacientesPage() {
         description:
           "El pago ha sido confirmado exitosamente. Se ha creado el perfil del paciente y el registro de pago automáticamente.",
       });
+
+      // Show parent creation modal
+      if (modalPago) {
+        setParentCreationData({
+          patientName: modalPago.patientName,
+          parentName: modalPago.parentName,
+          parentPhone: modalPago.parentPhone,
+          parentEmail: modalPago.parentEmail,
+        });
+        setShowParentCreationModal(true);
+      }
 
       setModalPago(null);
     } catch (error) {
@@ -461,6 +547,86 @@ export default function AdminNuevosPacientesPage() {
   const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
   const horarios = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
+
+  // Helper function to generate random password
+  const generatePassword = () => {
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    let password = "";
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    parentForm.setValue("password", password);
+  };
+
+  // Helper function to parse parent name into first and last name
+  const parseParentName = (fullName: string) => {
+    const nameParts = fullName.trim().split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+    return { firstName, lastName };
+  };
+
+  // Handle parent creation form submission
+  const handleParentFormSubmit = async (data: ParentFormData) => {
+    try {
+      await createParentMutation.mutateAsync({
+        ...data,
+        role: "PARENT",
+      });
+
+      // Show credentials modal with the created user info
+      setCreatedUserCredentials({
+        email: data.email,
+        password: data.password,
+        parentName: `${data.firstName} ${data.lastName}`.trim(),
+      });
+
+      setShowParentForm(false);
+      setShowParentCreationModal(false);
+      setParentCreationData(null);
+      parentForm.reset();
+      setShowCredentialsModal(true);
+    } catch (error) {
+      // Error handling is done by the mutation hook
+      console.error("Error creating parent user:", error);
+    }
+  };
+
+  // Handle configure parent now
+  const handleConfigureParentNow = () => {
+    if (!parentCreationData) return;
+
+    const { firstName, lastName } = parseParentName(
+      parentCreationData.parentName
+    );
+
+    // Pre-fill the form with available data
+    parentForm.setValue("firstName", firstName);
+    parentForm.setValue("lastName", lastName);
+    parentForm.setValue("phone", parentCreationData.parentPhone);
+    parentForm.setValue("email", parentCreationData.parentEmail || ""); // Pre-fill if available
+    parentForm.setValue("nationalId", ""); // Leave empty
+    parentForm.setValue("dateOfBirth", ""); // Leave empty
+    parentForm.setValue("address", ""); // Leave empty
+    parentForm.setValue("password", ""); // Will be generated
+
+    setShowParentForm(true);
+  };
+
+  // Handle configure later
+  const handleConfigureLater = () => {
+    setShowParentCreationModal(false);
+    setParentCreationData(null);
+    setShowParentForm(false);
+    parentForm.reset();
+  };
+
+  // Handle close credentials modal
+  const handleCloseCredentialsModal = () => {
+    setShowCredentialsModal(false);
+    setCreatedUserCredentials(null);
+  };
 
   if (isLoading) {
     return (
@@ -1099,6 +1265,358 @@ export default function AdminNuevosPacientesPage() {
                 </Card>
               </div>
             </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Parent Creation Modal */}
+      {showParentCreationModal && parentCreationData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="max-w-md w-full mx-4">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Configurar Usuario Padre</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleConfigureLater}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-md">
+                <p className="text-sm text-blue-800 mb-2">
+                  Se ha creado automáticamente un perfil para el padre/madre de{" "}
+                  <strong>{parentCreationData.patientName}</strong>.
+                </p>
+                <p className="text-sm text-blue-800">
+                  ¿Deseas configurar la cuenta del padre/madre ahora o hacerlo
+                  más tarde?
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div>
+                  <p className="text-sm text-gray-600">Paciente:</p>
+                  <p className="font-medium">
+                    {parentCreationData.patientName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Padre/Madre:</p>
+                  <p className="font-medium">{parentCreationData.parentName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Teléfono:</p>
+                  <p className="font-medium">
+                    {parentCreationData.parentPhone}
+                  </p>
+                </div>
+                {parentCreationData.parentEmail && (
+                  <div>
+                    <p className="text-sm text-gray-600">Email:</p>
+                    <p className="font-medium">
+                      {parentCreationData.parentEmail}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-3">
+                <Button onClick={handleConfigureParentNow} className="flex-1">
+                  Configurar Ahora
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleConfigureLater}
+                  className="flex-1"
+                >
+                  Más Tarde
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Parent Creation Form Modal */}
+      {showParentForm && parentCreationData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Crear Usuario Padre</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleConfigureLater}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={parentForm.handleSubmit(handleParentFormSubmit)}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Información Personal */}
+                  <div className="col-span-2">
+                    <h3 className="text-lg font-semibold mb-3">
+                      Información Personal
+                    </h3>
+                  </div>
+                  <div>
+                    <Label htmlFor="firstName">Nombres *</Label>
+                    <Input
+                      {...parentForm.register("firstName")}
+                      className={
+                        parentForm.formState.errors.firstName
+                          ? "border-red-500"
+                          : ""
+                      }
+                    />
+                    {parentForm.formState.errors.firstName && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {parentForm.formState.errors.firstName.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Apellidos *</Label>
+                    <Input
+                      {...parentForm.register("lastName")}
+                      className={
+                        parentForm.formState.errors.lastName
+                          ? "border-red-500"
+                          : ""
+                      }
+                    />
+                    {parentForm.formState.errors.lastName && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {parentForm.formState.errors.lastName.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      type="email"
+                      {...parentForm.register("email")}
+                      placeholder="usuario@vivirfeliz.bo"
+                      className={
+                        parentForm.formState.errors.email
+                          ? "border-red-500"
+                          : ""
+                      }
+                    />
+                    {parentForm.formState.errors.email && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {parentForm.formState.errors.email.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Teléfono *</Label>
+                    <Input
+                      {...parentForm.register("phone")}
+                      placeholder="+591-7-123-4567"
+                      className={
+                        parentForm.formState.errors.phone
+                          ? "border-red-500"
+                          : ""
+                      }
+                    />
+                    {parentForm.formState.errors.phone && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {parentForm.formState.errors.phone.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="nationalId">Cédula de Identidad</Label>
+                    <Input
+                      {...parentForm.register("nationalId")}
+                      placeholder="Dejar vacío para completar después"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dateOfBirth">Fecha de Nacimiento</Label>
+                    <Input
+                      type="date"
+                      {...parentForm.register("dateOfBirth")}
+                      placeholder="Dejar vacío para completar después"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="address">Dirección</Label>
+                    <Input
+                      {...parentForm.register("address")}
+                      placeholder="Dejar vacío para completar después"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="password">Contraseña *</Label>
+                    <div className="flex space-x-2">
+                      <Input
+                        type="password"
+                        {...parentForm.register("password")}
+                        className={
+                          parentForm.formState.errors.password
+                            ? "border-red-500"
+                            : ""
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={generatePassword}
+                      >
+                        Generar
+                      </Button>
+                    </div>
+                    {parentForm.formState.errors.password && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {parentForm.formState.errors.password.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 p-3 rounded-md">
+                  <p className="text-sm text-yellow-800">
+                    Los campos marcados con * son obligatorios. Los demás campos
+                    pueden ser completados por el padre/madre más tarde.
+                  </p>
+                </div>
+
+                <div className="flex space-x-3">
+                  <Button
+                    type="submit"
+                    disabled={createParentMutation.isPending}
+                    className="flex-1"
+                  >
+                    {createParentMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Creando...
+                      </>
+                    ) : (
+                      "Crear Usuario Padre"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleConfigureLater}
+                    disabled={createParentMutation.isPending}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* User Credentials Modal */}
+      {showCredentialsModal && createdUserCredentials && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="max-w-md w-full mx-4">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Usuario Padre Creado</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseCredentialsModal}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-green-50 p-4 rounded-md">
+                <p className="text-sm text-green-800">
+                  El usuario padre ha sido creado exitosamente. Guarda estas
+                  credenciales de forma segura.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-600">Nombre:</p>
+                  <p className="font-medium">
+                    {createdUserCredentials.parentName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Email:</p>
+                  <p className="font-medium">{createdUserCredentials.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Contraseña:</p>
+                  <div className="flex items-center space-x-2">
+                    <p className="font-medium font-mono bg-gray-100 px-2 py-1 rounded">
+                      {createdUserCredentials.password}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          createdUserCredentials.password
+                        );
+                        toast({
+                          title: "Contraseña copiada",
+                          description:
+                            "La contraseña ha sido copiada al portapapeles.",
+                        });
+                      }}
+                    >
+                      Copiar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 p-3 rounded-md">
+                <p className="text-sm text-yellow-800">
+                  <strong>Importante:</strong> Estas credenciales solo se
+                  mostrarán una vez. Asegúrate de guardarlas de forma segura o
+                  compartirlas con el padre/madre.
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <Button
+                  onClick={() => {
+                    const credentialsText = `Usuario Padre Creado\n\nNombre: ${createdUserCredentials.parentName}\nEmail: ${createdUserCredentials.email}\nContraseña: ${createdUserCredentials.password}\n\nGuarda estas credenciales de forma segura.`;
+                    navigator.clipboard.writeText(credentialsText);
+                    toast({
+                      title: "Credenciales copiadas",
+                      description:
+                        "Todas las credenciales han sido copiadas al portapapeles.",
+                    });
+                  }}
+                  className="flex-1"
+                >
+                  Copiar Todo
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCloseCredentialsModal}
+                  className="flex-1"
+                >
+                  Cerrar
+                </Button>
+              </div>
+            </CardContent>
           </Card>
         </div>
       )}
