@@ -129,6 +129,7 @@ const createUserSchema = z.object({
       "COORDINATOR",
     ])
     .optional(),
+  canTakeConsultations: z.boolean().optional(),
   password: z
     .string()
     .min(8, "Contraseña debe tener al menos 8 caracteres")
@@ -497,6 +498,7 @@ export default function AdminUsersPage() {
       dateOfBirth: "",
       biography: "",
       specialty: undefined,
+      canTakeConsultations: true, // Default to true for therapists
       password: "",
     },
     mode: "onChange",
@@ -616,11 +618,18 @@ export default function AdminUsersPage() {
 
   // Handle form submission
   const onSubmit = (data: FormData) => {
+    console.log("Form data received:", data);
+    console.log("canTakeConsultations value:", data.canTakeConsultations);
+
     // Don't send specialty if user is not a therapist
     const userData: CreateUserData = {
       ...data,
       specialty: data.role === "THERAPIST" ? data.specialty : undefined,
+      canTakeConsultations:
+        data.role === "THERAPIST" ? data.canTakeConsultations : undefined,
     };
+
+    console.log("User data to be sent:", userData);
 
     createUserMutation.mutate(userData, {
       onSuccess: (response) => {
@@ -934,9 +943,12 @@ export default function AdminUsersPage() {
                         value: "ADMIN" | "THERAPIST" | "PARENT"
                       ) => {
                         form.setValue("role", value);
-                        // Reset specialty when role changes
+                        // Reset specialty and canTakeConsultations when role changes
                         if (value !== "THERAPIST") {
                           form.setValue("specialty", undefined);
+                          form.setValue("canTakeConsultations", undefined);
+                        } else {
+                          form.setValue("canTakeConsultations", true);
                         }
                       }}
                       value={watchedFields.role}
@@ -1015,6 +1027,35 @@ export default function AdminUsersPage() {
                       <FieldError
                         error={form.formState.errors.biography?.message}
                       />
+                    </div>
+                  )}
+
+                  {selectedRole === "THERAPIST" && (
+                    <div className="col-span-2">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="canTakeConsultations"
+                          checked={form.watch("canTakeConsultations") || false}
+                          onChange={(e) =>
+                            form.setValue(
+                              "canTakeConsultations",
+                              e.target.checked
+                            )
+                          }
+                          className="rounded border-gray-300"
+                        />
+                        <Label
+                          htmlFor="canTakeConsultations"
+                          className="text-sm font-medium"
+                        >
+                          Puede tomar consultas
+                        </Label>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Si está desactivado, el terapeuta no aparecerá en el
+                        calendario de consultas para nuevos pacientes
+                      </p>
                     </div>
                   )}
 
@@ -1696,9 +1737,31 @@ export default function AdminUsersPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">
-                              {getSpecialtyLabel(user.specialty)}
-                            </Badge>
+                            <div className="space-y-1">
+                              <Badge variant="outline">
+                                {getSpecialtyLabel(user.specialty)}
+                              </Badge>
+                              {user.role === "THERAPIST" && (
+                                <div className="text-xs">
+                                  <Badge
+                                    variant={
+                                      user.canTakeConsultations
+                                        ? "default"
+                                        : "secondary"
+                                    }
+                                    className={
+                                      user.canTakeConsultations
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-gray-100 text-gray-600"
+                                    }
+                                  >
+                                    {user.canTakeConsultations
+                                      ? "Acepta consultas"
+                                      : "No acepta consultas"}
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">{user.phone}</div>

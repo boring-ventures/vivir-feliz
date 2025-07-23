@@ -47,6 +47,7 @@ const createUserSchema = z.object({
       "COORDINATOR",
     ])
     .optional(),
+  canTakeConsultations: z.boolean().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -253,6 +254,7 @@ export async function POST(request: NextRequest) {
           : null,
         biography: validatedData.biography || null,
         specialty: (validatedData.specialty as SpecialtyType) || null,
+        canTakeConsultations: validatedData.canTakeConsultations ?? null,
         active: true,
       },
     });

@@ -114,6 +114,7 @@ export async function PATCH(
       dateOfBirth: Date | null;
       biography: string | null;
       specialty: SpecialtyType | null;
+      canTakeConsultations: boolean | null;
       active: boolean;
     }> = {};
 
@@ -130,6 +131,8 @@ export async function PATCH(
     }
     if (body.biography !== undefined) updateData.biography = body.biography;
     if (body.specialty !== undefined) updateData.specialty = body.specialty;
+    if (body.canTakeConsultations !== undefined)
+      updateData.canTakeConsultations = body.canTakeConsultations;
     if (body.active !== undefined) updateData.active = body.active;
 
     // Check if nationalId already exists (if being updated and not null)
