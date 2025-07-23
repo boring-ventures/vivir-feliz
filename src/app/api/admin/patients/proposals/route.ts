@@ -51,8 +51,10 @@ export async function GET(request: NextRequest) {
             childGender: true,
             motherName: true,
             motherPhone: true,
+            motherEmail: true,
             fatherName: true,
             fatherPhone: true,
+            fatherEmail: true,
           },
         },
         therapist: {
@@ -162,6 +164,8 @@ export async function GET(request: NextRequest) {
                   fatherName: proposal.consultationRequest.fatherName,
                   motherPhone: proposal.consultationRequest.motherPhone,
                   fatherPhone: proposal.consultationRequest.fatherPhone,
+                  motherEmail: proposal.consultationRequest.motherEmail,
+                  fatherEmail: proposal.consultationRequest.fatherEmail,
                 }
               : undefined,
           },
