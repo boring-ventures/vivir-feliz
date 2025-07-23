@@ -75,6 +75,11 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
                 url: "/admin/proposals",
                 icon: Receipt,
               },
+              {
+                title: "Citas",
+                url: "/admin/appointments",
+                icon: Calendar,
+              },
             ],
           },
         ],
@@ -137,22 +142,22 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
               },
               {
                 title: "Citas",
-                url: "/parent/citas",
+                url: "/parent/appointments",
                 icon: Calendar,
               },
               {
                 title: "Documentos",
-                url: "/parent/documentos",
+                url: "/parent/documents",
                 icon: FileText,
               },
               {
                 title: "Pagos",
-                url: "/parent/pagos",
+                url: "/parent/payments",
                 icon: CreditCard,
               },
               {
                 title: "Progreso",
-                url: "/parent/progreso",
+                url: "/parent/progress",
                 icon: BarChart,
               },
             ],

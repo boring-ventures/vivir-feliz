@@ -83,10 +83,14 @@ export default function DashboardPage() {
           title: "Panel del Padre/Madre",
           description: "Gestiona las citas y progreso de tu hijo/a",
           links: [
-            { href: "/parent/citas", label: "Mis Citas", icon: Calendar },
-            { href: "/parent/documentos", label: "Documentos", icon: FileText },
-            { href: "/parent/progreso", label: "Progreso", icon: FileText },
-            { href: "/parent/pagos", label: "Pagos", icon: FileText },
+            {
+              href: "/parent/appointments",
+              label: "Mis Citas",
+              icon: Calendar,
+            },
+            { href: "/parent/documents", label: "Documentos", icon: FileText },
+            { href: "/parent/progress", label: "Progreso", icon: FileText },
+            { href: "/parent/payments", label: "Pagos", icon: FileText },
           ],
         };
     }
