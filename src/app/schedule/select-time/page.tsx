@@ -37,6 +37,7 @@ function SelectTimePageContent() {
     parentEmail?: string;
     type?: string;
     isScheduled?: boolean;
+    motivosConsulta?: Record<string, boolean>;
   } | null>(null);
   const [requestId, setRequestId] = useState<string>("");
 
@@ -72,7 +73,12 @@ function SelectTimePageContent() {
     data: slotsData,
     isLoading,
     error,
-  } = useAvailableSlots(appointmentType, startDate, endDate);
+  } = useAvailableSlots(
+    appointmentType,
+    startDate,
+    endDate,
+    type === "consultation" ? requestData?.motivosConsulta : undefined
+  );
   const bookAppointment = useBookAppointment();
 
   // Check if the request is already scheduled
