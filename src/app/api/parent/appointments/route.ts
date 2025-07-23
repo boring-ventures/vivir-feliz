@@ -4,12 +4,6 @@ import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 import { AppointmentStatus } from "@prisma/client";
 
-// Helper function to create date from string without timezone issues
-const createDateFromString = (dateStr: string): Date => {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day);
-};
-
 // Helper function to format date for display
 const formatDateLocal = (date: Date): string => {
   const day = date.getDate().toString().padStart(2, "0");
