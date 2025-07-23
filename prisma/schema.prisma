@@ -17,6 +17,7 @@ model Profile {
   lastName           String?             @map("last_name")
   role               UserRole            @default(PARENT)
   acceptWhatsApp     Boolean             @default(false) @map("accept_whatsapp")
+  canTakeConsultations Boolean?          @map("can_take_consultations")
   address            String?
   biography          String?
   createdAt          DateTime            @default(now()) @map("created_at")
@@ -297,6 +298,9 @@ model Appointment {
   rescheduledTo      DateTime?          @map("rescheduled_to")
   sessionNotes       String?            @map("session_notes")
   status             AppointmentStatus  @default(SCHEDULED)
+  absenceReason       String?            @map("absence_reason")
+  markedAbsentBy      String?            @map("marked_absent_by")
+  markedAbsentAt      DateTime?          @map("marked_absent_at")
   patient            Patient?           @relation(fields: [patientId], references: [id])
   proposal           TreatmentProposal? @relation(fields: [proposalId], references: [id])
   consultationRequest ConsultationRequest? @relation(fields: [consultationRequestId], references: [id])
