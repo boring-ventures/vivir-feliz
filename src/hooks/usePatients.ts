@@ -303,12 +303,19 @@ export function useProposalsDisplayData(
       proposal.consultationRequest?.fatherPhone ||
       "";
 
+    // Get parent email from consultation request
+    const parentEmail =
+      proposal.consultationRequest?.motherEmail ||
+      proposal.consultationRequest?.fatherEmail ||
+      "";
+
     return {
       id: proposal.id,
       patientName,
       patientAge,
       parentName,
       parentPhone,
+      parentEmail,
       therapistName,
       proposalDate: (() => {
         const date = new Date(proposal.proposalDate);

@@ -29,8 +29,10 @@ export interface TreatmentProposalWithRelations extends TreatmentProposal {
     childGender: string;
     motherName?: string | null;
     motherPhone?: string | null;
+    motherEmail?: string | null;
     fatherName?: string | null;
     fatherPhone?: string | null;
+    fatherEmail?: string | null;
   };
   therapist: Profile;
   payments: Payment[];
@@ -198,6 +200,7 @@ export interface ProposalDisplayData {
   patientAge: number;
   parentName: string;
   parentPhone: string;
+  parentEmail: string;
   therapistName: string;
   proposalDate: string;
   totalAmount: string;
