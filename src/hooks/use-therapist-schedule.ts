@@ -33,7 +33,18 @@ export type TherapistScheduleFormData = {
   }>;
 };
 
-export type TherapistSchedule = {
+export interface TherapistTimeSlot {
+  id: string;
+  scheduleId: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+  appointmentTypes: string[];
+  maxAppointments: number;
+}
+
+export interface TherapistSchedule {
   id: string;
   therapistId: string;
   isActive: boolean;
@@ -42,47 +53,28 @@ export type TherapistSchedule = {
   endTime: string;
   slotDuration: number;
   breakBetween: number;
-  createdAt: string;
-  updatedAt: string;
-  timeSlots: Array<{
-    id: string;
-    scheduleId: string;
-    dayOfWeek: string;
-    startTime: string;
-    endTime: string;
-    isAvailable: boolean;
-    appointmentTypes: string[];
-    maxAppointments: number;
-  }>;
-  blockedSlots: Array<{
-    id: string;
-    scheduleId: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    reason: string | null;
-    isRecurring: boolean;
-  }>;
-};
+  timeSlots: TherapistTimeSlot[];
+}
 
-// Hook to fetch therapist's own schedule
-export const useTherapistSchedule = () => {
-  return useQuery({
-    queryKey: ["therapist-schedule"],
-    queryFn: async (): Promise<TherapistSchedule | null> => {
-      const response = await fetch("/api/therapist/schedule");
+export function useTherapistSchedule(therapistId: string | undefined) {
+  return useQuery<TherapistSchedule>({
+    queryKey: ["therapist-schedule", therapistId],
+    queryFn: async () => {
+      if (!therapistId) throw new Error("Therapist ID is required");
+
+      const response = await fetch(
+        `/api/admin/therapists/${therapistId}/schedule-config`
+      );
 
       if (!response.ok) {
-        if (response.status === 404) {
-          return null; // No schedule found
-        }
-        throw new Error("Failed to fetch schedule");
+        throw new Error("Failed to fetch therapist schedule");
       }
 
       return response.json();
     },
+    enabled: !!therapistId,
   });
-};
+}
 
 // Hook to create or update therapist's schedule
 export const useUpdateTherapistSchedule = () => {
