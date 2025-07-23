@@ -32,9 +32,7 @@ import {
   Clock,
   User,
   MoreHorizontal,
-  AlertCircle,
   CheckCircle,
-  XCircle,
   UserX,
 } from "lucide-react";
 import { RoleGuard } from "@/components/auth/role-guard";
@@ -162,7 +160,6 @@ export default function AdminAppointmentsPage() {
     data: appointments = [],
     isLoading,
     error,
-    refetch,
   } = useQuery({
     queryKey: [
       "admin-appointments",

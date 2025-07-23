@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 // GET: Fetch all appointments (admin only)
 export async function GET(request: NextRequest) {
@@ -33,10 +34,17 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
 
     // Build where clause
-    const whereClause: any = {};
+    const whereClause: Prisma.AppointmentWhereInput = {};
 
     if (status && status !== "all") {
-      whereClause.status = status;
+      whereClause.status = status as
+        | "SCHEDULED"
+        | "CONFIRMED"
+        | "IN_PROGRESS"
+        | "COMPLETED"
+        | "CANCELLED"
+        | "NO_SHOW"
+        | "RESCHEDULED";
     }
 
     if (date) {

@@ -21,7 +21,6 @@ import {
   CheckCircle,
   XCircle,
   UserX,
-  MapPin,
   CreditCard,
 } from "lucide-react";
 
