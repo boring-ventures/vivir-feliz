@@ -18,14 +18,10 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
-  AlertCircle,
   CheckCircle,
-  X,
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRescheduleAppointment } from "@/hooks/use-reschedule-appointment";
 import { useTherapistMonthlyAppointments } from "@/hooks/use-therapist-appointments";
-import { useTherapistSchedule } from "@/hooks/use-therapist-schedule";
 
 interface Appointment {
   id: string;
@@ -49,7 +45,7 @@ interface Appointment {
   homework?: string;
   nextSessionPlan?: string;
   sessionNotes?: string;
-  therapistId?: string; // Add this field
+  therapistId?: string;
   patient?: {
     firstName: string;
     lastName: string;
@@ -93,18 +89,13 @@ export function RescheduleAppointmentModal({
   const therapistId =
     appointment?.therapist?.id ||
     appointment?.therapistId ||
-    (appointment as any)?.therapistId;
+    appointment?.therapistId;
 
   // Fetch therapist appointments for the current month
   const { data: therapistAppointments = [] } = useTherapistMonthlyAppointments(
     therapistId,
     mesActual.getFullYear(),
     mesActual.getMonth() + 1
-  );
-
-  // Fetch therapist schedule configuration
-  const { data: therapistSchedule } = useTherapistSchedule(
-    appointment?.therapist?.id
   );
 
   // Reset selections when modal opens
