@@ -49,10 +49,17 @@ export type BookedAppointment = {
 export const useAvailableSlots = (
   appointmentType: "CONSULTATION" | "INTERVIEW",
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  consultationReasons?: Record<string, boolean>
 ) => {
   return useQuery({
-    queryKey: ["available-slots", appointmentType, startDate, endDate],
+    queryKey: [
+      "available-slots",
+      appointmentType,
+      startDate,
+      endDate,
+      consultationReasons,
+    ],
     queryFn: async (): Promise<AvailableSlotsResponse> => {
       const params = new URLSearchParams({
         type: appointmentType,
@@ -60,6 +67,12 @@ export const useAvailableSlots = (
 
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
+      if (consultationReasons) {
+        params.append(
+          "consultationReasons",
+          JSON.stringify(consultationReasons)
+        );
+      }
 
       const response = await fetch(`/api/schedule/available-slots?${params}`);
 
