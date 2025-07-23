@@ -4,6 +4,7 @@ import { RoleGuard } from "@/components/auth/role-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Loader } from "@/components/ui/loader";
 import {
   Clock,
   Calendar,
@@ -14,10 +15,52 @@ import {
   Heart,
   CreditCard,
   Upload,
+  Users,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
+import { useParentDashboard } from "@/hooks/use-parent-dashboard";
 
 export default function ParentDashboardPage() {
+  const { data, isLoading, error } = useParentDashboard();
+
+  if (isLoading) {
+    return (
+      <RoleGuard allowedRoles={["PARENT"]}>
+        <main className="p-6">
+          <div className="flex items-center justify-center h-64">
+            <Loader className="h-8 w-8" />
+          </div>
+        </main>
+      </RoleGuard>
+    );
+  }
+
+  if (error) {
+    return (
+      <RoleGuard allowedRoles={["PARENT"]}>
+        <main className="p-6">
+          <div className="text-center">
+            <p className="text-red-600">Error al cargar el dashboard</p>
+          </div>
+        </main>
+      </RoleGuard>
+    );
+  }
+
+  const dashboardData = data || {
+    stats: {
+      totalPatients: 0,
+      upcomingAppointments: 0,
+      completedAppointments: 0,
+      totalDocuments: 0,
+      totalPaid: 0,
+      totalPending: 0,
+    },
+    nextAppointment: null,
+    recentDocuments: [],
+    recentActivity: [],
+  };
   return (
     <RoleGuard allowedRoles={["PARENT"]}>
       <main className="p-6">
@@ -30,53 +73,83 @@ export default function ParentDashboardPage() {
         </div>
 
         {/* Próxima Cita */}
-        <div className="mb-8">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="pb-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-xl mb-2">Próxima Cita</CardTitle>
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>Miércoles, 17 Enero 2025</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="h-4 w-4" />
-                      <span>10:00 AM - 11:00 AM</span>
+        {dashboardData.nextAppointment ? (
+          <div className="mb-8">
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="pb-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-xl mb-2">Próxima Cita</CardTitle>
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          {new Date(
+                            dashboardData.nextAppointment.appointmentDate
+                          ).toLocaleDateString("es-ES", {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {dashboardData.nextAppointment.appointmentTime} -{" "}
+                          {dashboardData.nextAppointment.endTime}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <Badge className="bg-green-100 text-green-800">
+                    ✅ Confirmada
+                  </Badge>
                 </div>
-                <Badge className="bg-green-100 text-green-800">
-                  ✅ Confirmada
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-semibold text-lg">Juan Pérez González</h4>
-                  <p className="text-muted-foreground">
-                    Sesión de Terapia del Lenguaje - Sesión 8/24
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Con Dr. Carlos Mendoza
-                  </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-lg">
+                      {dashboardData.nextAppointment.patientName}
+                    </h4>
+                    <p className="text-muted-foreground">
+                      {dashboardData.nextAppointment.proposalTitle ||
+                        "Sesión de Terapia"}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Con {dashboardData.nextAppointment.therapistName}
+                    </p>
+                  </div>
+                  <div className="flex space-x-3">
+                    <Button variant="outline" size="sm">
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Contactar Terapeuta
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Reagendar
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex space-x-3">
-                  <Button variant="outline" size="sm">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Contactar Terapeuta
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Reagendar
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="mb-8">
+            <Card className="border-l-4 border-l-gray-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl mb-2">Próxima Cita</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  No tienes citas programadas próximamente.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Documentos Recientes */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -84,7 +157,7 @@ export default function ParentDashboardPage() {
             <CardHeader className="pb-4">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">Documentos Recientes</CardTitle>
-                <Link href="/parent/documentos">
+                <Link href="/parent/documents">
                   <Button variant="outline" size="sm">
                     Ver Todos
                   </Button>
@@ -93,70 +166,46 @@ export default function ParentDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-blue-100 p-2 rounded-full">
-                      <FileText className="h-4 w-4 text-blue-600" />
+                {dashboardData.recentDocuments.length > 0 ? (
+                  dashboardData.recentDocuments.map((document) => (
+                    <div
+                      key={document.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-blue-100 p-2 rounded-full">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{document.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {document.patientName} -{" "}
+                            {new Date(document.uploadedAt).toLocaleDateString(
+                              "es-ES"
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge className="bg-red-100 text-red-800 text-xs">
+                          Nuevo
+                        </Badge>
+                        <Button variant="ghost" size="sm" asChild>
+                          <a
+                            href={document.fileUrl}
+                            download={document.fileName}
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">
-                        Informe de Progreso - Diciembre
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Subido el 02 Enero 2025
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className="bg-red-100 text-red-800 text-xs">
-                      Nuevo
-                    </Badge>
-                    <Button variant="ghost" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-green-100 p-2 rounded-full">
-                      <FileText className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        Plan de Tratamiento Actualizado
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Subido el 28 Diciembre 2024
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className="bg-red-100 text-red-800 text-xs">
-                      Nuevo
-                    </Badge>
-                    <Button variant="ghost" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-purple-100 p-2 rounded-full">
-                      <FileText className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Evaluación Inicial</p>
-                      <p className="text-sm text-muted-foreground">
-                        Subido el 15 Diciembre 2024
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    No hay documentos recientes
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -167,53 +216,191 @@ export default function ParentDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <div className="bg-blue-100 p-2 rounded-full">
-                    <Upload className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Documento subido</p>
-                    <p className="text-xs text-muted-foreground">
-                      Informe de progreso mensual - Hace 3 días
-                    </p>
-                  </div>
-                </div>
+                {dashboardData.recentActivity.length > 0 ? (
+                  dashboardData.recentActivity.map((activity) => {
+                    const getActivityIcon = () => {
+                      switch (activity.type) {
+                        case "appointment":
+                          return <Calendar className="h-4 w-4 text-blue-600" />;
+                        case "payment":
+                          return (
+                            <CreditCard className="h-4 w-4 text-amber-600" />
+                          );
+                        case "document":
+                          return <Upload className="h-4 w-4 text-green-600" />;
+                        default:
+                          return (
+                            <CheckCircle className="h-4 w-4 text-gray-600" />
+                          );
+                      }
+                    };
 
-                <div className="flex items-start space-x-3">
-                  <div className="bg-green-100 p-2 rounded-full">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Cita confirmada</p>
-                    <p className="text-xs text-muted-foreground">
-                      Sesión para el 17 de Enero - Hace 5 días
-                    </p>
-                  </div>
-                </div>
+                    const getActivityColor = () => {
+                      switch (activity.type) {
+                        case "appointment":
+                          return "bg-blue-100";
+                        case "payment":
+                          return "bg-amber-100";
+                        case "document":
+                          return "bg-green-100";
+                        default:
+                          return "bg-gray-100";
+                      }
+                    };
 
-                <div className="flex items-start space-x-3">
-                  <div className="bg-amber-100 p-2 rounded-full">
-                    <CreditCard className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Pago procesado</p>
-                    <p className="text-xs text-muted-foreground">
-                      Bs. 450 - Sesión del 10 Enero - Hace 1 semana
-                    </p>
-                  </div>
-                </div>
+                    const formatTimeAgo = (dateString: string) => {
+                      const date = new Date(dateString);
+                      const now = new Date();
+                      const diffInMs = now.getTime() - date.getTime();
+                      const diffInDays = Math.floor(
+                        diffInMs / (1000 * 60 * 60 * 24)
+                      );
 
-                <div className="flex items-start space-x-3">
-                  <div className="bg-purple-100 p-2 rounded-full">
-                    <MessageSquare className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Comentario de sesión</p>
-                    <p className="text-xs text-muted-foreground">
-                      &quot;Excelente progreso en pronunciación&quot; - Hace 1
-                      semana
-                    </p>
-                  </div>
+                      if (diffInDays === 0) return "Hoy";
+                      if (diffInDays === 1) return "Ayer";
+                      if (diffInDays < 7) return `Hace ${diffInDays} días`;
+                      if (diffInDays < 30)
+                        return `Hace ${Math.floor(diffInDays / 7)} semanas`;
+                      return `Hace ${Math.floor(diffInDays / 30)} meses`;
+                    };
+
+                    return (
+                      <div
+                        key={activity.id}
+                        className="flex items-start space-x-3"
+                      >
+                        <div
+                          className={`${getActivityColor()} p-2 rounded-full`}
+                        >
+                          {getActivityIcon()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            {activity.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {activity.description} -{" "}
+                            {formatTimeAgo(activity.date)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    No hay actividad reciente
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Estadísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Pacientes
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {dashboardData.stats.totalPatients}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="bg-green-100 p-3 rounded-full">
+                  <Calendar className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Citas Próximas
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {dashboardData.stats.upcomingAppointments}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="bg-purple-100 p-3 rounded-full">
+                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Citas Completadas
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {dashboardData.stats.completedAppointments}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="bg-amber-100 p-3 rounded-full">
+                  <FileText className="h-6 w-6 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Documentos
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {dashboardData.stats.totalDocuments}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="bg-green-100 p-3 rounded-full">
+                  <CreditCard className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Total Pagado
+                  </p>
+                  <p className="text-2xl font-bold">
+                    Bs. {dashboardData.stats.totalPaid.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="bg-red-100 p-3 rounded-full">
+                  <CreditCard className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Pendiente
+                  </p>
+                  <p className="text-2xl font-bold">
+                    Bs. {dashboardData.stats.totalPending.toLocaleString()}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -222,21 +409,21 @@ export default function ParentDashboardPage() {
 
         {/* Acceso Rápido */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Link href="/parent/citas">
+          <Link href="/parent/appointments">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6 text-center">
                 <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Calendar className="h-6 w-6 text-blue-600" />
                 </div>
-                <h3 className="font-semibold mb-2">Mis Citas</h3>
+                <h3 className="font-semibold mb-2">Appointments</h3>
                 <p className="text-sm text-muted-foreground">
-                  Ver y gestionar citas programadas
+                  View and manage scheduled appointments
                 </p>
               </CardContent>
             </Card>
           </Link>
 
-          <Link href="/parent/documentos">
+          <Link href="/parent/documents">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6 text-center">
                 <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -250,7 +437,7 @@ export default function ParentDashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/parent/pagos">
+          <Link href="/parent/payments">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6 text-center">
                 <div className="bg-amber-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -264,7 +451,7 @@ export default function ParentDashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/parent/progreso">
+          <Link href="/parent/progress">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6 text-center">
                 <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
