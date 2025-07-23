@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
       reasons: Record<string, boolean>
     ): string[] => {
       const selectedReasons = Object.entries(reasons)
-        .filter(([_, value]) => value === true)
-        .map(([key, _]) => key);
+        .filter(([, value]) => value === true)
+        .map(([key]) => key);
 
       if (selectedReasons.length === 0) {
         return []; // No filtering if no reasons selected
@@ -125,7 +125,13 @@ export async function GET(request: NextRequest) {
         canTakeConsultations: true, // Only therapists who can take consultations
         ...(requiredSpecialties.length > 0 && {
           specialty: {
-            in: requiredSpecialties as any,
+            in: requiredSpecialties as (
+              | "SPEECH_THERAPIST"
+              | "OCCUPATIONAL_THERAPIST"
+              | "PSYCHOPEDAGOGUE"
+              | "NEUROPSYCHOLOGIST"
+              | "COORDINATOR"
+            )[],
           },
         }),
       },

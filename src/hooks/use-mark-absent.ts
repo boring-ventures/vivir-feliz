@@ -4,9 +4,21 @@ interface MarkAbsentData {
   reason: string;
 }
 
+interface Appointment {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  patientId: string;
+  therapistId: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface MarkAbsentResponse {
   message: string;
-  appointment: any;
+  appointment: Appointment;
 }
 
 export const useMarkAbsent = () => {
@@ -38,7 +50,7 @@ export const useMarkAbsent = () => {
 
       return response.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       // Invalidate and refetch appointments queries
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["therapist-appointments"] });

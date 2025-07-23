@@ -6,9 +6,21 @@ interface RescheduleData {
   newEndTime: string;
 }
 
+interface Appointment {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  patientId: string;
+  therapistId: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface RescheduleResponse {
   message: string;
-  appointment: any;
+  appointment: Appointment;
 }
 
 export const useRescheduleAppointment = () => {
@@ -38,7 +50,7 @@ export const useRescheduleAppointment = () => {
 
       return response.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       // Invalidate and refetch appointments queries
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["therapist-appointments"] });
