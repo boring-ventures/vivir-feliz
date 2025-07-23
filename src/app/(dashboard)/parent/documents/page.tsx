@@ -16,7 +16,6 @@ import {
   Download,
   Eye,
   CheckCircle,
-  Clock,
   AlertCircle,
   Loader2,
 } from "lucide-react";
@@ -41,7 +40,7 @@ const getDocumentTypeLabel = (type: string) => {
   return documentTypeLabels[type as keyof typeof documentTypeLabels] || type;
 };
 
-const getEstadoInfo = (document: ParentDocument) => {
+const getEstadoInfo = () => {
   // For now, we'll show all documents as completed since they're uploaded
   // In the future, you might want to add a status field to the database
   return {
@@ -169,7 +168,7 @@ export default function ParentDocumentosPage() {
       ) : (
         <div className="space-y-4">
           {documents.map((documentItem) => {
-            const estadoInfo = getEstadoInfo(documentItem);
+            const estadoInfo = getEstadoInfo();
 
             return (
               <Card key={documentItem.id} className="shadow-sm">

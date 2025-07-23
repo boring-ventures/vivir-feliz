@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +10,6 @@ import {
   Calendar,
   Eye,
   AlertTriangle,
-  CheckCircle,
-  Clock,
   Loader2,
 } from "lucide-react";
 import {
@@ -36,66 +33,66 @@ const formatCurrency = (amount: number) => {
   return `Bs. ${amount.toFixed(2)}`;
 };
 
-const getPaymentStatusInfo = (status: string) => {
-  switch (status) {
-    case "COMPLETED":
-      return {
-        icon: <CheckCircle className="h-3 w-3" />,
-        color: "bg-green-100 text-green-800 hover:bg-green-100",
-        text: "Completado",
-      };
-    case "PENDING":
-      return {
-        icon: <Clock className="h-3 w-3" />,
-        color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
-        text: "Pendiente",
-      };
-    case "CANCELLED":
-      return {
-        icon: <AlertTriangle className="h-3 w-3" />,
-        color: "bg-red-100 text-red-800 hover:bg-red-100",
-        text: "Cancelado",
-      };
-    default:
-      return {
-        icon: <Clock className="h-3 w-3" />,
-        color: "bg-gray-100 text-gray-800 hover:bg-gray-100",
-        text: status,
-      };
-  }
-};
+// const getPaymentStatusInfo = (status: string) => {
+//   switch (status) {
+//     case "COMPLETED":
+//       return {
+//         icon: <CheckCircle className="h-3 w-3" />,
+//         color: "bg-green-100 text-green-800 hover:bg-green-100",
+//         text: "Completado",
+//       };
+//     case "PENDING":
+//       return {
+//         icon: <Clock className="h-3 w-3" />,
+//         color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
+//         text: "Pendiente",
+//       };
+//     case "CANCELLED":
+//       return {
+//         icon: <AlertTriangle className="h-3 w-3" />,
+//         color: "bg-red-100 text-red-800 hover:bg-red-100",
+//         text: "Cancelado",
+//       };
+//     default:
+//       return {
+//         icon: <Clock className="h-3 w-3" />,
+//         color: "bg-gray-100 text-gray-800 hover:bg-gray-100",
+//         text: status,
+//       };
+//   }
+// };
 
-const getProposalStatusInfo = (status: string) => {
-  switch (status) {
-    case "PAYMENT_CONFIRMED":
-    case "APPOINTMENTS_SCHEDULED":
-    case "TREATMENT_ACTIVE":
-      return {
-        color: "bg-green-100 text-green-800 hover:bg-green-100",
-        text: "Activo",
-      };
-    case "PAYMENT_PENDING":
-      return {
-        color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
-        text: "Pago Pendiente",
-      };
-    case "TREATMENT_COMPLETED":
-      return {
-        color: "bg-blue-100 text-blue-800 hover:bg-blue-100",
-        text: "Completado",
-      };
-    case "CANCELLED":
-      return {
-        color: "bg-red-100 text-red-800 hover:bg-red-100",
-        text: "Cancelado",
-      };
-    default:
-      return {
-        color: "bg-gray-100 text-gray-800 hover:bg-gray-100",
-        text: status,
-      };
-  }
-};
+// const getProposalStatusInfo = (status: string) => {
+//   switch (status) {
+//     case "PAYMENT_CONFIRMED":
+//     case "APPOINTMENTS_SCHEDULED":
+//     case "TREATMENT_ACTIVE":
+//       return {
+//         color: "bg-green-100 text-green-800 hover:bg-green-100",
+//         text: "Activo",
+//       };
+//     case "PAYMENT_PENDING":
+//       return {
+//         color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
+//         text: "Pago Pendiente",
+//       };
+//     case "TREATMENT_COMPLETED":
+//       return {
+//         color: "bg-blue-100 text-blue-800 hover:bg-blue-100",
+//         text: "Completado",
+//       };
+//     case "CANCELLED":
+//       return {
+//         color: "bg-red-100 text-red-800 hover:bg-red-100",
+//         text: "Cancelado",
+//       };
+//     default:
+//       return {
+//         color: "bg-gray-100 text-gray-800 hover:bg-gray-100",
+//         text: status,
+//       };
+//   }
+// };
 
 export default function ParentPagosPage() {
   const { data, isLoading, error } = useParentPayments();

@@ -9,25 +9,26 @@ import { Progress } from "@/components/ui/progress";
 
 import {
   Calendar as CalendarIcon,
-  Clock,
   User,
   Search,
-  Filter,
-  Download,
   Eye,
-  MessageSquare,
   X,
   FileText,
-  DollarSign,
-  MapPin,
-  Phone,
-  Mail,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useParentAppointments } from "@/hooks/use-parent-appointments";
 import type { ParentAppointment } from "@/hooks/use-parent-appointments";
+
+interface CalendarDay {
+  date: Date;
+  day: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  hasAppointment: boolean;
+  appointments: ParentAppointment[];
+}
 
 export default function ParentAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<
@@ -48,7 +49,10 @@ export default function ParentAppointmentsPage() {
     limit: 1000, // Increase limit to get all appointments
   });
 
-  const allAppointments = data?.appointments || [];
+  // Wrap allAppointments in useMemo to prevent dependency changes
+  const allAppointments = useMemo(() => {
+    return data?.appointments || [];
+  }, [data?.appointments]);
 
   // Client-side filtering and statistics calculation
   const { filteredAppointments, stats } = useMemo(() => {
@@ -181,10 +185,6 @@ export default function ParentAppointmentsPage() {
     });
   };
 
-  const getAppointmentCount = (date: Date) => {
-    return getAppointmentsForDate(date).length;
-  };
-
   // Calendar navigation functions
   const goToPreviousMonth = () => {
     setCurrentDate(
@@ -216,7 +216,7 @@ export default function ParentAppointmentsPage() {
     // Generate calendar days for current month
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDayOfMonth = getFirstDayOfMonth(currentDate);
-    const calendarDays = [];
+    const calendarDays: CalendarDay[] = [];
 
     // Add days from previous month
     const prevMonth = new Date(
@@ -349,7 +349,13 @@ export default function ParentAppointmentsPage() {
       proximasCitas,
       calendarDays,
     };
-  }, [allAppointments, currentDate]);
+  }, [
+    allAppointments,
+    currentDate,
+    getAppointmentsForDate,
+    hasAppointment,
+    isToday,
+  ]);
 
   const openAppointmentModal = (appointment: ParentAppointment) => {
     setSelectedAppointment(appointment);
@@ -361,7 +367,7 @@ export default function ParentAppointmentsPage() {
     setSelectedAppointment(null);
   };
 
-  const handleCalendarDayClick = (day: any) => {
+  const handleCalendarDayClick = (day: CalendarDay) => {
     if (day.hasAppointment && day.appointments.length > 0) {
       // Show the first appointment for this day
       setSelectedAppointment(day.appointments[0]);

@@ -18,8 +18,6 @@ import {
 import {
   useParentProgress,
   ParentObjective,
-  ParentSessionNote,
-  ParentEvaluation,
 } from "@/hooks/use-parent-progress";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
