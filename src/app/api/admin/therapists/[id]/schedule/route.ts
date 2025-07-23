@@ -130,13 +130,47 @@ export async function GET(
     const endDate = new Date(parseInt(year), parseInt(month), 0); // Last day of the month
 
     const { id: therapistId } = await params;
+
+    // Debug logging
+    console.log("🔍 API Debug - Fetching appointments:", {
+      therapistId,
+      year,
+      month,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    });
+
+    // First, let's check if there are ANY appointments for this therapist
+    const allAppointmentsForTherapist = await prisma.appointment.findMany({
+      where: {
+        therapistId,
+      },
+      select: {
+        id: true,
+        date: true,
+        startTime: true,
+        endTime: true,
+        type: true,
+        status: true,
+      },
+      orderBy: {
+        date: "asc",
+      },
+    });
+
+    console.log("🔍 API Debug - All appointments for therapist:", {
+      totalAppointments: allAppointmentsForTherapist.length,
+      appointments: allAppointmentsForTherapist.slice(0, 5), // Show first 5
+    });
+
+    // Temporarily remove date filter to see if there are any appointments at all
     const appointments = await prisma.appointment.findMany({
       where: {
         therapistId,
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
+        // date: {
+        //   gte: startDate,
+        //   lte: endDate,
+        // },
         status: {
           notIn: ["CANCELLED", "RESCHEDULED"],
         },
@@ -153,6 +187,11 @@ export async function GET(
       orderBy: {
         date: "asc",
       },
+    });
+
+    console.log("🔍 API Debug - Filtered appointments for month:", {
+      filteredAppointments: appointments.length,
+      appointments: appointments,
     });
 
     // Transform the data to match the expected interface
