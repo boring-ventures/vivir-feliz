@@ -22,6 +22,7 @@ export type AdminUser = {
     | "NEUROPSYCHOLOGIST"
     | "COORDINATOR"
     | null;
+  canTakeConsultations: boolean | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -44,6 +45,7 @@ export type CreateUserData = {
     | "ASD_THERAPIST"
     | "NEUROPSYCHOLOGIST"
     | "COORDINATOR";
+  canTakeConsultations?: boolean | null;
   password: string;
 };
 
@@ -64,6 +66,7 @@ export type UpdateUserData = {
     | "NEUROPSYCHOLOGIST"
     | "COORDINATOR"
     | null;
+  canTakeConsultations?: boolean | null;
   active?: boolean;
 };
 
