@@ -66,6 +66,13 @@ interface Appointment {
     phone?: string;
     email?: string;
   };
+  proposal?: {
+    id: string;
+    timeAvailability?: Record<string, { morning: boolean; afternoon: boolean }>;
+    title?: string;
+    description?: string;
+    status?: string;
+  };
 }
 
 interface AppointmentDetailsModalProps {
@@ -288,6 +295,47 @@ export function AppointmentDetailsModal({
                 </div>
               )}
 
+              {/* Time Availability Display */}
+              {appointment.proposal?.timeAvailability && (
+                <div className="md:col-span-2 mt-2 p-3 bg-blue-100 rounded border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium text-blue-800">
+                      Disponibilidad de Horarios:
+                    </span>
+                  </div>
+                  <div className="text-sm text-blue-700">
+                    {Object.entries(appointment.proposal.timeAvailability)
+                      .filter(
+                        ([_, periods]) => periods.morning || periods.afternoon
+                      )
+                      .map(([day, periods]) => {
+                        const dayLabel =
+                          {
+                            monday: "Lunes",
+                            tuesday: "Martes",
+                            wednesday: "Miércoles",
+                            thursday: "Jueves",
+                            friday: "Viernes",
+                            saturday: "Sábado",
+                            sunday: "Domingo",
+                          }[day] || day;
+
+                        const availablePeriods = [];
+                        if (periods.morning) availablePeriods.push("Mañana");
+                        if (periods.afternoon) availablePeriods.push("Tarde");
+
+                        return availablePeriods.length > 0 ? (
+                          <span key={day} className="inline-block mr-3 mb-1">
+                            <span className="font-medium">{dayLabel}:</span>{" "}
+                            {availablePeriods.join(", ")}
+                          </span>
+                        ) : null;
+                      })}
+                  </div>
+                </div>
+              )}
+
               {appointment.patient?.dateOfBirth && (
                 <div>
                   <span className="font-medium">Fecha de Nacimiento:</span>
@@ -442,6 +490,47 @@ export function AppointmentDetailsModal({
                 </div>
               )}
 
+              {/* Time Availability Display */}
+              {appointment.proposal?.timeAvailability && (
+                <div className="md:col-span-2 mt-2 p-3 bg-purple-100 rounded border border-purple-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="w-4 h-4 text-purple-600" />
+                    <span className="font-medium text-purple-800">
+                      Disponibilidad de Horarios:
+                    </span>
+                  </div>
+                  <div className="text-sm text-purple-700">
+                    {Object.entries(appointment.proposal.timeAvailability)
+                      .filter(
+                        ([_, periods]) => periods.morning || periods.afternoon
+                      )
+                      .map(([day, periods]) => {
+                        const dayLabel =
+                          {
+                            monday: "Lunes",
+                            tuesday: "Martes",
+                            wednesday: "Miércoles",
+                            thursday: "Jueves",
+                            friday: "Viernes",
+                            saturday: "Sábado",
+                            sunday: "Domingo",
+                          }[day] || day;
+
+                        const availablePeriods = [];
+                        if (periods.morning) availablePeriods.push("Mañana");
+                        if (periods.afternoon) availablePeriods.push("Tarde");
+
+                        return availablePeriods.length > 0 ? (
+                          <span key={day} className="inline-block mr-3 mb-1">
+                            <span className="font-medium">{dayLabel}:</span>{" "}
+                            {availablePeriods.join(", ")}
+                          </span>
+                        ) : null;
+                      })}
+                  </div>
+                </div>
+              )}
+
               {appointment.therapist?.phone && (
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-gray-500" />
@@ -459,6 +548,48 @@ export function AppointmentDetailsModal({
               )}
             </div>
           </div>
+
+          {/* Time Availability Information */}
+          {appointment.proposal?.timeAvailability && (
+            <div className="bg-indigo-50 rounded-lg p-4">
+              <h3 className="font-semibold text-indigo-900 mb-3 flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Disponibilidad de Horarios
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(appointment.proposal.timeAvailability).map(
+                  ([day, periods]) => {
+                    const dayLabel =
+                      {
+                        monday: "Lunes",
+                        tuesday: "Martes",
+                        wednesday: "Miércoles",
+                        thursday: "Jueves",
+                        friday: "Viernes",
+                        saturday: "Sábado",
+                        sunday: "Domingo",
+                      }[day] || day;
+
+                    const availablePeriods = [];
+                    if (periods.morning) availablePeriods.push("Mañana");
+                    if (periods.afternoon) availablePeriods.push("Tarde");
+
+                    if (availablePeriods.length === 0) return null;
+
+                    return (
+                      <div key={day} className="flex items-center gap-2">
+                        <span className="font-medium">{dayLabel}:</span>
+                        <span className="text-sm text-gray-600">
+                          {availablePeriods.join(", ")}
+                        </span>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Session Information */}
           {(appointment.notes ||
