@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentStatus, AppointmentType } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,12 +35,14 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const skip = (page - 1) * limit;
 
-    // Build where clause
+    // Build where clause - always filter for CONSULTA type
     const whereClause: {
       therapistId: string;
+      type: AppointmentType;
       status?: { in: AppointmentStatus[] } | AppointmentStatus;
     } = {
       therapistId: profile.id,
+      type: AppointmentType.CONSULTA, // Only fetch CONSULTA appointments
     };
 
     if (status !== "all") {
@@ -150,7 +152,7 @@ export async function GET(request: NextRequest) {
           (1000 * 60 * 60 * 24)
       );
 
-      if (appointment.type === "ENTREVISTA") {
+      if (appointment.type === AppointmentType.ENTREVISTA) {
         priority = "alta";
       } else if (daysDiff <= 3) {
         priority = "alta";
@@ -162,7 +164,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: appointment.id,
-        appointmentId: `${appointment.type === "CONSULTA" ? "CON" : "INT"}-${appointment.id}`,
+        appointmentId: `${appointment.type === AppointmentType.CONSULTA ? "CON" : "INT"}-${appointment.id}`,
         patientName: appointment.patientName || "Nombre no disponible",
         patientAge: age,
         parentName: appointment.parentName || "No especificado",
@@ -198,6 +200,37 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Get stats for ALL CONSULTA appointments regardless of current filter
+    const allConsultationsWhereClause = {
+      therapistId: profile.id,
+      type: AppointmentType.CONSULTA,
+    };
+
+    const [allScheduled, allCompleted, allHighPriority] = await Promise.all([
+      prisma.appointment.count({
+        where: {
+          ...allConsultationsWhereClause,
+          status: {
+            in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED],
+          },
+        },
+      }),
+      prisma.appointment.count({
+        where: {
+          ...allConsultationsWhereClause,
+          status: AppointmentStatus.COMPLETED,
+        },
+      }),
+      prisma.appointment.count({
+        where: {
+          ...allConsultationsWhereClause,
+          date: {
+            lte: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // Within 3 days
+          },
+        },
+      }),
+    ]);
+
     return NextResponse.json({
       appointments: transformedAppointments,
       pagination: {
@@ -207,21 +240,11 @@ export async function GET(request: NextRequest) {
         pages: Math.ceil(total / limit),
       },
       stats: {
-        scheduled: transformedAppointments.filter((a) =>
-          ["SCHEDULED", "CONFIRMED"].includes(a.status)
-        ).length,
-        completed: transformedAppointments.filter(
-          (a) => a.status === "COMPLETED"
-        ).length,
-        highPriority: transformedAppointments.filter(
-          (a) => a.priority === "ALTA"
-        ).length,
-        consultations: transformedAppointments.filter(
-          (a) => a.type === "CONSULTA"
-        ).length,
-        interviews: transformedAppointments.filter(
-          (a) => a.type === "ENTREVISTA"
-        ).length,
+        scheduled: allScheduled,
+        completed: allCompleted,
+        highPriority: allHighPriority,
+        consultations: total, // Total consultations for current filter
+        interviews: 0, // No interviews since we only fetch CONSULTA
       },
     });
   } catch (error) {

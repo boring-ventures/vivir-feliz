@@ -14,6 +14,7 @@ interface ProposalData {
   appointmentId: string;
   quienTomaConsulta: string;
   derivacion: string;
+  timeAvailability: Record<string, { morning: boolean; afternoon: boolean }>;
   serviciosEvaluacion: ServiceData[];
   serviciosTratamiento: ServiceData[];
 }
@@ -29,6 +30,7 @@ export async function POST(
     const {
       quienTomaConsulta,
       derivacion,
+      timeAvailability,
       serviciosEvaluacion,
       serviciosTratamiento,
     } = body;
@@ -135,6 +137,7 @@ export async function POST(
             parentEmail: appointment.parentEmail,
           },
         }),
+        timeAvailability,
       },
     });
 
