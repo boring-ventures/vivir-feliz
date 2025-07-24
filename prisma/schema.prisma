@@ -116,6 +116,7 @@ model TreatmentProposal {
   endDate               DateTime?           @map("end_date")
   notes                 String?
   parentNotes           String?             @map("parent_notes")
+  timeAvailability      Json?               @map("time_availability")
   createdAt             DateTime            @default(now()) @map("created_at")
   updatedAt             DateTime            @updatedAt @map("updated_at")
   appointments          Appointment[]
@@ -153,6 +154,8 @@ model ProposalService {
   @@index([type])
   @@map("proposal_services")
 }
+
+
 
 model Payment {
   id                    String            @id @default(cuid())
