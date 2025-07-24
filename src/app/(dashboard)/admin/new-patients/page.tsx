@@ -136,6 +136,10 @@ export default function AdminNuevosPacientesPage() {
             citasProgramadas?: boolean;
             proposalData?: {
               status?: string;
+              timeAvailability?: Record<
+                string,
+                { morning: boolean; afternoon: boolean }
+              >;
               consultationRequest?: {
                 childName: string;
                 childDateOfBirth: string;
@@ -199,6 +203,7 @@ export default function AdminNuevosPacientesPage() {
             canScheduleAppointments:
               item.proposalData?.status === "PAYMENT_CONFIRMED" &&
               !item.citasProgramadas,
+            timeAvailability: item.proposalData?.timeAvailability,
           })
         ) as ProposalDisplayData[];
       }
@@ -967,6 +972,55 @@ export default function AdminNuevosPacientesPage() {
                     <p className="font-medium">{modalCitas.therapistName}</p>
                   </div>
                 </div>
+
+                {/* Time Availability Section */}
+                {modalCitas.timeAvailability && (
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <h4 className="font-medium mb-2 text-sm">
+                      Disponibilidad del Paciente
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {Object.entries(modalCitas.timeAvailability).map(
+                        ([day, availability]) => (
+                          <div
+                            key={day}
+                            className="flex justify-between items-center"
+                          >
+                            <span className="capitalize font-medium">
+                              {day === "monday" && "Lunes"}
+                              {day === "tuesday" && "Martes"}
+                              {day === "wednesday" && "Miércoles"}
+                              {day === "thursday" && "Jueves"}
+                              {day === "friday" && "Viernes"}
+                              {day === "saturday" && "Sábado"}
+                              {day === "sunday" && "Domingo"}
+                            </span>
+                            <div className="flex gap-1">
+                              <Badge
+                                variant={
+                                  availability.morning ? "default" : "secondary"
+                                }
+                                className="text-xs px-1 py-0.5"
+                              >
+                                Mañana
+                              </Badge>
+                              <Badge
+                                variant={
+                                  availability.afternoon
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className="text-xs px-1 py-0.5"
+                              >
+                                Tarde
+                              </Badge>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Services display with current service highlight */}
                 {proposalServices && (
