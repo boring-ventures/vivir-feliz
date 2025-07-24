@@ -43,15 +43,12 @@ export default function TherapistAnalysisPage() {
   const filteredAppointments =
     data?.appointments?.filter(
       (appointment) =>
-        appointment.type === "CONSULTA" &&
-        (appointment.patientName
+        appointment.patientName
           .toLowerCase()
           .includes(busqueda.toLowerCase()) ||
-          appointment.parentName
-            .toLowerCase()
-            .includes(busqueda.toLowerCase()) ||
-          appointment.notes.toLowerCase().includes(busqueda.toLowerCase()) ||
-          "consulta".includes(busqueda.toLowerCase()))
+        appointment.parentName.toLowerCase().includes(busqueda.toLowerCase()) ||
+        appointment.notes.toLowerCase().includes(busqueda.toLowerCase()) ||
+        "consulta".includes(busqueda.toLowerCase())
     ) || [];
 
   const getPrioridadColor = (prioridad: string) => {
@@ -125,7 +122,7 @@ export default function TherapistAnalysisPage() {
                   Análisis de Consultas
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  Gestiona y analiza las consultas y entrevistas programadas
+                  Gestiona y analiza las consultas programadas
                 </p>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
                   <p className="text-sm text-blue-800">
@@ -249,7 +246,7 @@ export default function TherapistAnalysisPage() {
                       Consultas
                     </p>
                     <p className="text-3xl font-bold text-purple-600">
-                      {data?.stats?.consultations || 0}
+                      {filteredAppointments.length}
                     </p>
                   </div>
                   <div className="p-3 bg-purple-100 rounded-lg">

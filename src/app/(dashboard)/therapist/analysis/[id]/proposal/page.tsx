@@ -13,7 +13,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, Calculator, Send } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  ChevronLeft,
+  Calculator,
+  Send,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
@@ -46,6 +57,23 @@ export default function TerapeutaPropuestaServicioPage() {
   const [terapeutasTratamiento, setTerapeutasTratamiento] = useState<
     Record<string, string>
   >({});
+
+  // Time availability state
+  const [timeAvailability, setTimeAvailability] = useState<
+    Record<string, { morning: boolean; afternoon: boolean }>
+  >({
+    monday: { morning: false, afternoon: false },
+    tuesday: { morning: false, afternoon: false },
+    wednesday: { morning: false, afternoon: false },
+    thursday: { morning: false, afternoon: false },
+    friday: { morning: false, afternoon: false },
+    saturday: { morning: false, afternoon: false },
+  });
+
+  // Collapsible states
+  const [evaluacionOpen, setEvaluacionOpen] = useState(false);
+  const [tratamientoOpen, setTratamientoOpen] = useState(false);
+  const [disponibilidadOpen, setDisponibilidadOpen] = useState(false);
 
   // Mapping between service codes and required specialties
   const serviceSpecialtyMapping: Record<string, string> = {
@@ -94,7 +122,19 @@ export default function TerapeutaPropuestaServicioPage() {
     {
       codigo: "EV-INT",
       servicio: "Evaluación Integral",
-      descripcion: "Evaluación Específica",
+      descripcion: "",
+      sesiones: 4,
+    },
+    {
+      codigo: "",
+      servicio: "Evaluación Específica",
+      descripcion: "",
+      sesiones: 4,
+    },
+    {
+      codigo: "EV-INT D",
+      servicio: "Evaluación Integral Screening",
+      descripcion: "",
       sesiones: 4,
     },
     {
@@ -291,6 +331,20 @@ export default function TerapeutaPropuestaServicioPage() {
     setTerapeutasTratamiento((prev) => ({ ...prev, [codigo]: terapeuta }));
   };
 
+  const handleTimeAvailabilityChange = (
+    day: string,
+    period: "morning" | "afternoon",
+    checked: boolean
+  ) => {
+    setTimeAvailability((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [period]: checked,
+      },
+    }));
+  };
+
   const calcularCosto = () => {
     console.log("Calculando costo...");
     // TODO: Implement cost calculation logic
@@ -336,6 +390,21 @@ export default function TerapeutaPropuestaServicioPage() {
       return false;
     }
 
+    // Check if at least one time slot is selected
+    const hasTimeAvailability = Object.values(timeAvailability).some(
+      (day) => day.morning || day.afternoon
+    );
+
+    if (!hasTimeAvailability) {
+      toast({
+        title: "Error de validación",
+        description:
+          "Debe seleccionar al menos un horario disponible para el tratamiento",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     // Check if selected services have therapists assigned
     const selectedEvaluacion = Object.entries(serviciosEvaluacion).filter(
       ([, selected]) => selected
@@ -374,6 +443,7 @@ export default function TerapeutaPropuestaServicioPage() {
         appointmentId,
         quienTomaConsulta,
         derivacion,
+        timeAvailability,
         serviciosEvaluacion: Object.entries(serviciosEvaluacion)
           .filter(([, selected]) => selected)
           .map(([codigo]) => {
@@ -607,216 +677,381 @@ export default function TerapeutaPropuestaServicioPage() {
             </div>
 
             {/* Servicios de Evaluación */}
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="bg-gray-800 text-white p-4 rounded-t-lg">
-                <h3 className="text-lg font-semibold text-center">
-                  EVALUACIÓN
-                </h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 border-b">
-                      <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
-                        Código
-                      </th>
-                      <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
-                        Servicio de Evaluación
-                      </th>
-                      <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
-                        Descripción
-                      </th>
-                      <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
-                        N° Sesiones
-                      </th>
-                      <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
-                        Terapeuta
-                      </th>
-                      <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
-                        Seleccionar
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {serviciosEvaluacionData.map((servicio, index) => (
-                      <tr
-                        key={`${servicio.codigo}-${index}`}
-                        className="hover:bg-gray-50"
-                      >
-                        <td className="border border-gray-300 p-3 font-mono text-sm">
-                          {servicio.codigo}
-                        </td>
-                        <td className="border border-gray-300 p-3">
-                          {servicio.servicio}
-                        </td>
-                        <td className="border border-gray-300 p-3 text-sm text-gray-600">
-                          {servicio.descripcion}
-                        </td>
-                        <td className="border border-gray-300 p-3 text-center">
-                          {servicio.sesiones}
-                        </td>
-                        <td className="border border-gray-300 p-3">
-                          <Select
-                            value={terapeutasEvaluacion[servicio.codigo] || ""}
-                            onValueChange={(value) =>
-                              handleTerapeutaEvaluacionChange(
-                                servicio.codigo,
-                                value
-                              )
-                            }
-                            disabled={
-                              !serviciosEvaluacion[servicio.codigo] ||
-                              therapistsLoading
-                            }
+            <Collapsible open={evaluacionOpen} onOpenChange={setEvaluacionOpen}>
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between w-full p-4 text-gray-900 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
+                  <h3 className="text-lg font-semibold">EVALUACIÓN</h3>
+                  {evaluacionOpen ? (
+                    <ChevronUp className="h-5 w-5" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5" />
+                  )}
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50 border-b">
+                          <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
+                            Código
+                          </th>
+                          <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
+                            Servicio de Evaluación
+                          </th>
+                          <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
+                            Descripción
+                          </th>
+                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
+                            N° Sesiones
+                          </th>
+                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
+                            Terapeuta
+                          </th>
+                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
+                            Seleccionar
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {serviciosEvaluacionData.map((servicio, index) => (
+                          <tr
+                            key={`${servicio.codigo}-${index}`}
+                            className="hover:bg-gray-50"
                           >
-                            <SelectTrigger className="text-xs h-8">
-                              <SelectValue placeholder="Seleccionar terapeuta" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getTherapistsByService(servicio.codigo).length >
-                              0 ? (
-                                getTherapistsByService(servicio.codigo).map(
-                                  (therapist) => (
-                                    <SelectItem
-                                      key={therapist.id}
-                                      value={therapist.id}
-                                    >
-                                      {getTherapistDisplayName(therapist)}
-                                    </SelectItem>
+                            <td className="border border-gray-300 p-3 font-mono text-sm">
+                              {servicio.codigo}
+                            </td>
+                            <td className="border border-gray-300 p-3">
+                              {servicio.servicio}
+                            </td>
+                            <td className="border border-gray-300 p-3 text-sm text-gray-600">
+                              {servicio.descripcion}
+                            </td>
+                            <td className="border border-gray-300 p-3 text-center">
+                              {servicio.sesiones}
+                            </td>
+                            <td className="border border-gray-300 p-3">
+                              <Select
+                                value={
+                                  terapeutasEvaluacion[servicio.codigo] || ""
+                                }
+                                onValueChange={(value) =>
+                                  handleTerapeutaEvaluacionChange(
+                                    servicio.codigo,
+                                    value
                                   )
-                                )
-                              ) : (
-                                <div className="px-2 py-1.5 text-sm text-gray-500">
-                                  {therapistsLoading
-                                    ? "Cargando..."
-                                    : "No hay terapeutas disponibles"}
-                                </div>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="border border-gray-300 p-3 text-center">
-                          <Checkbox
-                            checked={
-                              serviciosEvaluacion[servicio.codigo] || false
-                            }
-                            onCheckedChange={(checked) =>
-                              handleEvaluacionChange(
-                                servicio.codigo,
-                                checked as boolean
-                              )
-                            }
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                                }
+                                disabled={
+                                  !serviciosEvaluacion[servicio.codigo] ||
+                                  therapistsLoading
+                                }
+                              >
+                                <SelectTrigger className="text-xs h-8">
+                                  <SelectValue placeholder="Seleccionar terapeuta" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {getTherapistsByService(servicio.codigo)
+                                    .length > 0 ? (
+                                    getTherapistsByService(servicio.codigo).map(
+                                      (therapist) => (
+                                        <SelectItem
+                                          key={therapist.id}
+                                          value={therapist.id}
+                                        >
+                                          {getTherapistDisplayName(therapist)}
+                                        </SelectItem>
+                                      )
+                                    )
+                                  ) : (
+                                    <div className="px-2 py-1.5 text-sm text-gray-500">
+                                      {therapistsLoading
+                                        ? "Cargando..."
+                                        : "No hay terapeutas disponibles"}
+                                    </div>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="border border-gray-300 p-3 text-center">
+                              <Checkbox
+                                checked={
+                                  serviciosEvaluacion[servicio.codigo] || false
+                                }
+                                onCheckedChange={(checked) =>
+                                  handleEvaluacionChange(
+                                    servicio.codigo,
+                                    checked as boolean
+                                  )
+                                }
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Servicios de Tratamiento */}
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="bg-gray-800 text-white p-4 rounded-t-lg">
-                <h3 className="text-lg font-semibold text-center">
-                  TRATAMIENTO
-                </h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 border-b">
-                      <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
-                        Código
-                      </th>
-                      <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
-                        Servicio
-                      </th>
-                      <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
-                        N° Sesiones
-                      </th>
-                      <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
-                        Terapeuta
-                      </th>
-                      <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
-                        Seleccionar
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {serviciosTratamientoData.map((servicio, index) => (
-                      <tr
-                        key={`${servicio.codigo}-${index}`}
-                        className="hover:bg-gray-50"
-                      >
-                        <td className="border border-gray-300 p-3 font-mono text-sm">
-                          {servicio.codigo}
-                        </td>
-                        <td className="border border-gray-300 p-3">
-                          {servicio.servicio}
-                        </td>
-                        <td className="border border-gray-300 p-3 text-center">
-                          {servicio.sesiones || ""}
-                        </td>
-                        <td className="border border-gray-300 p-3">
-                          <Select
-                            value={terapeutasTratamiento[servicio.codigo] || ""}
-                            onValueChange={(value) =>
-                              handleTerapeutaTratamientoChange(
-                                servicio.codigo,
-                                value
-                              )
-                            }
-                            disabled={
-                              !serviciosTratamiento[servicio.codigo] ||
-                              therapistsLoading
-                            }
+            <Collapsible
+              open={tratamientoOpen}
+              onOpenChange={setTratamientoOpen}
+            >
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between w-full p-4 text-gray-900 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
+                  <h3 className="text-lg font-semibold">TRATAMIENTO</h3>
+                  {tratamientoOpen ? (
+                    <ChevronUp className="h-5 w-5" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5" />
+                  )}
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50 border-b">
+                          <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
+                            Código
+                          </th>
+                          <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
+                            Servicio
+                          </th>
+                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
+                            N° Sesiones
+                          </th>
+                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
+                            Terapeuta
+                          </th>
+                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
+                            Seleccionar
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {serviciosTratamientoData.map((servicio, index) => (
+                          <tr
+                            key={`${servicio.codigo}-${index}`}
+                            className="hover:bg-gray-50"
                           >
-                            <SelectTrigger className="text-xs h-8">
-                              <SelectValue placeholder="Seleccionar terapeuta" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getTherapistsByService(servicio.codigo).length >
-                              0 ? (
-                                getTherapistsByService(servicio.codigo).map(
-                                  (therapist) => (
-                                    <SelectItem
-                                      key={therapist.id}
-                                      value={therapist.id}
-                                    >
-                                      {getTherapistDisplayName(therapist)}
-                                    </SelectItem>
+                            <td className="border border-gray-300 p-3 font-mono text-sm">
+                              {servicio.codigo}
+                            </td>
+                            <td className="border border-gray-300 p-3">
+                              {servicio.servicio}
+                            </td>
+                            <td className="border border-gray-300 p-3 text-center">
+                              {servicio.sesiones || ""}
+                            </td>
+                            <td className="border border-gray-300 p-3">
+                              <Select
+                                value={
+                                  terapeutasTratamiento[servicio.codigo] || ""
+                                }
+                                onValueChange={(value) =>
+                                  handleTerapeutaTratamientoChange(
+                                    servicio.codigo,
+                                    value
                                   )
-                                )
-                              ) : (
-                                <div className="px-2 py-1.5 text-sm text-gray-500">
-                                  {therapistsLoading
-                                    ? "Cargando..."
-                                    : "No hay terapeutas disponibles"}
-                                </div>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="border border-gray-300 p-3 text-center">
-                          <Checkbox
-                            checked={
-                              serviciosTratamiento[servicio.codigo] || false
-                            }
-                            onCheckedChange={(checked) =>
-                              handleTratamientoChange(
-                                servicio.codigo,
-                                checked as boolean
-                              )
-                            }
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                                }
+                                disabled={
+                                  !serviciosTratamiento[servicio.codigo] ||
+                                  therapistsLoading
+                                }
+                              >
+                                <SelectTrigger className="text-xs h-8">
+                                  <SelectValue placeholder="Seleccionar terapeuta" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {getTherapistsByService(servicio.codigo)
+                                    .length > 0 ? (
+                                    getTherapistsByService(servicio.codigo).map(
+                                      (therapist) => (
+                                        <SelectItem
+                                          key={therapist.id}
+                                          value={therapist.id}
+                                        >
+                                          {getTherapistDisplayName(therapist)}
+                                        </SelectItem>
+                                      )
+                                    )
+                                  ) : (
+                                    <div className="px-2 py-1.5 text-sm text-gray-500">
+                                      {therapistsLoading
+                                        ? "Cargando..."
+                                        : "No hay terapeutas disponibles"}
+                                    </div>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="border border-gray-300 p-3 text-center">
+                              <Checkbox
+                                checked={
+                                  serviciosTratamiento[servicio.codigo] || false
+                                }
+                                onCheckedChange={(checked) =>
+                                  handleTratamientoChange(
+                                    servicio.codigo,
+                                    checked as boolean
+                                  )
+                                }
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Disponibilidad de Tiempo */}
+            <Collapsible
+              open={disponibilidadOpen}
+              onOpenChange={setDisponibilidadOpen}
+            >
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between w-full p-4 text-gray-900 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
+                  <h3 className="text-lg font-semibold">
+                    DISPONIBILIDAD DE TIEMPO
+                  </h3>
+                  {disponibilidadOpen ? (
+                    <ChevronUp className="h-5 w-5" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5" />
+                  )}
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                  <div className="mb-4">
+                    <h4 className="text-md font-medium text-gray-900 mb-2">
+                      Marque los horarios disponibles para el tratamiento:
+                    </h4>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Seleccione las mañanas y tardes en las que el paciente
+                      puede asistir
+                    </p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">
+                        <strong>Nota:</strong> Esta información ayudará a
+                        programar las sesiones de tratamiento en los horarios
+                        más convenientes para el paciente.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50 border-b">
+                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
+                            Día
+                          </th>
+                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
+                            Mañana
+                          </th>
+                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
+                            Tarde
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { key: "monday", label: "Lunes" },
+                          { key: "tuesday", label: "Martes" },
+                          { key: "wednesday", label: "Miércoles" },
+                          { key: "thursday", label: "Jueves" },
+                          { key: "friday", label: "Viernes" },
+                        ].map((day) => (
+                          <tr key={day.key} className="hover:bg-gray-50">
+                            <td className="border border-gray-300 p-3 text-center font-medium">
+                              {day.label}
+                            </td>
+                            <td className="border border-gray-300 p-3 text-center">
+                              <Checkbox
+                                checked={
+                                  timeAvailability[day.key]?.morning || false
+                                }
+                                onCheckedChange={(checked) =>
+                                  handleTimeAvailabilityChange(
+                                    day.key,
+                                    "morning",
+                                    checked as boolean
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="border border-gray-300 p-3 text-center">
+                              <Checkbox
+                                checked={
+                                  timeAvailability[day.key]?.afternoon || false
+                                }
+                                onCheckedChange={(checked) =>
+                                  handleTimeAvailabilityChange(
+                                    day.key,
+                                    "afternoon",
+                                    checked as boolean
+                                  )
+                                }
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Summary of selected time slots */}
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <h5 className="text-sm font-medium text-gray-900 mb-2">
+                      Horarios seleccionados:
+                    </h5>
+                    <div className="text-sm text-gray-600">
+                      {(() => {
+                        const selectedSlots = Object.entries(timeAvailability)
+                          .filter(
+                            ([, periods]) =>
+                              periods.morning || periods.afternoon
+                          )
+                          .map(([dayKey, periods]) => {
+                            const dayLabel = {
+                              monday: "Lunes",
+                              tuesday: "Martes",
+                              wednesday: "Miércoles",
+                              thursday: "Jueves",
+                              friday: "Viernes",
+                              saturday: "Sábado",
+                            }[dayKey];
+
+                            const periodsList = [];
+                            if (periods.morning) periodsList.push("Mañana");
+                            if (periods.afternoon) periodsList.push("Tarde");
+
+                            return `${dayLabel}: ${periodsList.join(", ")}`;
+                          });
+
+                        return selectedSlots.length > 0 ? (
+                          <p>{selectedSlots.join(" | ")}</p>
+                        ) : (
+                          <p className="text-gray-500 italic">
+                            Ningún horario seleccionado
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Botones de Acción */}
             <div className="flex justify-between items-center pt-6 border-t border-gray-200">
