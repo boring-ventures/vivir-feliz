@@ -86,6 +86,13 @@ interface Appointment {
     phone?: string;
     email?: string;
   };
+  proposal?: {
+    id: string;
+    timeAvailability?: Record<string, { morning: boolean; afternoon: boolean }>;
+    title?: string;
+    description?: string;
+    status?: string;
+  };
 }
 
 // Fetch appointments for admin
