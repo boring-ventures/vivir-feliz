@@ -434,6 +434,16 @@ export default function AdminProposalEditPage() {
             }
           }
 
+          // If updating the cost field, ensure it's a number
+          if (field === "cost") {
+            updatedEvaluation.cost = Number(value) || 0;
+          }
+
+          // If updating the sessions field, ensure it's a number
+          if (field === "sessions") {
+            updatedEvaluation.sessions = Number(value) || 1;
+          }
+
           return updatedEvaluation;
         }
         return evaluation;
@@ -485,6 +495,16 @@ export default function AdminProposalEditPage() {
             }
           }
 
+          // If updating the cost field, ensure it's a number
+          if (field === "cost") {
+            updatedTreatment.cost = Number(value) || 0;
+          }
+
+          // If updating the sessions field, ensure it's a number
+          if (field === "sessions") {
+            updatedTreatment.sessions = Number(value) || 1;
+          }
+
           return updatedTreatment;
         }
         return treatment;
@@ -498,10 +518,13 @@ export default function AdminProposalEditPage() {
 
   // Calculations
   const totalEvaluations = evaluations.reduce(
-    (sum, item) => sum + item.cost,
+    (sum, item) => sum + (Number(item.cost) || 0),
     0
   );
-  const totalTreatments = treatments.reduce((sum, item) => sum + item.cost, 0);
+  const totalTreatments = treatments.reduce(
+    (sum, item) => sum + (Number(item.cost) || 0),
+    0
+  );
   const totalGeneral = totalEvaluations + totalTreatments;
 
   // Update the saveProposal function to include therapist IDs
