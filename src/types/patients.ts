@@ -211,6 +211,7 @@ export interface ProposalDisplayData {
   appointmentsScheduled: boolean;
   canConfirmPayment: boolean;
   canScheduleAppointments: boolean;
+  timeAvailability?: Record<string, { morning: boolean; afternoon: boolean }>;
 }
 
 export interface AppointmentCalendarData {
