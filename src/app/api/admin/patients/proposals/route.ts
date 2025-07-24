@@ -155,6 +155,7 @@ export async function GET(request: NextRequest) {
             sessionPrice: proposal.sessionPrice,
             totalAmount: proposal.totalAmount,
             status: proposal.status,
+            timeAvailability: proposal.timeAvailability,
             consultationRequest: proposal.consultationRequest
               ? {
                   childName: proposal.consultationRequest.childName,
