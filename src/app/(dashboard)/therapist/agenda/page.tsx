@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -10,22 +11,20 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Save,
   Bell,
   User,
   Info,
   Loader2,
-  Sun,
-  Trash2,
-  Calendar,
   X,
+  Play,
+  CheckCircle,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useTherapistsWithSchedule } from "@/hooks/useTherapists";
 import {
-  useTherapistsWithSchedule,
-  useUpdateTherapistSchedule,
-} from "@/hooks/useTherapists";
-import { useTherapistAppointments } from "@/hooks/use-therapist-appointments";
+  useTherapistAppointments,
+  useUpdateAppointmentStatus,
+} from "@/hooks/use-therapist-appointments";
 import {
   TherapistProfile,
   WeeklyAvailability,
@@ -33,6 +32,7 @@ import {
   TherapistAppointment,
 } from "@/types/therapists";
 import { SpecialtyType } from "@prisma/client";
+import { APPOINTMENT_STATUS_LABELS } from "@/types/patients";
 
 // Utility functions
 const getSpecialtyDisplay = (specialty: SpecialtyType | null): string => {
@@ -117,20 +117,22 @@ const diasSemanaDisplay = [
 ];
 
 export default function TherapistAgendaPage() {
+  const router = useRouter();
   const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [configurationMode, setConfigurationMode] = useState(false);
   const [showLegend, setShowLegend] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<{
     id: string;
     startTime: string;
     endTime?: string;
     patientName?: string;
+    patientId?: string | null;
     type?: string;
     status?: string;
     date?: string;
     parentPhone?: string;
   } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
 
   const { profile, isLoading: authLoading } = useCurrentUser();
 
@@ -148,7 +150,7 @@ export default function TherapistAgendaPage() {
     error: appointmentsError,
   } = useTherapistAppointments({ status: "all", limit: 1000 });
 
-  const updateScheduleMutation = useUpdateTherapistSchedule();
+  const updateAppointmentStatusMutation = useUpdateAppointmentStatus();
 
   // Find current therapist's profile and merge with appointments
   const currentTherapist = useMemo(() => {
@@ -163,6 +165,7 @@ export default function TherapistAgendaPage() {
         (appointment: {
           id: string;
           appointmentId: string;
+          patientId: string | null;
           patientName: string;
           patientAge: number | null;
           parentName: string;
@@ -193,6 +196,7 @@ export default function TherapistAgendaPage() {
           startTime: appointment.appointmentTime,
           endTime: calculateEndTime(appointment.appointmentTime, 60), // Calculate end time (60 min sessions)
           type: appointment.type as "CONSULTA" | "ENTREVISTA",
+          patientId: appointment.patientId,
           patientName: appointment.patientName || "Paciente",
           patientAge: appointment.patientAge || null,
           parentName: appointment.parentName || "",
@@ -217,16 +221,6 @@ export default function TherapistAgendaPage() {
     const [hours, minutes] = time.split(":").map(Number);
     return hours * 60 + minutes;
   };
-
-  // State for editable availability
-  const [editableAvailability, setEditableAvailability] =
-    useState<WeeklyAvailability>({
-      lunes: [],
-      martes: [],
-      miercoles: [],
-      jueves: [],
-      viernes: [],
-    });
 
   // Initialize current week to Monday
   const getMonday = (date: Date) => {
@@ -438,11 +432,13 @@ export default function TherapistAgendaPage() {
 
   // Open appointment modal
   const openAppointmentModal = (appointment: TherapistAppointment) => {
+    console.log("Opening appointment modal with:", appointment);
     setSelectedAppointment({
       id: appointment.id,
       startTime: appointment.startTime,
       endTime: appointment.endTime,
       patientName: appointment.patientName,
+      patientId: appointment.patientId,
       type: appointment.type,
       status: appointment.status,
       date: appointment.date.toISOString(),
@@ -451,139 +447,61 @@ export default function TherapistAgendaPage() {
     setIsModalOpen(true);
   };
 
-  // Toggle availability for a time slot
-  const toggleAvailability = (day: string, time: string) => {
-    setEditableAvailability((prev) => {
-      const dayAvailability = [
-        ...(prev[day as keyof WeeklyAvailability] || []),
-      ];
-      const index = dayAvailability.indexOf(time);
-
-      if (index >= 0) {
-        dayAvailability.splice(index, 1);
-      } else {
-        dayAvailability.push(time);
-        dayAvailability.sort();
-      }
-
-      return {
-        ...prev,
-        [day]: dayAvailability,
-      };
-    });
+  // Open status change modal
+  const openStatusModal = () => {
+    setIsStatusModalOpen(true);
+    setIsModalOpen(false);
   };
 
-  // Template functions
-  const applyMorningTemplate = () => {
-    const morningHours = [
-      "08:00",
-      "08:30",
-      "09:00",
-      "09:30",
-      "10:00",
-      "10:30",
-      "11:00",
-      "11:30",
-      "12:00",
-    ];
-    const newAvailability = {} as WeeklyAvailability;
-
-    diasSemana.slice(0, 5).forEach((day) => {
-      // Only weekdays for morning template
-      newAvailability[day as keyof WeeklyAvailability] = [...morningHours];
-    });
-
-    setEditableAvailability(newAvailability);
+  // Close status modal and reopen appointment modal
+  const closeStatusModal = () => {
+    setIsStatusModalOpen(false);
+    setIsModalOpen(true);
   };
 
-  const applyAfternoonTemplate = () => {
-    const afternoonHours = [
-      "14:00",
-      "14:30",
-      "15:00",
-      "15:30",
-      "16:00",
-      "16:30",
-      "17:00",
-      "17:30",
-      "18:00",
-    ];
-    const newAvailability = {} as WeeklyAvailability;
-
-    diasSemana.slice(0, 5).forEach((day) => {
-      // Only weekdays for afternoon template
-      newAvailability[day as keyof WeeklyAvailability] = [...afternoonHours];
-    });
-
-    setEditableAvailability(newAvailability);
-  };
-
-  const applyFullDayTemplate = () => {
-    const fullDayHours = [
-      "08:00",
-      "08:30",
-      "09:00",
-      "09:30",
-      "10:00",
-      "10:30",
-      "11:00",
-      "11:30",
-      "12:00",
-      "12:30",
-      "13:00",
-      "13:30",
-      "14:00",
-      "14:30",
-      "15:00",
-      "15:30",
-      "16:00",
-      "16:30",
-      "17:00",
-      "17:30",
-      "18:00",
-    ];
-    const newAvailability = {} as WeeklyAvailability;
-
-    diasSemana.slice(0, 5).forEach((day) => {
-      // Only weekdays for full day template
-      newAvailability[day as keyof WeeklyAvailability] = [...fullDayHours];
-    });
-
-    setEditableAvailability(newAvailability);
-  };
-
-  const clearAllAvailability = () => {
-    const emptyAvailability = {} as WeeklyAvailability;
-
-    diasSemana.forEach((day) => {
-      emptyAvailability[day as keyof WeeklyAvailability] = [];
-    });
-
-    setEditableAvailability(emptyAvailability);
-  };
-
-  // Save availability changes
-  const saveAvailabilityChanges = async () => {
-    if (!currentTherapist) return;
+  // Handle status change
+  const handleStatusChange = async (newStatus: "IN_PROGRESS" | "COMPLETED") => {
+    if (!selectedAppointment) return;
 
     try {
-      await updateScheduleMutation.mutateAsync({
-        therapistId: currentTherapist.id,
-        availability: editableAvailability,
+      await updateAppointmentStatusMutation.mutateAsync({
+        appointmentId: selectedAppointment.id,
+        status: newStatus,
       });
 
       toast({
-        title: "Éxito",
-        description: "Horario actualizado correctamente",
+        title: "Estado actualizado",
+        description: `La cita ha sido marcada como ${newStatus === "COMPLETED" ? "completada" : "en progreso"}`,
       });
+
+      setIsStatusModalOpen(false);
+      setIsModalOpen(false);
+      setSelectedAppointment(null);
     } catch (error) {
-      console.error("Error saving schedule:", error);
+      console.error("Error updating appointment status:", error);
       toast({
         title: "Error",
-        description: "Error al actualizar el horario",
+        description: "No se pudo actualizar el estado de la cita",
         variant: "destructive",
       });
     }
+  };
+
+  // Navigate to patient record
+  const handleViewPatientRecord = () => {
+    console.log("Selected appointment:", selectedAppointment);
+    console.log("Patient ID:", selectedAppointment?.patientId);
+
+    if (!selectedAppointment?.patientId) {
+      toast({
+        title: "Error",
+        description: "No se pudo obtener la información del paciente",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    router.push(`/therapist/patients/${selectedAppointment.patientId}`);
   };
 
   // Navigation functions
@@ -631,14 +549,6 @@ export default function TherapistAgendaPage() {
 
     return upcomingAppointments[0] || null;
   };
-
-  // Initialize editable availability when currentTherapist changes
-  useState(() => {
-    if (currentTherapist) {
-      const currentAvailability = getTherapistAvailability(currentTherapist);
-      setEditableAvailability(currentAvailability);
-    }
-  });
 
   const nextAppointment = getNextAppointment();
 
@@ -761,85 +671,11 @@ export default function TherapistAgendaPage() {
               </Button>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={configurationMode}
-                  onCheckedChange={setConfigurationMode}
-                  id="config-mode"
-                />
-                <label htmlFor="config-mode" className="text-sm font-medium">
-                  Configurar Horarios
-                </label>
-              </div>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={saveAvailabilityChanges}
-                disabled={updateScheduleMutation.isPending}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {updateScheduleMutation.isPending
-                  ? "Guardando..."
-                  : "Guardar Cambios"}
-              </Button>
+              {/* Configuration controls removed - therapists cannot modify their own schedules */}
             </div>
           </div>
 
-          {/* Schedule Configuration */}
-          {configurationMode && (
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-4">
-                  Configuración de Horarios de Trabajo
-                </h3>
-
-                {/* Quick Templates */}
-                <div className="flex gap-2 mb-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                    onClick={applyMorningTemplate}
-                  >
-                    <Clock className="h-4 w-4 mr-2" />
-                    Mañanas (8-12)
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                    onClick={applyAfternoonTemplate}
-                  >
-                    <Sun className="h-4 w-4 mr-2" />
-                    Tardes (14-18)
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
-                    onClick={applyFullDayTemplate}
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Día Completo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                    onClick={clearAllAvailability}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Limpiar
-                  </Button>
-                </div>
-
-                <p className="text-sm text-blue-700 mb-3">
-                  Haz clic en los espacios del calendario para marcar o
-                  desmarcar horarios disponibles. También puedes usar las
-                  plantillas rápidas para configurar horarios comunes.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          {/* Schedule Configuration removed - therapists cannot modify their own schedules */}
 
           {/* Legend */}
           {showLegend && (
@@ -911,10 +747,6 @@ export default function TherapistAgendaPage() {
                         </td>
                         {diasSemana.map((dia) => {
                           const appointment = getAppointmentForSlot(dia, hora);
-                          const isAvailable =
-                            editableAvailability[
-                              dia as keyof WeeklyAvailability
-                            ]?.includes(hora);
                           const isBlocked = isTimeSlotBlocked(
                             currentTherapist,
                             dia,
@@ -957,46 +789,32 @@ export default function TherapistAgendaPage() {
                                     </span>
                                     <Badge
                                       variant={
-                                        appointment.status === "CONFIRMED"
+                                        appointment.status === "CONFIRMED" ||
+                                        appointment.status === "COMPLETED"
                                           ? "default"
-                                          : "outline"
+                                          : appointment.status === "IN_PROGRESS"
+                                            ? "secondary"
+                                            : appointment.status ===
+                                                "RESCHEDULED"
+                                              ? "secondary"
+                                              : "outline"
                                       }
-                                      className="text-xs"
+                                      className={`text-xs ${
+                                        appointment.status === "COMPLETED"
+                                          ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                          : appointment.status === "IN_PROGRESS"
+                                            ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                            : appointment.status ===
+                                                "RESCHEDULED"
+                                              ? "bg-orange-100 text-orange-800 hover:bg-orange-200"
+                                              : ""
+                                      }`}
                                     >
-                                      {appointment.status === "CONFIRMED"
-                                        ? "Confirmada"
-                                        : "Pendiente"}
+                                      {APPOINTMENT_STATUS_LABELS[
+                                        appointment.status as keyof typeof APPOINTMENT_STATUS_LABELS
+                                      ] || appointment.status}
                                     </Badge>
                                   </div>
-                                </div>
-                              ) : configurationMode ? (
-                                // Configuration mode - clickable availability
-                                <div
-                                  className={`h-full cursor-pointer flex items-center justify-center transition-colors ${
-                                    appointment
-                                      ? "cursor-not-allowed"
-                                      : "hover:bg-gray-50"
-                                  }`}
-                                  onClick={() => {
-                                    if (!appointment) {
-                                      toggleAvailability(dia, hora);
-                                    }
-                                  }}
-                                >
-                                  {isAvailable && (
-                                    <div className="w-full h-full bg-green-500 flex items-center justify-center">
-                                      <span className="text-white text-xs font-medium">
-                                        Disponible
-                                      </span>
-                                    </div>
-                                  )}
-                                  {!isAvailable && (
-                                    <div className="w-full h-full border-2 border-dashed border-blue-400 flex items-center justify-center opacity-0 hover:opacity-100">
-                                      <span className="text-blue-600 text-xs">
-                                        Click para activar
-                                      </span>
-                                    </div>
-                                  )}
                                 </div>
                               ) : isBlocked ? (
                                 // Blocked time slot
@@ -1079,19 +897,30 @@ export default function TherapistAgendaPage() {
                   <p className="text-sm text-gray-600">Estado</p>
                   <Badge
                     variant={
-                      selectedAppointment.status === "CONFIRMED"
+                      selectedAppointment.status === "CONFIRMED" ||
+                      selectedAppointment.status === "COMPLETED"
                         ? "default"
-                        : "outline"
+                        : selectedAppointment.status === "IN_PROGRESS"
+                          ? "secondary"
+                          : selectedAppointment.status === "RESCHEDULED"
+                            ? "secondary"
+                            : "outline"
                     }
                     className={
-                      selectedAppointment.status === "CONFIRMED"
+                      selectedAppointment.status === "COMPLETED"
                         ? "bg-green-100 text-green-800 hover:bg-green-200"
-                        : ""
+                        : selectedAppointment.status === "IN_PROGRESS"
+                          ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                          : selectedAppointment.status === "RESCHEDULED"
+                            ? "bg-orange-100 text-orange-800 hover:bg-orange-200"
+                            : selectedAppointment.status === "CONFIRMED"
+                              ? "bg-green-100 text-green-800 hover:bg-green-200"
+                              : ""
                     }
                   >
-                    {selectedAppointment.status === "CONFIRMED"
-                      ? "Confirmada"
-                      : "Pendiente"}
+                    {APPOINTMENT_STATUS_LABELS[
+                      selectedAppointment.status as keyof typeof APPOINTMENT_STATUS_LABELS
+                    ] || selectedAppointment.status}
                   </Badge>
                 </div>
                 <div>
@@ -1103,8 +932,129 @@ export default function TherapistAgendaPage() {
               </div>
 
               <div className="pt-4 border-t flex justify-end gap-3">
-                <Button variant="outline">Editar Cita</Button>
-                <Button>Ver Expediente</Button>
+                <Button
+                  variant="outline"
+                  onClick={openStatusModal}
+                  disabled={
+                    selectedAppointment.status === "COMPLETED" ||
+                    selectedAppointment.status === "CANCELLED" ||
+                    selectedAppointment.status === "NO_SHOW"
+                  }
+                >
+                  Cambiar Estado
+                </Button>
+                <Button
+                  onClick={handleViewPatientRecord}
+                  disabled={!selectedAppointment.patientId}
+                  variant={
+                    !selectedAppointment.patientId ? "outline" : "default"
+                  }
+                >
+                  Ver Expediente{" "}
+                  {!selectedAppointment.patientId && "(No disponible)"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Change Modal */}
+      {isStatusModalOpen && selectedAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                Cambiar Estado de la Cita
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={closeStatusModal}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="text-center mb-6">
+                <p className="text-sm text-gray-600 mb-2">
+                  Paciente: <strong>{selectedAppointment.patientName}</strong>
+                </p>
+                <p className="text-sm text-gray-600">
+                  {selectedAppointment.date
+                    ? new Date(selectedAppointment.date).toLocaleDateString()
+                    : "N/A"}{" "}
+                  a las {selectedAppointment.startTime}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {selectedAppointment.status === "SCHEDULED" ||
+                selectedAppointment.status === "CONFIRMED" ||
+                selectedAppointment.status === "RESCHEDULED" ? (
+                  <Button
+                    variant="outline"
+                    className="w-full h-16 flex items-center justify-center space-x-3 border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+                    onClick={() => handleStatusChange("IN_PROGRESS")}
+                    disabled={updateAppointmentStatusMutation.isPending}
+                  >
+                    <Play className="h-5 w-5 text-blue-600" />
+                    <div className="text-left">
+                      <div className="font-medium text-blue-800">
+                        Iniciar Sesión
+                      </div>
+                      <div className="text-sm text-blue-600">
+                        Marcar como EN PROGRESO
+                      </div>
+                    </div>
+                  </Button>
+                ) : null}
+
+                {selectedAppointment.status === "IN_PROGRESS" ? (
+                  <Button
+                    variant="outline"
+                    className="w-full h-16 flex items-center justify-center space-x-3 border-2 border-green-200 hover:border-green-300 hover:bg-green-50"
+                    onClick={() => handleStatusChange("COMPLETED")}
+                    disabled={updateAppointmentStatusMutation.isPending}
+                  >
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <div className="text-left">
+                      <div className="font-medium text-green-800">
+                        Completar Sesión
+                      </div>
+                      <div className="text-sm text-green-600">
+                        Marcar como COMPLETADA
+                      </div>
+                    </div>
+                  </Button>
+                ) : null}
+
+                {selectedAppointment.status === "COMPLETED" && (
+                  <div className="text-center py-4">
+                    <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                    <p className="text-green-800 font-medium">
+                      Sesión Completada
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Esta cita ya ha sido marcada como completada
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {updateAppointmentStatusMutation.isPending && (
+                <div className="flex items-center justify-center space-x-2 text-blue-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Actualizando estado...</span>
+                </div>
+              )}
+
+              <div className="pt-4 border-t flex justify-end">
+                <Button variant="outline" onClick={closeStatusModal}>
+                  Cancelar
+                </Button>
               </div>
             </div>
           </div>
