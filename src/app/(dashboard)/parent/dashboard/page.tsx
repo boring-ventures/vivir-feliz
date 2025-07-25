@@ -41,7 +41,17 @@ export default function ParentDashboardPage() {
       <RoleGuard allowedRoles={["PARENT"]}>
         <main className="p-6">
           <div className="text-center">
-            <p className="text-red-600">Error al cargar el dashboard</p>
+            <p className="text-red-600 mb-2">Error al cargar el dashboard</p>
+            <p className="text-sm text-gray-600">
+              {error instanceof Error ? error.message : "Error desconocido"}
+            </p>
+            <Button
+              onClick={() => window.location.reload()}
+              className="mt-4"
+              variant="outline"
+            >
+              Reintentar
+            </Button>
           </div>
         </main>
       </RoleGuard>
@@ -61,6 +71,10 @@ export default function ParentDashboardPage() {
     recentDocuments: [],
     recentActivity: [],
   };
+
+  // Debug logging
+  console.log("Parent dashboard - Data received:", data);
+  console.log("Parent dashboard - Dashboard data:", dashboardData);
   return (
     <RoleGuard allowedRoles={["PARENT"]}>
       <main className="p-6">
