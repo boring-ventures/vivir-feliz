@@ -1009,7 +1009,7 @@ export default function TerapeutaPacientesPage() {
                               new Date(a.date).getTime()
                           )
                           .map((appointment: AppointmentWithRelations) => {
-                            const hasComments = appointment.sessionNotes;
+                            const hasComments = appointment.sessionNote;
                             const appointmentDate = new Date(
                               appointment.date
                             ).toLocaleDateString("es-ES", {
@@ -1073,9 +1073,24 @@ export default function TerapeutaPacientesPage() {
                                           Comentario de la sesión:
                                         </label>
                                         <p className="text-sm text-gray-800">
-                                          {appointment.sessionNotes ||
+                                          {appointment.sessionNote
+                                            ?.sessionComment ||
                                             "Sin comentario específico"}
                                         </p>
+                                        {appointment.sessionNote
+                                          ?.parentMessage && (
+                                          <div className="mt-3 pt-3 border-t border-gray-200">
+                                            <label className="text-xs font-medium text-gray-600 block mb-1">
+                                              Mensaje para el padre:
+                                            </label>
+                                            <p className="text-sm text-gray-800 italic">
+                                              {
+                                                appointment.sessionNote
+                                                  .parentMessage
+                                              }
+                                            </p>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   ) : (

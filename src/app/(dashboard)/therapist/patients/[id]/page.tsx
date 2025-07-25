@@ -209,9 +209,19 @@ export default function PatientHistoryPage() {
 
   // Calculate treatment progress
   const totalSessions = patient.treatmentProposals?.[0]?.totalSessions || 0;
+  const scheduledSessions = appointments.filter(
+    (apt: Appointment) =>
+      apt.status === "SCHEDULED" || apt.status === "CONFIRMED"
+  ).length;
+  const totalScheduledSessions = completedSessions.length + scheduledSessions;
+
+  // Use the higher value between totalSessions from proposal and totalScheduledSessions
+  const finalTotalSessions = Math.max(totalSessions, totalScheduledSessions);
   const completedCount = completedSessions.length;
   const progressPercentage =
-    totalSessions > 0 ? Math.round((completedCount / totalSessions) * 100) : 0;
+    finalTotalSessions > 0
+      ? Math.round((completedCount / finalTotalSessions) * 100)
+      : 0;
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-ES", {
@@ -453,7 +463,7 @@ export default function PatientHistoryPage() {
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-semibold">Historial de Sesiones</h3>
             <div className="text-sm text-gray-600">
-              {completedCount} de {totalSessions} sesiones completadas
+              {completedCount} de {finalTotalSessions} sesiones completadas
             </div>
           </div>
 
@@ -467,7 +477,7 @@ export default function PatientHistoryPage() {
                 </div>
                 <Progress value={progressPercentage} className="h-3" />
                 <p className="text-xs text-gray-500">
-                  {completedCount} sesiones completadas de {totalSessions}{" "}
+                  {completedCount} sesiones completadas de {finalTotalSessions}{" "}
                   planificadas
                 </p>
               </div>
