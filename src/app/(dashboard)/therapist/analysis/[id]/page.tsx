@@ -42,6 +42,8 @@ import {
   type AnalysisData,
 } from "@/hooks/use-analysis";
 import MedicalFormModal from "@/components/therapist/medical-form-modal";
+import DevelopmentEvaluationForm from "@/components/therapist/development-evaluation-form";
+import { useDevelopmentEvaluation } from "@/hooks/use-development-evaluation";
 
 export default function TherapistAnalysisDetailPage() {
   const params = useParams();
@@ -60,6 +62,9 @@ export default function TherapistAnalysisDetailPage() {
 
   const saveAnalysisMutation = useSaveAnalysis();
   const autoPopulateAnalysis = useAutoPopulateAnalysis();
+
+  const { data: developmentEvaluation, isLoading: developmentLoading } =
+    useDevelopmentEvaluation(appointmentId);
 
   const [formData, setFormData] = useState<Partial<AnalysisData>>({
     // Observación Clínica
@@ -326,6 +331,64 @@ export default function TherapistAnalysisDetailPage() {
       });
       return false;
     }
+
+    // Check development evaluation completion
+    if (!developmentEvaluation) {
+      toast({
+        title: "Evaluación de desarrollo incompleta",
+        description:
+          "Debe completar la evaluación de desarrollo antes de finalizar el análisis.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Check if at least some development areas are evaluated
+    const developmentAreas = [
+      "comunicacionYLenguaje",
+      "habilidadesGruesas",
+      "habilidadesFinas",
+      "atencionYAprendizaje",
+      "relacionConOtros",
+      "autonomiaYAdaptacion",
+    ];
+
+    const evaluatedAreas = developmentAreas.filter(
+      (area) =>
+        developmentEvaluation[area as keyof typeof developmentEvaluation]
+    );
+
+    if (evaluatedAreas.length === 0) {
+      toast({
+        title: "Evaluación de desarrollo incompleta",
+        description:
+          "Debe evaluar al menos un área de desarrollo antes de finalizar el análisis.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Check if text sections are filled (optional but recommended)
+    const hasRecommendations =
+      (developmentEvaluation.fortalezas &&
+        developmentEvaluation.fortalezas.trim()) ||
+      (developmentEvaluation.areasParaApoyar &&
+        developmentEvaluation.areasParaApoyar.trim()) ||
+      (developmentEvaluation.recomendacionCasas &&
+        developmentEvaluation.recomendacionCasas.trim()) ||
+      (developmentEvaluation.recomendacionColegio &&
+        developmentEvaluation.recomendacionColegio.trim());
+
+    if (!hasRecommendations) {
+      toast({
+        title: "Evaluación de desarrollo incompleta",
+        description:
+          "Se recomienda completar al menos una sección de texto (fortalezas, áreas para apoyar, o recomendaciones) en la evaluación de desarrollo.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     return true;
   };
 
@@ -950,7 +1013,10 @@ export default function TherapistAnalysisDetailPage() {
                 </div>
               </div>
 
-              {/* SECCIÓN 2: ANÁLISIS PROFESIONAL */}
+              {/* SECCIÓN 2: EVALUACIÓN DE DESARROLLO */}
+              <DevelopmentEvaluationForm appointmentId={appointmentId} />
+
+              {/* SECCIÓN 3: ANÁLISIS PROFESIONAL */}
               <div>
                 <div className="flex items-center space-x-3 mb-6 pb-2 border-b border-gray-200">
                   <Brain className="h-5 w-5 text-purple-600" />
@@ -1163,7 +1229,7 @@ export default function TherapistAnalysisDetailPage() {
                 <h3 className="text-sm font-semibold text-gray-700 mb-4">
                   Estado del Proceso:
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Medical Form Status */}
                   <div className="flex items-start space-x-3 p-3 rounded-lg border">
                     {analysisData?.medicalForm ? (
@@ -1240,6 +1306,76 @@ export default function TherapistAnalysisDetailPage() {
                               {isComplete
                                 ? "Completado"
                                 : `Faltan ${missingFields.length + (hasArrayValues ? 0 : 1)} campos por completar`}
+                            </p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Development Evaluation Status */}
+                  <div className="flex items-start space-x-3 p-3 rounded-lg border">
+                    {(() => {
+                      if (!developmentEvaluation) {
+                        return (
+                          <>
+                            <XCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                Evaluación de Desarrollo
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                No completado
+                              </p>
+                            </div>
+                          </>
+                        );
+                      }
+
+                      const developmentAreas = [
+                        "comunicacionYLenguaje",
+                        "habilidadesGruesas",
+                        "habilidadesFinas",
+                        "atencionYAprendizaje",
+                        "relacionConOtros",
+                        "autonomiaYAdaptacion",
+                      ];
+
+                      const evaluatedAreas = developmentAreas.filter(
+                        (area) =>
+                          developmentEvaluation[
+                            area as keyof typeof developmentEvaluation
+                          ]
+                      );
+
+                      const hasRecommendations =
+                        (developmentEvaluation.fortalezas &&
+                          developmentEvaluation.fortalezas.trim()) ||
+                        (developmentEvaluation.areasParaApoyar &&
+                          developmentEvaluation.areasParaApoyar.trim()) ||
+                        (developmentEvaluation.recomendacionCasas &&
+                          developmentEvaluation.recomendacionCasas.trim()) ||
+                        (developmentEvaluation.recomendacionColegio &&
+                          developmentEvaluation.recomendacionColegio.trim());
+
+                      const isComplete =
+                        evaluatedAreas.length > 0 && hasRecommendations;
+
+                      return (
+                        <>
+                          {isComplete ? (
+                            <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                          ) : (
+                            <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                          )}
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              Evaluación de Desarrollo
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              {isComplete
+                                ? "Completado"
+                                : `${evaluatedAreas.length}/6 áreas evaluadas${!hasRecommendations ? ", faltan recomendaciones" : ""}`}
                             </p>
                           </div>
                         </>
