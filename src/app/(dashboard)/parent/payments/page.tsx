@@ -20,17 +20,30 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-const formatDate = (dateString: string) => {
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) {
+    return "Fecha no disponible";
+  }
+
   try {
     const date = new Date(dateString);
+
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return "Fecha no disponible";
+    }
+
     return format(date, "dd/MM/yyyy", { locale: es });
   } catch {
     return "Fecha no disponible";
   }
 };
 
-const formatCurrency = (amount: number) => {
-  return `Bs. ${amount.toFixed(2)}`;
+const formatCurrency = (amount: number | null | undefined) => {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return "Bs. 0.00";
+  }
+  return `Bs. ${Number(amount).toFixed(2)}`;
 };
 
 // const getPaymentStatusInfo = (status: string) => {
@@ -146,6 +159,17 @@ export default function ParentPagosPage() {
   }
 
   const proposals = data?.proposals || [];
+
+  // Ensure proposals have safe default values
+  const safeProposals = proposals.map((proposal) => ({
+    ...proposal,
+    title: proposal.title || "Sin título",
+    patientName: proposal.patientName || "Paciente no disponible",
+    pendingAmount: Number(proposal.pendingAmount) || 0,
+    totalAmount: Number(proposal.totalAmount) || 0,
+    totalPaid: Number(proposal.totalPaid) || 0,
+    payments: proposal.payments || [],
+  }));
   const stats = data?.stats || {
     totalPaid: 0,
     totalPending: 0,
@@ -153,14 +177,22 @@ export default function ParentPagosPage() {
     activeProposals: 0,
   };
 
+  // Ensure all stats are numbers
+  const safeStats = {
+    totalPaid: Number(stats.totalPaid) || 0,
+    totalPending: Number(stats.totalPending) || 0,
+    totalProposals: Number(stats.totalProposals) || 0,
+    activeProposals: Number(stats.activeProposals) || 0,
+  };
+
   // Calculate overdue payments (proposals with pending amounts)
-  const pagosVencidos = proposals.filter(
+  const pagosVencidos = safeProposals.filter(
     (proposal) => proposal.pendingAmount > 0
   );
-  const saldoAdeudado = stats.totalPending;
+  const saldoAdeudado = safeStats.totalPending;
 
   // Get pending payments (proposals with pending amounts)
-  const pagosPendientes = proposals
+  const pagosPendientes = safeProposals
     .filter((proposal) => proposal.pendingAmount > 0)
     .map((proposal) => ({
       id: proposal.id,
@@ -169,14 +201,14 @@ export default function ParentPagosPage() {
       monto: formatCurrency(proposal.pendingAmount),
       vencimiento: formatDate(proposal.createdAt), // Using creation date as due date for now
       diasVencimiento: Math.floor(
-        (Date.now() - new Date(proposal.createdAt).getTime()) /
+        (Date.now() - new Date(proposal.createdAt || Date.now()).getTime()) /
           (1000 * 60 * 60 * 24)
       ),
       proposal,
     }));
 
   // Get payment history (all completed payments)
-  const historialPagos = proposals
+  const historialPagos = safeProposals
     .flatMap((proposal) =>
       proposal.payments
         .filter((payment) => payment.status === "COMPLETED")
@@ -186,14 +218,18 @@ export default function ParentPagosPage() {
           concepto: proposal.title,
           monto: formatCurrency(payment.amount),
           comprobante: payment.referenceNumber || "N/A",
-          payment,
+          payment: {
+            ...payment,
+            amount: Number(payment.amount) || 0,
+          },
         }))
     )
-    .sort(
-      (a, b) =>
-        new Date(b.payment.paymentDate).getTime() -
-        new Date(a.payment.paymentDate).getTime()
-    );
+    .sort((a, b) => {
+      const dateA = new Date(b.payment.paymentDate || Date.now()).getTime();
+      const dateB = new Date(a.payment.paymentDate || Date.now()).getTime();
+      return dateA - dateB;
+    })
+    .filter((pago) => pago.payment && pago.payment.id); // Additional safety filter
 
   // Get last payment info
   const ultimoPago = historialPagos[0];
@@ -260,7 +296,9 @@ export default function ParentPagosPage() {
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-600">Propuestas Activas</p>
-              <p className="text-lg font-semibold">{stats.activeProposals}</p>
+              <p className="text-lg font-semibold">
+                {safeStats.activeProposals}
+              </p>
             </div>
           </div>
         </CardContent>
