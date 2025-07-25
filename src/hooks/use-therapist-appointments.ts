@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 export interface TherapistAppointment {
   id: string;
   appointmentId: string;
+  patientId: string | null;
   patientName: string;
   patientAge: number | null;
   parentName: string;
@@ -102,7 +103,7 @@ export const useUpdateAppointmentStatus = () => {
       homework,
     }: {
       appointmentId: string;
-      status: "COMPLETED" | "CANCELLED";
+      status: "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
       sessionNotes?: string;
       homework?: string;
     }) => {

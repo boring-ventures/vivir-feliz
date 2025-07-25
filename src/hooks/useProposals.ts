@@ -99,6 +99,7 @@ export interface ProposalService {
   id: string;
   treatmentProposalId: string;
   type: "EVALUATION" | "TREATMENT";
+  proposalType: string; // Add proposalType field
   code: string;
   service: string;
   sessions: number;
