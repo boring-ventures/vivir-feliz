@@ -65,6 +65,14 @@ export default function AdminNuevosPacientesPage() {
     useState<Record<string, string[]>>({});
   // Add state for current service index
   const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
+  // Add state for selected payment plan
+  const [selectedPaymentPlan, setSelectedPaymentPlan] = useState<
+    string | undefined
+  >(undefined);
+  // Add state for selected proposal
+  const [selectedProposal, setSelectedProposal] = useState<string | undefined>(
+    undefined
+  );
 
   // Parent creation modal states
   const [showParentCreationModal, setShowParentCreationModal] = useState(false);
@@ -134,6 +142,7 @@ export default function AdminNuevosPacientesPage() {
             estadoPropuesta?: string;
             pagoConfirmado?: boolean;
             citasProgramadas?: boolean;
+            selectedProposal?: string | null;
             proposalData?: {
               status?: string;
               timeAvailability?: Record<
@@ -204,6 +213,7 @@ export default function AdminNuevosPacientesPage() {
               item.proposalData?.status === "PAYMENT_CONFIRMED" &&
               !item.citasProgramadas,
             timeAvailability: item.proposalData?.timeAvailability,
+            selectedProposal: item.selectedProposal || undefined,
           })
         ) as ProposalDisplayData[];
       }
@@ -225,10 +235,69 @@ export default function AdminNuevosPacientesPage() {
   // Add mutation for scheduling appointments
   const scheduleAppointments = useScheduleServiceAppointments();
 
-  // Add proposal services fetch
-  const { data: proposalServices } = useProposalServices(
+  // Add proposal services fetch - filter by selected proposal type
+  const { data: allProposalServices } = useProposalServices(
     modalCitas?.id ?? null
   );
+
+  // Get the selected proposal from the database
+  const getSelectedProposalFromDatabase = () => {
+    if (!response || !modalCitas?.id) return null;
+
+    console.log("🔍 Looking for proposal ID:", modalCitas.id);
+    console.log("🔍 Response type:", typeof response);
+    console.log("🔍 Response has data property:", "data" in response);
+    console.log("🔍 Response is array:", Array.isArray(response));
+
+    // If response has 'data' property, it's the transformed format
+    if ("data" in response && Array.isArray(response.data)) {
+      console.log(
+        "🔍 Searching in transformed data, total proposals:",
+        response.data.length
+      );
+      const proposal = response.data.find((p: any) => p.id === modalCitas.id);
+      console.log("🔍 Found proposal in transformed data:", proposal);
+      console.log("🔍 Proposal selectedProposal:", proposal?.selectedProposal);
+      return proposal?.selectedProposal || null;
+    }
+
+    // If response is an array, it's the raw format
+    if (Array.isArray(response)) {
+      console.log(
+        "🔍 Searching in raw data, total proposals:",
+        response.length
+      );
+      const proposal = response.find((p: any) => p.id === modalCitas.id);
+      console.log("🔍 Found proposal in raw data:", proposal);
+      console.log("🔍 Proposal selectedProposal:", proposal?.selectedProposal);
+      return proposal?.selectedProposal || null;
+    }
+
+    console.log("🔍 No matching response format found");
+    return null;
+  };
+
+  const databaseSelectedProposal = getSelectedProposalFromDatabase();
+
+  // Filter services based on selected proposal type from database
+  const proposalServices =
+    allProposalServices?.filter(
+      (service) => service.proposalType === databaseSelectedProposal
+    ) || [];
+
+  // Debug logging
+  console.log("🔍 Database selected proposal:", databaseSelectedProposal);
+  console.log("🔍 Modal citas ID:", modalCitas?.id);
+  console.log("🔍 Response data:", response);
+  console.log(
+    "🔍 Response data keys:",
+    response ? Object.keys(response) : "No response"
+  );
+  if (response && "data" in response) {
+    console.log("🔍 First proposal in data:", response.data[0]);
+  }
+  console.log("🔍 All proposal services:", allProposalServices);
+  console.log("🔍 Filtered proposal services:", proposalServices);
 
   // Add therapist appointments fetching
   const currentService = proposalServices?.[currentServiceIndex];
@@ -294,6 +363,8 @@ export default function AdminNuevosPacientesPage() {
         proposalId: pacienteId,
         status: "PAYMENT_CONFIRMED",
         notes: `Pago confirmado el ${new Date().toLocaleDateString("es-ES")}`,
+        selectedProposal: selectedProposal,
+        selectedPaymentPlan: selectedPaymentPlan,
       });
 
       toast({
@@ -314,6 +385,8 @@ export default function AdminNuevosPacientesPage() {
       }
 
       setModalPago(null);
+      setSelectedPaymentPlan(undefined);
+      // Keep selectedProposal for appointment scheduling
     } catch (error) {
       toast({
         title: "Error",
@@ -618,6 +691,49 @@ export default function AdminNuevosPacientesPage() {
     setCreatedUserCredentials(null);
   };
 
+  // Helper function to get payment plans from raw proposal data
+  const getPaymentPlans = (proposalId: string) => {
+    // First try to find in rawProposals (direct array format)
+    let rawProposal = rawProposals.find((p) => p.id === proposalId);
+
+    // If not found in rawProposals, try to find in the transformed data format
+    if (
+      !rawProposal &&
+      response &&
+      "data" in response &&
+      Array.isArray(response.data)
+    ) {
+      rawProposal = response.data.find((p: any) => p.id === proposalId);
+    }
+
+    console.log("🔍 Looking for proposal:", proposalId);
+    console.log("🔍 Raw proposal found:", rawProposal);
+    console.log("🔍 Payment plan data:", rawProposal?.paymentPlan);
+
+    if (!rawProposal?.paymentPlan) {
+      console.log("❌ No payment plan found for proposal:", proposalId);
+      return null;
+    }
+
+    try {
+      const paymentPlan =
+        typeof rawProposal.paymentPlan === "string"
+          ? JSON.parse(rawProposal.paymentPlan)
+          : rawProposal.paymentPlan;
+
+      console.log("✅ Parsed payment plan:", paymentPlan);
+      return paymentPlan;
+    } catch (error) {
+      console.error("Error parsing payment plan:", error);
+      return null;
+    }
+  };
+
+  // Helper function to format payment amount
+  const formatPaymentAmount = (amount: number) => {
+    return `Bs. ${amount.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6 p-6">
@@ -864,6 +980,7 @@ export default function AdminNuevosPacientesPage() {
                             !paciente.paymentConfirmed ||
                             paciente.appointmentsScheduled
                           }
+                          title="Programar citas"
                         >
                           <Calendar className="h-4 w-4" />
                         </Button>
@@ -880,42 +997,141 @@ export default function AdminNuevosPacientesPage() {
       {/* Payment confirmation modal */}
       {modalPago && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="max-w-md w-full mx-4">
+          <Card className="max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Confirmar Pago</CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setModalPago(null)}
+                  onClick={() => {
+                    setModalPago(null);
+                    setSelectedPaymentPlan(undefined);
+                    setSelectedProposal(undefined);
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600">Paciente:</p>
-                <p className="font-medium">{modalPago.patientName}</p>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Paciente:</p>
+                  <p className="font-medium">{modalPago.patientName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">
+                    Monto de la propuesta:
+                  </p>
+                  <p className="font-medium text-lg">{modalPago.totalAmount}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Padre/Madre:</p>
+                  <p className="font-medium">{modalPago.parentName}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Monto de la propuesta:</p>
-                <p className="font-medium text-lg">{modalPago.totalAmount}</p>
+
+              {/* Payment Plans Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">
+                  Planes de Pago Disponibles
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Selecciona el plan de pago que el padre/madre ha elegido:
+                </p>
+
+                {(() => {
+                  const paymentPlans = getPaymentPlans(modalPago.id);
+                  if (!paymentPlans) {
+                    return (
+                      <div className="bg-yellow-50 p-4 rounded-md">
+                        <p className="text-sm text-yellow-800">
+                          No hay planes de pago disponibles para esta propuesta.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Proposal A Payment Plans */}
+                      <div className="border rounded-lg p-4 bg-blue-50">
+                        <h4 className="font-semibold text-blue-900 mb-3">
+                          Propuesta A
+                        </h4>
+                        <div className="space-y-2">
+                          <button
+                            onClick={() => {
+                              setSelectedProposal("A");
+                              setSelectedPaymentPlan("1");
+                            }}
+                            className={`w-full text-left p-3 rounded-md border transition-colors ${
+                              selectedProposal === "A" &&
+                              selectedPaymentPlan === "1"
+                                ? "bg-blue-100 border-blue-300"
+                                : "bg-white border-gray-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            <div className="font-medium">Pago Único</div>
+                            <div className="text-lg font-bold text-blue-900">
+                              {formatPaymentAmount(paymentPlans.A?.single || 0)}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              5% de descuento
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Proposal B Payment Plans */}
+                      <div className="border rounded-lg p-4 bg-green-50">
+                        <h4 className="font-semibold text-green-900 mb-3">
+                          Propuesta B
+                        </h4>
+                        <div className="space-y-2">
+                          <button
+                            onClick={() => {
+                              setSelectedProposal("B");
+                              setSelectedPaymentPlan("1");
+                            }}
+                            className={`w-full text-left p-3 rounded-md border transition-colors ${
+                              selectedProposal === "B" &&
+                              selectedPaymentPlan === "1"
+                                ? "bg-green-100 border-green-300"
+                                : "bg-white border-gray-200 hover:bg-green-50"
+                            }`}
+                          >
+                            <div className="font-medium">Pago Único</div>
+                            <div className="text-lg font-bold text-green-900">
+                              {formatPaymentAmount(paymentPlans.B?.single || 0)}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              5% de descuento
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Padre/Madre:</p>
-                <p className="font-medium">{modalPago.parentName}</p>
-              </div>
+
               <div className="bg-yellow-50 p-3 rounded-md">
                 <p className="text-sm text-yellow-800">
-                  ¿Confirmas que el padre/madre ha realizado el pago completo de
-                  la propuesta?
+                  ¿Confirmas que el padre/madre ha realizado el pago completo
+                  del plan seleccionado?
                 </p>
               </div>
+
               <div className="flex space-x-3">
                 <Button
                   onClick={() => confirmarPago(modalPago.id)}
-                  disabled={updateProposalStatus.isPending}
+                  disabled={
+                    updateProposalStatus.isPending ||
+                    !selectedProposal ||
+                    !selectedPaymentPlan
+                  }
                   className="flex-1"
                 >
                   {updateProposalStatus.isPending ? (
@@ -929,7 +1145,11 @@ export default function AdminNuevosPacientesPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => setModalPago(null)}
+                  onClick={() => {
+                    setModalPago(null);
+                    setSelectedPaymentPlan(undefined);
+                    setSelectedProposal(undefined);
+                  }}
                   disabled={updateProposalStatus.isPending}
                   className="flex-1"
                 >
@@ -953,7 +1173,11 @@ export default function AdminNuevosPacientesPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setModalCitas(null)}
+                  onClick={() => {
+                    setModalCitas(null);
+                    setCitasSeleccionadasPorServicio({});
+                    setCurrentServiceIndex(0);
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -972,6 +1196,38 @@ export default function AdminNuevosPacientesPage() {
                     <p className="font-medium">{modalCitas.therapistName}</p>
                   </div>
                 </div>
+
+                {/* Selected Proposal Display */}
+                {databaseSelectedProposal ? (
+                  <div className="bg-blue-50 p-4 rounded-md">
+                    <h4 className="font-medium mb-3">Propuesta Confirmada</h4>
+                    <div className="p-3 bg-white rounded-md border">
+                      <div className="font-medium text-blue-900">
+                        Propuesta {databaseSelectedProposal}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {allProposalServices?.filter(
+                          (s) => s.proposalType === databaseSelectedProposal
+                        ).length || 0}{" "}
+                        servicios configurados
+                      </div>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2">
+                      Esta propuesta fue seleccionada durante la confirmación
+                      del pago.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 p-4 rounded-md">
+                    <p className="text-sm text-yellow-800">
+                      <strong>No hay propuesta seleccionada</strong>
+                    </p>
+                    <p className="text-xs text-yellow-600 mt-1">
+                      Primero debe confirmar el pago y seleccionar una
+                      propuesta.
+                    </p>
+                  </div>
+                )}
 
                 {/* Time Availability Section */}
                 {modalCitas.timeAvailability && (
@@ -1023,115 +1279,144 @@ export default function AdminNuevosPacientesPage() {
                 )}
 
                 {/* Services display with current service highlight */}
-                {proposalServices && (
-                  <div className="bg-blue-50 p-4 rounded-md">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-medium">Servicios a Programar</h4>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setCurrentServiceIndex((prev) =>
-                              Math.max(0, prev - 1)
-                            )
-                          }
-                          disabled={currentServiceIndex === 0}
-                        >
-                          <ArrowLeft className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setCurrentServiceIndex((prev) =>
-                              Math.min(proposalServices.length - 1, prev + 1)
-                            )
-                          }
-                          disabled={
-                            currentServiceIndex === proposalServices.length - 1
-                          }
-                        >
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
+                {databaseSelectedProposal ? (
+                  proposalServices.length > 0 ? (
+                    <div className="bg-blue-50 p-4 rounded-md">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-medium">
+                          Servicios a Programar - Propuesta{" "}
+                          {databaseSelectedProposal}
+                        </h4>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setCurrentServiceIndex((prev) =>
+                                Math.max(0, prev - 1)
+                              )
+                            }
+                            disabled={currentServiceIndex === 0}
+                          >
+                            <ArrowLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setCurrentServiceIndex((prev) =>
+                                Math.min(proposalServices.length - 1, prev + 1)
+                              )
+                            }
+                            disabled={
+                              currentServiceIndex ===
+                              proposalServices.length - 1
+                            }
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {proposalServices.map((service, index) => {
+                          const serviceAppointments =
+                            citasSeleccionadasPorServicio[service.id] || [];
+                          const isCurrentService =
+                            index === currentServiceIndex;
+                          return (
+                            <div
+                              key={service.id}
+                              className={`flex justify-between items-center p-2 rounded-md ${
+                                isCurrentService ? "bg-blue-100" : ""
+                              }`}
+                              onClick={() => setCurrentServiceIndex(index)}
+                              style={{ cursor: "pointer" }}
+                            >
+                              <span>{service.service}</span>
+                              <div className="flex items-center space-x-2">
+                                <Badge
+                                  variant={
+                                    serviceAppointments.length ===
+                                    service.sessions
+                                      ? "secondary"
+                                      : "outline"
+                                  }
+                                >
+                                  {serviceAppointments.length}/
+                                  {service.sessions} sesiones
+                                </Badge>
+                                {isCurrentService && (
+                                  <Badge variant="secondary">Programando</Badge>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      {proposalServices.map((service, index) => {
-                        const serviceAppointments =
-                          citasSeleccionadasPorServicio[service.id] || [];
-                        const isCurrentService = index === currentServiceIndex;
-                        return (
-                          <div
-                            key={service.id}
-                            className={`flex justify-between items-center p-2 rounded-md ${
-                              isCurrentService ? "bg-blue-100" : ""
-                            }`}
-                            onClick={() => setCurrentServiceIndex(index)}
-                            style={{ cursor: "pointer" }}
-                          >
-                            <span>{service.service}</span>
-                            <div className="flex items-center space-x-2">
-                              <Badge
-                                variant={
-                                  serviceAppointments.length ===
-                                  service.sessions
-                                    ? "secondary"
-                                    : "outline"
-                                }
-                              >
-                                {serviceAppointments.length}/{service.sessions}{" "}
-                                sesiones
-                              </Badge>
-                              {isCurrentService && (
-                                <Badge variant="secondary">Programando</Badge>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                  ) : (
+                    <div className="bg-yellow-50 p-4 rounded-md">
+                      <p className="text-sm text-yellow-800">
+                        No se encontraron servicios para la Propuesta{" "}
+                        {databaseSelectedProposal}.
+                      </p>
+                      <p className="text-xs text-yellow-600 mt-1">
+                        Verifica que la propuesta tenga servicios configurados.
+                      </p>
+                    </div>
+                  )
+                ) : (
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <p className="text-sm text-gray-600">
+                      No hay propuesta seleccionada. Primero confirma el pago.
+                    </p>
+                  </div>
+                )}
+
+                {databaseSelectedProposal && (
+                  <div className="bg-blue-50 p-4 rounded-md">
+                    <h4 className="font-medium mb-2">
+                      Progreso de Programación - Propuesta{" "}
+                      {databaseSelectedProposal}
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-600">Sesiones totales:</p>
+                        <p className="font-medium">
+                          {getTotalRequiredAppointments()} sesiones
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Citas programadas:</p>
+                        <p className="font-medium">
+                          {getTotalScheduledAppointments()}/
+                          {getTotalRequiredAppointments()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Servicio actual:</p>
+                        <p className="font-medium">
+                          {proposalServices?.[currentServiceIndex]?.service ||
+                            "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Progreso del servicio:</p>
+                        <p className="font-medium">
+                          {getCitasSeleccionadas().length}/
+                          {proposalServices?.[currentServiceIndex]?.sessions ||
+                            0}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                <div className="bg-blue-50 p-4 rounded-md">
-                  <h4 className="font-medium mb-2">Progreso de Programación</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-600">Sesiones totales:</p>
-                      <p className="font-medium">
-                        {getTotalRequiredAppointments()} sesiones
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Citas programadas:</p>
-                      <p className="font-medium">
-                        {getTotalScheduledAppointments()}/
-                        {getTotalRequiredAppointments()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Servicio actual:</p>
-                      <p className="font-medium">
-                        {proposalServices?.[currentServiceIndex]?.service ||
-                          "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Progreso del servicio:</p>
-                      <p className="font-medium">
-                        {getCitasSeleccionadas().length}/
-                        {proposalServices?.[currentServiceIndex]?.sessions || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="bg-green-50 p-3 rounded-md space-y-2">
                   <p className="text-sm text-green-800">
                     Selecciona las citas para{" "}
-                    {proposalServices?.[currentServiceIndex]?.service}.
-                    Necesitas{" "}
+                    {proposalServices?.[currentServiceIndex]?.service}{" "}
+                    (Propuesta {databaseSelectedProposal}). Necesitas{" "}
                     {proposalServices?.[currentServiceIndex]?.sessions || 0}{" "}
                     sesiones y has seleccionado {getCitasSeleccionadas().length}
                     .
@@ -1157,7 +1442,8 @@ export default function AdminNuevosPacientesPage() {
                     onClick={() => programarCitas(modalCitas.id)}
                     disabled={
                       !areAllServicesScheduled() ||
-                      scheduleAppointments.isPending
+                      scheduleAppointments.isPending ||
+                      !databaseSelectedProposal
                     }
                     className="flex-1"
                   >
@@ -1167,12 +1453,16 @@ export default function AdminNuevosPacientesPage() {
                         Programando...
                       </>
                     ) : (
-                      `Programar Todas las Citas (${getTotalScheduledAppointments()}/${getTotalRequiredAppointments()})`
+                      `Programar Citas - Propuesta ${databaseSelectedProposal} (${getTotalScheduledAppointments()}/${getTotalRequiredAppointments()})`
                     )}
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => setModalCitas(null)}
+                    onClick={() => {
+                      setModalCitas(null);
+                      setCitasSeleccionadasPorServicio({});
+                      setCurrentServiceIndex(0);
+                    }}
                     disabled={scheduleAppointments.isPending}
                     className="flex-1"
                   >
