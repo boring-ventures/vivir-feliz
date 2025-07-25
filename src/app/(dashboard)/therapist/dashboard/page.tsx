@@ -12,8 +12,10 @@ import {
   Clock,
   Users,
   TrendingUp,
+  TrendingDown,
   Eye,
   Send,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -24,46 +26,124 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useTherapistAppointments } from "@/hooks/use-therapist-appointments";
+import { useTherapistPatients } from "@/hooks/use-therapist-patients";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export default function TherapistDashboardPage() {
-  const proximasCitas = [
-    {
-      id: 1,
-      hora: "10:00 AM",
-      paciente: "Juan Pérez González",
-      edad: 8,
-      tipo: "Consulta Inicial",
-      estado: "confirmada",
-      duracion: "60 min",
-      notas: "Primera evaluación - Déficit de atención",
-    },
-    {
-      id: 2,
-      hora: "2:00 PM",
-      paciente: "Ana García López",
-      edad: 6,
-      tipo: "Seguimiento",
-      estado: "confirmada",
-      duracion: "45 min",
-      notas: "Sesión 8/24 - Terapia del lenguaje",
-    },
-    {
-      id: 3,
-      hora: "4:30 PM",
-      paciente: "Pedro Mamani Flores",
-      edad: 7,
-      tipo: "Evaluación",
-      estado: "pendiente",
-      duracion: "90 min",
-      notas: "Evaluación neuropsicológica",
-    },
-  ];
+  // Fetch real data
+  const { user, profile, isLoading: isLoadingUser } = useCurrentUser();
+  const { data: appointmentsData, isLoading: isLoadingAppointments } =
+    useTherapistAppointments({
+      status: "all",
+    });
+  const { data: patientsData, isLoading: isLoadingPatients } =
+    useTherapistPatients({
+      status: "active",
+    });
 
+  // Get today's appointments
+  const today = new Date().toISOString().split("T")[0];
+  const todayAppointments =
+    appointmentsData?.appointments?.filter((apt) => {
+      // Extract only the date part from the datetime string (before the space)
+      const appointmentDateOnly = apt.appointmentDate.split(" ")[0];
+      const isToday = appointmentDateOnly === today;
+      const isNotCancelled = apt.status !== "CANCELLED";
+      return isToday && isNotCancelled;
+    }) || [];
+
+  // Get yesterday's appointments for comparison
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  const yesterdayAppointments =
+    appointmentsData?.appointments?.filter((apt) => {
+      const appointmentDateOnly = apt.appointmentDate.split(" ")[0];
+      const isYesterday = appointmentDateOnly === yesterdayStr;
+      const isNotCancelled = apt.status !== "CANCELLED";
+      return isYesterday && isNotCancelled;
+    }) || [];
+
+  // Get this week's appointments
+  const getStartOfWeek = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    return new Date(d.setDate(diff));
+  };
+
+  const getEndOfWeek = (date: Date) => {
+    const startOfWeek = getStartOfWeek(date);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    return endOfWeek;
+  };
+
+  const startOfWeek = getStartOfWeek(new Date()).toISOString().split("T")[0];
+  const endOfWeek = getEndOfWeek(new Date()).toISOString().split("T")[0];
+
+  const thisWeekAppointments =
+    appointmentsData?.appointments?.filter((apt) => {
+      // Extract only the date part from the datetime string (before the space)
+      const appointmentDateOnly = apt.appointmentDate.split(" ")[0];
+      const isThisWeek =
+        appointmentDateOnly >= startOfWeek && appointmentDateOnly <= endOfWeek;
+      const isNotCancelled = apt.status !== "CANCELLED";
+      return isThisWeek && isNotCancelled;
+    }) || [];
+
+  // Get previous week's appointments for comparison
+  const getPreviousWeekRange = () => {
+    const today = new Date();
+    const startOfThisWeek = getStartOfWeek(today);
+
+    // Calculate previous week
+    const startOfPrevWeek = new Date(startOfThisWeek);
+    startOfPrevWeek.setDate(startOfThisWeek.getDate() - 7);
+
+    const endOfPrevWeek = new Date(startOfPrevWeek);
+    endOfPrevWeek.setDate(startOfPrevWeek.getDate() + 6);
+
+    return {
+      start: startOfPrevWeek.toISOString().split("T")[0],
+      end: endOfPrevWeek.toISOString().split("T")[0],
+    };
+  };
+
+  const prevWeekRange = getPreviousWeekRange();
+  const previousWeekAppointments =
+    appointmentsData?.appointments?.filter((apt) => {
+      const appointmentDateOnly = apt.appointmentDate.split(" ")[0];
+      const isPrevWeek =
+        appointmentDateOnly >= prevWeekRange.start &&
+        appointmentDateOnly <= prevWeekRange.end;
+      const isNotCancelled = apt.status !== "CANCELLED";
+      return isPrevWeek && isNotCancelled;
+    }) || [];
+
+  // Calculate changes
+  const todayChange = todayAppointments.length - yesterdayAppointments.length;
+  const weekChange =
+    thisWeekAppointments.length - previousWeekAppointments.length;
+
+  // Helper function to format change values
+  const formatChange = (change: number) => {
+    if (change > 0) return `+${change}`;
+    if (change < 0) return `${change}`;
+    return "0";
+  };
+
+  // Loading state
+  const isLoading = isLoadingUser || isLoadingAppointments || isLoadingPatients;
+
+  // Statistics from real data
   const estadisticasRapidas = [
     {
       titulo: "Pacientes Activos",
-      valor: "12",
-      cambio: "+2",
+      valor: patientsData?.total?.toString() || "0",
+      cambio: "", // Keep static for now as we don't have historical patient data easily accessible
       tendencia: "up",
       color: "text-blue-700",
       bgColor: "bg-blue-50",
@@ -71,68 +151,68 @@ export default function TherapistDashboardPage() {
     },
     {
       titulo: "Citas Esta Semana",
-      valor: "18",
-      cambio: "+3",
-      tendencia: "up",
+      valor: thisWeekAppointments.length.toString(),
+      cambio: formatChange(weekChange),
+      tendencia: weekChange >= 0 ? "up" : "down",
       color: "text-green-700",
       bgColor: "bg-green-50",
       icon: <Calendar className="h-6 w-6 text-green-600" />,
     },
     {
-      titulo: "Tasa de Asistencia",
-      valor: "92%",
-      cambio: "+5%",
+      titulo: "Citas Completadas",
+      valor: appointmentsData?.stats?.completed?.toString() || "0",
+      cambio: "", // Keep static for now as we don't have historical completed data easily accessible
       tendencia: "up",
       color: "text-amber-700",
       bgColor: "bg-amber-50",
       icon: <TrendingUp className="h-6 w-6 text-amber-600" />,
     },
     {
-      titulo: "Evaluaciones Completadas",
-      valor: "8",
-      cambio: "+1",
-      tendencia: "up",
+      titulo: "Citas de Hoy",
+      valor: todayAppointments.length.toString(),
+      cambio: formatChange(todayChange),
+      tendencia: todayChange >= 0 ? "up" : "down",
       color: "text-purple-700",
       bgColor: "bg-purple-50",
       icon: <Clock className="h-6 w-6 text-purple-600" />,
     },
   ];
 
-  const pacientesRecientes = [
-    {
-      id: 1,
-      nombre: "Juan Pérez González",
-      edad: 8,
-      diagnostico: "Déficit de Atención",
-      estado: "En tratamiento",
-      progreso: 75,
-      proximaCita: "Hoy 10:00 AM",
-      sesiones: "8/24",
-      estadoColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 2,
-      nombre: "Ana García López",
-      edad: 6,
-      diagnostico: "Retraso del Lenguaje",
-      estado: "En tratamiento",
-      progreso: 60,
-      proximaCita: "Hoy 2:00 PM",
-      sesiones: "12/24",
-      estadoColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 3,
-      nombre: "Pedro Mamani Flores",
-      edad: 7,
-      diagnostico: "Evaluación Pendiente",
-      estado: "En evaluación",
-      progreso: 25,
-      proximaCita: "Hoy 4:30 PM",
-      sesiones: "2/4",
-      estadoColor: "bg-amber-100 text-amber-800",
-    },
-  ];
+  // Transform real appointment data
+  const proximasCitas = todayAppointments.slice(0, 3).map((apt) => ({
+    id: apt.appointmentId,
+    hora: apt.appointmentTime,
+    paciente: apt.patientName,
+    edad: apt.patientAge || 0,
+    tipo:
+      apt.type === "CONSULTA"
+        ? "Consulta"
+        : apt.type === "TERAPIA"
+          ? "Terapia"
+          : apt.type === "ENTREVISTA"
+            ? "Entrevista"
+            : apt.type === "SEGUIMIENTO"
+              ? "Seguimiento"
+              : apt.type, // fallback to original value
+    estado: apt.status === "CONFIRMED" ? "confirmada" : "pendiente",
+    duracion: "60 min",
+    notas: apt.notes || "Sin notas adicionales",
+  }));
+
+  // Transform real patient data - using the PatientWithSessions interface structure
+  const pacientesRecientes = (patientsData?.patients || [])
+    .slice(0, 3)
+    .map((patient) => ({
+      id: patient.id,
+      nombre: patient.nombre,
+      edad: patient.edad,
+      diagnostico: patient.diagnostico || "En evaluación",
+      estado: patient.estado,
+      progreso: patient.progreso,
+      proximaCita: patient.proximaCita,
+      sesiones: `${patient.sesiones.completadas}/${patient.sesiones.totales}`,
+      estadoColor: patient.estadoColor,
+    }));
 
   const [open, setOpen] = useState(false);
   const [selectedPaciente, setSelectedPaciente] = useState<string | null>(null);
@@ -142,6 +222,19 @@ export default function TherapistDashboardPage() {
     setOpen(true);
   };
 
+  if (isLoading) {
+    return (
+      <RoleGuard allowedRoles={["THERAPIST"]}>
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Cargando dashboard...</p>
+          </div>
+        </div>
+      </RoleGuard>
+    );
+  }
+
   return (
     <RoleGuard allowedRoles={["THERAPIST"]}>
       <div className="min-h-screen bg-gray-100">
@@ -149,16 +242,29 @@ export default function TherapistDashboardPage() {
         <header className="bg-white shadow-sm p-4 flex justify-between items-center">
           <div>
             <h1 className="text-xl font-semibold">
-              Bienvenido/a, Dr. Carlos Mendoza
+              Bienvenido/a,{" "}
+              {profile?.firstName && profile?.lastName
+                ? `${profile.firstName} ${profile.lastName}`
+                : "Doctor/a"}
             </h1>
-            <p className="text-gray-600">HOY - Miércoles, 15 Enero 2025</p>
+            <p className="text-gray-600">
+              HOY -{" "}
+              {new Date().toLocaleDateString("es-ES", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
           </div>
           <div className="flex items-center space-x-4">
             <Button variant="outline" size="icon" className="relative">
               <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                3
-              </span>
+              {todayAppointments.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {todayAppointments.length}
+                </span>
+              )}
             </Button>
             <Button variant="outline" size="icon">
               <User className="h-5 w-5" />
@@ -179,8 +285,18 @@ export default function TherapistDashboardPage() {
                       <p className={`text-2xl font-bold ${stat.color}`}>
                         {stat.valor}
                       </p>
-                      <p className="text-sm text-green-600 flex items-center">
-                        <TrendingUp className="h-3 w-3 mr-1" />
+                      <p
+                        className={`text-sm flex items-center ${
+                          stat.tendencia === "up"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {stat.tendencia === "up" ? (
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 mr-1" />
+                        )}
                         {stat.cambio}
                       </p>
                     </div>
@@ -200,7 +316,7 @@ export default function TherapistDashboardPage() {
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-semibold">
-                      Próximas Citas
+                      Citas de Hoy ({todayAppointments.length})
                     </CardTitle>
                     <Link href="/therapist/agenda">
                       <Button variant="outline" size="sm">
@@ -210,60 +326,69 @@ export default function TherapistDashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {proximasCitas.map((cita) => (
-                      <div
-                        key={cita.id}
-                        className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <div className="bg-blue-100 p-2 rounded-full">
-                                <Clock className="h-4 w-4 text-blue-600" />
+                  {proximasCitas.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No tienes citas programadas para hoy</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {proximasCitas.map((cita) => (
+                        <div
+                          key={cita.id}
+                          className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <div className="bg-blue-100 p-2 rounded-full">
+                                  <Clock className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-lg">
+                                    {cita.hora}
+                                  </p>
+                                  <p className="text-gray-600">
+                                    {cita.duracion}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="font-semibold text-lg">
-                                  {cita.hora}
+                              <div className="ml-11">
+                                <h4 className="font-medium">{cita.paciente}</h4>
+                                <p className="text-sm text-gray-600">
+                                  {cita.edad} años - {cita.tipo}
                                 </p>
-                                <p className="text-gray-600">{cita.duracion}</p>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {cita.notas}
+                                </p>
+                                <Badge
+                                  className={
+                                    cita.estado === "confirmada"
+                                      ? "bg-green-100 text-green-800 mt-2"
+                                      : "bg-yellow-100 text-yellow-800 mt-2"
+                                  }
+                                >
+                                  {cita.estado === "confirmada"
+                                    ? "✅ Confirmada"
+                                    : "⏳ Pendiente"}
+                                </Badge>
                               </div>
                             </div>
-                            <div className="ml-11">
-                              <h4 className="font-medium">{cita.paciente}</h4>
-                              <p className="text-sm text-gray-600">
-                                {cita.edad} años - {cita.tipo}
-                              </p>
-                              <p className="text-sm text-gray-500 mt-1">
-                                {cita.notas}
-                              </p>
-                              <Badge
-                                className={
-                                  cita.estado === "confirmada"
-                                    ? "bg-green-100 text-green-800 mt-2"
-                                    : "bg-yellow-100 text-yellow-800 mt-2"
-                                }
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenModal(cita.paciente)}
                               >
-                                {cita.estado === "confirmada"
-                                  ? "✅ Confirmada"
-                                  : "⏳ Pendiente"}
-                              </Badge>
+                                <Eye className="h-4 w-4 mr-1" />
+                                Ver Paciente
+                              </Button>
                             </div>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenModal(cita.paciente)}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              Ver Paciente
-                            </Button>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -275,9 +400,9 @@ export default function TherapistDashboardPage() {
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg font-semibold">
-                    Pacientes Recientes
+                    Pacientes Activos ({patientsData?.total || 0})
                   </CardTitle>
-                  <Link href="/therapist/pacientes">
+                  <Link href="/therapist/patients">
                     <Button variant="outline" size="sm">
                       Ver Todos
                     </Button>
@@ -285,46 +410,55 @@ export default function TherapistDashboardPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y">
-                  {pacientesRecientes.map((paciente) => (
-                    <div
-                      key={paciente.id}
-                      className="p-4 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h4 className="font-medium">{paciente.nombre}</h4>
-                          <p className="text-sm text-gray-600">
-                            {paciente.edad} años - {paciente.diagnostico}
-                          </p>
+                {pacientesRecientes.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No tienes pacientes asignados</p>
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {pacientesRecientes.map((paciente) => (
+                      <div
+                        key={paciente.id}
+                        className="p-4 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h4 className="font-medium">{paciente.nombre}</h4>
+                            <p className="text-sm text-gray-600">
+                              {paciente.edad} años - {paciente.diagnostico}
+                            </p>
+                          </div>
+                          <Badge className={paciente.estadoColor}>
+                            {paciente.estado}
+                          </Badge>
                         </div>
-                        <Badge className={paciente.estadoColor}>
-                          {paciente.estado}
-                        </Badge>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Progreso del tratamiento</span>
-                          <span>{paciente.sesiones} sesiones</span>
-                        </div>
-                        <Progress value={paciente.progreso} className="h-2" />
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm text-gray-600">
-                            Próxima: {paciente.proximaCita}
-                          </p>
-                          <div className="flex space-x-1">
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              <Send className="h-3 w-3" />
-                            </Button>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Progreso del tratamiento</span>
+                            <span>{paciente.sesiones} sesiones</span>
+                          </div>
+                          <Progress value={paciente.progreso} className="h-2" />
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm text-gray-600">
+                              Próxima: {paciente.proximaCita}
+                            </p>
+                            <div className="flex space-x-1">
+                              <Link href={`/therapist/patients/${paciente.id}`}>
+                                <Button variant="outline" size="sm">
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              </Link>
+                              <Button variant="outline" size="sm">
+                                <Send className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
