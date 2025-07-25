@@ -183,7 +183,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status, notes } = body;
+    const { status, notes, selectedProposal, selectedPaymentPlan } = body;
 
     const proposal = await prisma.treatmentProposal.findUnique({
       where: { id },
@@ -256,11 +256,33 @@ export async function PUT(
       });
 
       if (!existingPayment) {
+        // Convert totalAmount from JSON to number for payment record
+        let paymentAmount = 0;
+        if (proposal.totalAmount && typeof proposal.totalAmount === "object") {
+          // If totalAmount is JSON, use the selected proposal's amount
+          const totalAmountObj = proposal.totalAmount as any;
+          if (
+            (proposal as any).selectedProposal &&
+            totalAmountObj[(proposal as any).selectedProposal]
+          ) {
+            paymentAmount = Number(
+              totalAmountObj[(proposal as any).selectedProposal]
+            );
+          } else {
+            // Fallback to first available amount
+            const amounts = Object.values(totalAmountObj);
+            paymentAmount = amounts.length > 0 ? Number(amounts[0]) : 0;
+          }
+        } else {
+          // Fallback for old format
+          paymentAmount = Number(proposal.totalAmount) || 0;
+        }
+
         // Create payment record
         await prisma.payment.create({
           data: {
             proposalId: id,
-            amount: proposal.totalAmount || 0,
+            amount: paymentAmount,
             paymentMethod: "TRANSFER", // Default method
             status: "COMPLETED" as const,
             referenceNumber: `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
@@ -279,13 +301,15 @@ export async function PUT(
         status,
         notes,
         patientId, // Link the patient if created
+        selectedProposal: selectedProposal || null, // Save the selected proposal
+        selectedPaymentPlan: selectedPaymentPlan || null, // Save the selected payment plan
         approvedDate:
           status === "PAYMENT_CONFIRMED" ? new Date() : proposal.approvedDate,
         startDate:
           status === "TREATMENT_ACTIVE" ? new Date() : proposal.startDate,
         endDate:
           status === "TREATMENT_COMPLETED" ? new Date() : proposal.endDate,
-      },
+      } as any, // Type assertion to bypass TypeScript error until Prisma client is regenerated
       include: {
         patient: {
           include: {
@@ -328,5 +352,168 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  return PUT(request, { params });
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { status, notes, paymentPlan, selectedPaymentPlan } = body;
+
+    const proposal = await prisma.treatmentProposal.findUnique({
+      where: { id },
+      include: {
+        consultationRequest: true,
+      },
+    });
+
+    if (!proposal) {
+      return NextResponse.json(
+        { error: "Proposal not found" },
+        { status: 404 }
+      );
+    }
+
+    // Handle patient creation when payment is confirmed
+    let patientId = proposal.patientId;
+
+    if (
+      status === "PAYMENT_CONFIRMED" &&
+      !proposal.patientId &&
+      proposal.consultationRequestId &&
+      proposal.consultationRequest
+    ) {
+      try {
+        console.log("Creating patient from consultation request data...");
+
+        // Validate required data exists
+        if (
+          !proposal.consultationRequest.childName ||
+          !proposal.consultationRequest.childDateOfBirth
+        ) {
+          console.error("Missing required child data in consultation request");
+          throw new Error("Missing required child data for patient creation");
+        }
+
+        // Create parent profile
+        const parent = await findOrCreateParentFromConsultationRequest(
+          proposal.consultationRequest
+        );
+        console.log("Parent created/found:", parent.id);
+
+        // Create patient
+        const patient = await createPatientFromConsultationRequest(
+          proposal.consultationRequest,
+          parent.id
+        );
+        console.log("Patient created:", patient.id);
+
+        patientId = patient.id;
+
+        console.log(
+          `Successfully linked patient ${patient.id} to proposal ${proposal.id}`
+        );
+      } catch (error) {
+        console.error("Error creating patient:", error);
+        // Continue with proposal update even if patient creation fails
+        // Admin can manually create patient later if needed
+      }
+    }
+
+    // Create payment record when status is PAYMENT_CONFIRMED
+    if (status === "PAYMENT_CONFIRMED") {
+      // Check if payment record already exists
+      const existingPayment = await prisma.payment.findFirst({
+        where: {
+          proposalId: id,
+          status: "COMPLETED" as const,
+        },
+      });
+
+      if (!existingPayment) {
+        // Convert totalAmount from JSON to number for payment record
+        let paymentAmount = 0;
+        if (proposal.totalAmount && typeof proposal.totalAmount === "object") {
+          // If totalAmount is JSON, use the selected proposal's amount
+          const totalAmountObj = proposal.totalAmount as any;
+          if (
+            proposal.selectedProposal &&
+            totalAmountObj[proposal.selectedProposal]
+          ) {
+            paymentAmount = Number(totalAmountObj[proposal.selectedProposal]);
+          } else {
+            // Fallback to first available amount
+            const amounts = Object.values(totalAmountObj);
+            paymentAmount = amounts.length > 0 ? Number(amounts[0]) : 0;
+          }
+        } else {
+          // Fallback for old format
+          paymentAmount = Number(proposal.totalAmount) || 0;
+        }
+
+        // Create payment record
+        await prisma.payment.create({
+          data: {
+            proposalId: id,
+            amount: paymentAmount,
+            paymentMethod: "TRANSFER", // Default method
+            status: "COMPLETED" as const,
+            referenceNumber: `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+            notes:
+              notes ||
+              `Pago confirmado el ${new Date().toLocaleDateString("es-ES")}`,
+            paymentDate: new Date(),
+          },
+        });
+      }
+    }
+
+    const updatedProposal = await prisma.treatmentProposal.update({
+      where: { id },
+      data: {
+        status,
+        notes,
+        patientId, // Link the patient if created
+        approvedDate:
+          status === "PAYMENT_CONFIRMED" ? new Date() : proposal.approvedDate,
+        startDate:
+          status === "TREATMENT_ACTIVE" ? new Date() : proposal.startDate,
+        endDate:
+          status === "TREATMENT_COMPLETED" ? new Date() : proposal.endDate,
+        paymentPlan: paymentPlan || (proposal as any).paymentPlan,
+        selectedPaymentPlan:
+          selectedPaymentPlan || (proposal as any).selectedPaymentPlan,
+      } as any,
+      include: {
+        patient: {
+          include: {
+            parent: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+              },
+            },
+          },
+        },
+        therapist: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            specialty: true,
+          },
+        },
+        payments: true,
+        appointments: true,
+        consultationRequest: true,
+      },
+    });
+
+    return NextResponse.json(updatedProposal);
+  } catch (error) {
+    console.error("Error updating proposal:", error);
+    return NextResponse.json(
+      { error: "Error updating proposal" },
+      { status: 500 }
+    );
+  }
 }
