@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
   ChevronLeft,
@@ -26,7 +25,6 @@ import { toast } from "@/components/ui/use-toast";
 export default function AdminProposalPreviewPage() {
   const params = useParams();
   const router = useRouter();
-  const [paymentMethod, setPaymentMethod] = useState("");
   const [confirmation, setConfirmation] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -84,15 +82,43 @@ export default function AdminProposalPreviewPage() {
           ),
           therapist: `${currentProposal.therapist.firstName} ${currentProposal.therapist.lastName}`,
           observations: currentProposal.description || "",
-          evaluations: proposalServices
-            .filter((service) => service.type === "EVALUATION")
+          // Proposal A services
+          evaluationsA: proposalServices
+            .filter(
+              (service) =>
+                service.type === "EVALUATION" && service.proposalType === "A"
+            )
             .map((service) => ({
               name: service.service,
               sessions: Number(service.sessions),
               cost: Number(service.cost || 0),
             })),
-          treatments: proposalServices
-            .filter((service) => service.type === "TREATMENT")
+          treatmentsA: proposalServices
+            .filter(
+              (service) =>
+                service.type === "TREATMENT" && service.proposalType === "A"
+            )
+            .map((service) => ({
+              name: service.service,
+              sessions: Number(service.sessions),
+              cost: Number(service.cost || 0),
+            })),
+          // Proposal B services
+          evaluationsB: proposalServices
+            .filter(
+              (service) =>
+                service.type === "EVALUATION" && service.proposalType === "B"
+            )
+            .map((service) => ({
+              name: service.service,
+              sessions: Number(service.sessions),
+              cost: Number(service.cost || 0),
+            })),
+          treatmentsB: proposalServices
+            .filter(
+              (service) =>
+                service.type === "TREATMENT" && service.proposalType === "B"
+            )
             .map((service) => ({
               name: service.service,
               sessions: Number(service.sessions),
@@ -101,15 +127,48 @@ export default function AdminProposalPreviewPage() {
         }
       : null;
 
-  const totalEvaluations =
-    proposalData?.evaluations.reduce((sum, item) => sum + item.cost, 0) || 0;
-  const totalTreatments =
-    proposalData?.treatments.reduce((sum, item) => sum + item.cost, 0) || 0;
-  const grandTotal = totalEvaluations + totalTreatments;
+  // Calculate totals for Proposal A
+  const totalEvaluationsA =
+    proposalData?.evaluationsA.reduce((sum, item) => sum + item.cost, 0) || 0;
+  const totalTreatmentsA =
+    proposalData?.treatmentsA.reduce((sum, item) => sum + item.cost, 0) || 0;
+  const totalProposalA = totalEvaluationsA + totalTreatmentsA;
 
-  const singlePayment = grandTotal * 0.95; // 5% discount
-  const monthlyPayment = grandTotal / 6;
-  const bimonthlyPayment = grandTotal / 3;
+  // Calculate session totals for Proposal A
+  const totalSessionsEvaluationsA =
+    proposalData?.evaluationsA.reduce((sum, item) => sum + item.sessions, 0) ||
+    0;
+  const totalSessionsTreatmentsA =
+    proposalData?.treatmentsA.reduce((sum, item) => sum + item.sessions, 0) ||
+    0;
+  const totalSessionsProposalA =
+    totalSessionsEvaluationsA + totalSessionsTreatmentsA;
+
+  // Calculate totals for Proposal B
+  const totalEvaluationsB =
+    proposalData?.evaluationsB.reduce((sum, item) => sum + item.cost, 0) || 0;
+  const totalTreatmentsB =
+    proposalData?.treatmentsB.reduce((sum, item) => sum + item.cost, 0) || 0;
+  const totalProposalB = totalEvaluationsB + totalTreatmentsB;
+
+  // Calculate session totals for Proposal B
+  const totalSessionsEvaluationsB =
+    proposalData?.evaluationsB.reduce((sum, item) => sum + item.sessions, 0) ||
+    0;
+  const totalSessionsTreatmentsB =
+    proposalData?.treatmentsB.reduce((sum, item) => sum + item.sessions, 0) ||
+    0;
+  const totalSessionsProposalB =
+    totalSessionsEvaluationsB + totalSessionsTreatmentsB;
+
+  // Payment calculations for both proposals
+  const singlePaymentA = totalProposalA * 0.95; // 5% discount
+  const monthlyPaymentA = totalProposalA / 6;
+  const bimonthlyPaymentA = totalProposalA / 3;
+
+  const singlePaymentB = totalProposalB * 0.95; // 5% discount
+  const monthlyPaymentB = totalProposalB / 6;
+  const bimonthlyPaymentB = totalProposalB / 3;
 
   // Show loading state while data is being fetched
   if (proposalsLoading || servicesLoading || !proposalData) {
@@ -137,17 +196,23 @@ export default function AdminProposalPreviewPage() {
       });
       return;
     }
-    if (!paymentMethod) {
-      toast({
-        title: "Error",
-        description: "Debe seleccionar una forma de pago",
-        variant: "destructive",
-      });
-      return;
-    }
 
     setIsUpdatingStatus(true);
     try {
+      // Prepare payment plan data
+      const paymentPlanData = {
+        A: {
+          single: singlePaymentA,
+          monthly: monthlyPaymentA,
+          bimonthly: bimonthlyPaymentA,
+        },
+        B: {
+          single: singlePaymentB,
+          monthly: monthlyPaymentB,
+          bimonthly: bimonthlyPaymentB,
+        },
+      };
+
       const response = await fetch(
         `/api/admin/patients/proposals/${params.id}`,
         {
@@ -157,7 +222,7 @@ export default function AdminProposalPreviewPage() {
           },
           body: JSON.stringify({
             status: "PAYMENT_PENDING",
-            paymentMethod,
+            paymentPlan: paymentPlanData,
           }),
         }
       );
@@ -708,55 +773,145 @@ export default function AdminProposalPreviewPage() {
               <CardHeader>
                 <CardTitle className="text-lg">Servicios Propuestos</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Evaluations */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-4">
-                    EVALUACIONES
-                  </h4>
-                  <div className="space-y-3">
-                    {proposalData.evaluations.map((evaluation, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between items-center"
-                      >
-                        <span className="text-gray-700">
-                          • {evaluation.name} ({evaluation.sessions} ses.)
-                        </span>
-                        <span className="font-medium">
-                          Bs. {evaluation.cost.toLocaleString()}
-                        </span>
+              <CardContent className="space-y-8">
+                {/* Proposal A */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-4">
+                    PROPUESTA A
+                  </h3>
+
+                  {/* Evaluations A */}
+                  <div className="mb-6">
+                    <h4 className="font-medium text-blue-800 mb-3">
+                      EVALUACIONES
+                    </h4>
+                    <div className="space-y-2">
+                      {proposalData.evaluationsA.map((evaluation, index) => (
+                        <div
+                          key={index}
+                          className="flex justify-between items-center"
+                        >
+                          <span className="text-blue-700">
+                            • {evaluation.name} ({evaluation.sessions} ses.)
+                          </span>
+                          <span className="font-medium text-blue-800">
+                            Bs. {evaluation.cost.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between items-center pt-2 border-t border-blue-200 font-semibold">
+                        <span>Total Evaluaciones:</span>
+                        <span>Bs. {totalEvaluationsA.toLocaleString()}</span>
                       </div>
-                    ))}
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 font-semibold">
-                      <span>Total:</span>
-                      <span>Bs. {totalEvaluations.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Treatments A */}
+                  <div className="mb-4">
+                    <h4 className="font-medium text-blue-800 mb-3">
+                      TRATAMIENTOS (6 meses)
+                    </h4>
+                    <div className="space-y-2">
+                      {proposalData.treatmentsA.map((treatment, index) => (
+                        <div
+                          key={index}
+                          className="flex justify-between items-center"
+                        >
+                          <span className="text-blue-700">
+                            • {treatment.name} ({treatment.sessions} ses.)
+                          </span>
+                          <span className="font-medium text-blue-800">
+                            Bs. {treatment.cost.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between items-center pt-2 border-t border-blue-200 font-semibold">
+                        <span>Total Tratamientos:</span>
+                        <span>Bs. {totalTreatmentsA.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Proposal A Summary */}
+                  <div className="border-t border-blue-300 pt-3">
+                    <div className="flex justify-between text-lg font-bold text-blue-900">
+                      <span>TOTAL PROPUESTA A:</span>
+                      <span>Bs. {totalProposalA.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-blue-700 mt-1">
+                      <span>Total Sesiones:</span>
+                      <span>{totalSessionsProposalA} sesiones</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Treatments */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-4">
-                    TRATAMIENTOS (6 meses)
-                  </h4>
-                  <div className="space-y-3">
-                    {proposalData.treatments.map((treatment, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between items-center"
-                      >
-                        <span className="text-gray-700">
-                          • {treatment.name} ({treatment.sessions} ses.)
-                        </span>
-                        <span className="font-medium">
-                          Bs. {treatment.cost.toLocaleString()}
-                        </span>
+                {/* Proposal B */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-green-900 mb-4">
+                    PROPUESTA B
+                  </h3>
+
+                  {/* Evaluations B */}
+                  <div className="mb-6">
+                    <h4 className="font-medium text-green-800 mb-3">
+                      EVALUACIONES
+                    </h4>
+                    <div className="space-y-2">
+                      {proposalData.evaluationsB.map((evaluation, index) => (
+                        <div
+                          key={index}
+                          className="flex justify-between items-center"
+                        >
+                          <span className="text-green-700">
+                            • {evaluation.name} ({evaluation.sessions} ses.)
+                          </span>
+                          <span className="font-medium text-green-800">
+                            Bs. {evaluation.cost.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between items-center pt-2 border-t border-green-200 font-semibold">
+                        <span>Total Evaluaciones:</span>
+                        <span>Bs. {totalEvaluationsB.toLocaleString()}</span>
                       </div>
-                    ))}
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 font-semibold">
-                      <span>Total:</span>
-                      <span>Bs. {totalTreatments.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Treatments B */}
+                  <div className="mb-4">
+                    <h4 className="font-medium text-green-800 mb-3">
+                      TRATAMIENTOS (6 meses)
+                    </h4>
+                    <div className="space-y-2">
+                      {proposalData.treatmentsB.map((treatment, index) => (
+                        <div
+                          key={index}
+                          className="flex justify-between items-center"
+                        >
+                          <span className="text-green-700">
+                            • {treatment.name} ({treatment.sessions} ses.)
+                          </span>
+                          <span className="font-medium text-green-800">
+                            Bs. {treatment.cost.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between items-center pt-2 border-t border-green-200 font-semibold">
+                        <span>Total Tratamientos:</span>
+                        <span>Bs. {totalTreatmentsB.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Proposal B Summary */}
+                  <div className="border-t border-green-300 pt-3">
+                    <div className="flex justify-between text-lg font-bold text-green-900">
+                      <span>TOTAL PROPUESTA B:</span>
+                      <span>Bs. {totalProposalB.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-green-700 mt-1">
+                      <span>Total Sesiones:</span>
+                      <span>{totalSessionsProposalB} sesiones</span>
                     </div>
                   </div>
                 </div>
@@ -769,76 +924,153 @@ export default function AdminProposalPreviewPage() {
                 <CardTitle className="text-lg">Resumen Financiero</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span>Evaluaciones:</span>
-                    <span>Bs. {totalEvaluations.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Tratamientos:</span>
-                    <span>Bs. {totalTreatments.toLocaleString()}</span>
-                  </div>
-                  <div className="border-t border-gray-300 pt-3">
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>TOTAL:</span>
-                      <span>Bs. {grandTotal.toLocaleString()}</span>
+                <div className="space-y-4">
+                  {/* Proposal A Summary */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-900 mb-2">
+                      Propuesta A
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Evaluaciones:</span>
+                        <span>Bs. {totalEvaluationsA.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Tratamientos:</span>
+                        <span>Bs. {totalTreatmentsA.toLocaleString()}</span>
+                      </div>
+                      <div className="border-t border-blue-200 pt-2">
+                        <div className="flex justify-between font-semibold text-blue-900">
+                          <span>Total Propuesta A:</span>
+                          <span>Bs. {totalProposalA.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-blue-700">
+                          <span>Sesiones:</span>
+                          <span>{totalSessionsProposalA} sesiones</span>
+                        </div>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Proposal B Summary */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-green-900 mb-2">
+                      Propuesta B
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Evaluaciones:</span>
+                        <span>Bs. {totalEvaluationsB.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Tratamientos:</span>
+                        <span>Bs. {totalTreatmentsB.toLocaleString()}</span>
+                      </div>
+                      <div className="border-t border-green-200 pt-2">
+                        <div className="flex justify-between font-semibold text-green-900">
+                          <span>Total Propuesta B:</span>
+                          <span>Bs. {totalProposalB.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-green-700">
+                          <span>Sesiones:</span>
+                          <span>{totalSessionsProposalB} sesiones</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Note about selection */}
+                  <div className="text-center text-sm text-gray-600 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="font-medium text-yellow-800">
+                      Los padres deberán seleccionar una de las dos propuestas
+                    </p>
+                    <p className="text-yellow-700 mt-1">
+                      Propuesta A: {totalSessionsProposalA} sesiones | Propuesta
+                      B: {totalSessionsProposalB} sesiones
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Payment Method - Only show for NEW_PROPOSAL status */}
-            {currentProposal?.status === "NEW_PROPOSAL" && (
-              <Card className="print:hidden">
-                <CardHeader>
-                  <CardTitle className="text-lg">Forma de Pago</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <RadioGroup
-                    value={paymentMethod}
-                    onValueChange={setPaymentMethod}
-                    className="space-y-3"
-                  >
-                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
-                      <div className="flex items-center space-x-3">
-                        <RadioGroupItem value="single" id="single" />
-                        <Label htmlFor="single" className="font-medium">
-                          Pago único (5% descuento):
-                        </Label>
-                      </div>
-                      <span className="font-bold text-green-600">
-                        Bs. {singlePayment.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
-                      <div className="flex items-center space-x-3">
-                        <RadioGroupItem value="monthly" id="monthly" />
-                        <Label htmlFor="monthly" className="font-medium">
-                          Pago mensual:
-                        </Label>
-                      </div>
+            {/* Formas de Pago section - remove radio buttons, display payment options for A and B as plain text/rows */}
+            <div className="mt-8 print:mt-8">
+              <h3 className="text-lg font-semibold mb-2">Formas de Pago</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Propuesta A */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-semibold mb-2">Propuesta A</h4>
+                  <ul className="space-y-1">
+                    <li>
+                      Pago único:{" "}
                       <span className="font-bold">
-                        Bs. {Math.round(monthlyPayment).toLocaleString()} x 6
-                        meses
+                        $
+                        {singlePaymentA.toLocaleString("es-MX", {
+                          style: "currency",
+                          currency: "MXN",
+                        })}
                       </span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50">
-                      <div className="flex items-center space-x-3">
-                        <RadioGroupItem value="bimonthly" id="bimonthly" />
-                        <Label htmlFor="bimonthly" className="font-medium">
-                          Pago bimestral:
-                        </Label>
-                      </div>
+                    </li>
+                    <li>
+                      Pago mensual (4 pagos):{" "}
                       <span className="font-bold">
-                        Bs. {Math.round(bimonthlyPayment).toLocaleString()} x 3
-                        pagos
+                        $
+                        {monthlyPaymentA.toLocaleString("es-MX", {
+                          style: "currency",
+                          currency: "MXN",
+                        })}
                       </span>
-                    </div>
-                  </RadioGroup>
-                </CardContent>
-              </Card>
-            )}
+                    </li>
+                    <li>
+                      Pago bimestral (2 pagos):{" "}
+                      <span className="font-bold">
+                        $
+                        {bimonthlyPaymentA.toLocaleString("es-MX", {
+                          style: "currency",
+                          currency: "MXN",
+                        })}
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+                {/* Propuesta B */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-semibold mb-2">Propuesta B</h4>
+                  <ul className="space-y-1">
+                    <li>
+                      Pago único:{" "}
+                      <span className="font-bold">
+                        $
+                        {singlePaymentB.toLocaleString("es-MX", {
+                          style: "currency",
+                          currency: "MXN",
+                        })}
+                      </span>
+                    </li>
+                    <li>
+                      Pago mensual (4 pagos):{" "}
+                      <span className="font-bold">
+                        $
+                        {monthlyPaymentB.toLocaleString("es-MX", {
+                          style: "currency",
+                          currency: "MXN",
+                        })}
+                      </span>
+                    </li>
+                    <li>
+                      Pago bimestral (2 pagos):{" "}
+                      <span className="font-bold">
+                        $
+                        {bimonthlyPaymentB.toLocaleString("es-MX", {
+                          style: "currency",
+                          currency: "MXN",
+                        })}
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
 
             {/* Confirmation - Only show for NEW_PROPOSAL status */}
             {currentProposal?.status === "NEW_PROPOSAL" && (
@@ -915,9 +1147,7 @@ export default function AdminProposalPreviewPage() {
 
                   <Button
                     onClick={sendToCommercial}
-                    disabled={
-                      !confirmation || !paymentMethod || isUpdatingStatus
-                    }
+                    disabled={!confirmation || isUpdatingStatus}
                     className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isUpdatingStatus ? (
