@@ -41,17 +41,45 @@ export async function PUT(
     console.log("Updating services for proposal ID:", id);
     console.log("Services to update:", services);
 
-    // Calculate total amount and total sessions from services
-    const totalAmount = services.reduce(
-      (sum: number, service: { cost: number }) => sum + Number(service.cost),
-      0
-    );
+    // Calculate total amount and total sessions for both proposals
+    const proposalATotals = services
+      .filter(
+        (service: { proposalType: string }) => service.proposalType === "A"
+      )
+      .reduce(
+        (
+          sum: { amount: number; sessions: number },
+          service: { cost: number; sessions: number }
+        ) => ({
+          amount: sum.amount + Number(service.cost),
+          sessions: sum.sessions + Number(service.sessions),
+        }),
+        { amount: 0, sessions: 0 }
+      );
 
-    const totalSessions = services.reduce(
-      (sum: number, service: { sessions: number }) =>
-        sum + Number(service.sessions),
-      0
-    );
+    const proposalBTotals = services
+      .filter(
+        (service: { proposalType: string }) => service.proposalType === "B"
+      )
+      .reduce(
+        (
+          sum: { amount: number; sessions: number },
+          service: { cost: number; sessions: number }
+        ) => ({
+          amount: sum.amount + Number(service.cost),
+          sessions: sum.sessions + Number(service.sessions),
+        }),
+        { amount: 0, sessions: 0 }
+      );
+
+    const totalAmount = {
+      A: proposalATotals.amount,
+      B: proposalBTotals.amount,
+    };
+    const totalSessions = {
+      A: proposalATotals.sessions,
+      B: proposalBTotals.sessions,
+    };
 
     // Use a transaction to update both services and proposal
     const result = await prisma.$transaction(async (tx) => {
@@ -66,6 +94,7 @@ export async function PUT(
           data: services.map(
             (service: {
               type: string;
+              proposalType: string;
               code: string;
               service: string;
               sessions: number;
@@ -74,6 +103,7 @@ export async function PUT(
             }) => ({
               treatmentProposalId: id,
               type: service.type,
+              proposalType: service.proposalType,
               code: service.code,
               service: service.service,
               sessions: service.sessions,
@@ -84,12 +114,12 @@ export async function PUT(
         });
       }
 
-      // Update the proposal's total amount and total sessions
+      // Update the proposal's total amount and total sessions with JSON structure
       await tx.treatmentProposal.update({
         where: { id },
         data: {
-          totalAmount,
-          totalSessions,
+          totalAmount: totalAmount as any, // Type assertion for now until Prisma client is regenerated
+          totalSessions: totalSessions as any, // Type assertion for now until Prisma client is regenerated
         },
       });
 

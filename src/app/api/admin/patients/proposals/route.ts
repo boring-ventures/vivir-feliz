@@ -108,6 +108,46 @@ export async function GET(request: NextRequest) {
           citasProgramadas = true;
         }
 
+        // Handle totalAmount as JSON field
+        const getTotalAmountDisplay = () => {
+          try {
+            const totalAmount = proposal.totalAmount as any;
+
+            // If selectedProposal exists, use that specific amount
+            if (
+              proposal.selectedProposal &&
+              totalAmount &&
+              typeof totalAmount === "object"
+            ) {
+              const selectedAmount = totalAmount[proposal.selectedProposal];
+              if (typeof selectedAmount === "number") {
+                return `Bs. ${selectedAmount.toFixed(2)}`;
+              }
+            }
+
+            // If no selection, show combined amount or first available
+            if (totalAmount && typeof totalAmount === "object") {
+              const amountA = totalAmount.A || 0;
+              const amountB = totalAmount.B || 0;
+
+              // If both proposals exist, show combined
+              if (amountA > 0 && amountB > 0) {
+                return `Bs. ${(amountA + amountB).toFixed(2)} (A+B)`;
+              }
+
+              // Show the available proposal
+              const amount = amountA > 0 ? amountA : amountB;
+              return `Bs. ${amount.toFixed(2)}`;
+            }
+
+            // Fallback for legacy data or invalid format
+            return "Bs. 0.00";
+          } catch (error) {
+            console.error("Error processing totalAmount:", error);
+            return "Bs. 0.00";
+          }
+        };
+
         return {
           id: proposal.id,
           nombre: patient
@@ -143,9 +183,11 @@ export async function GET(request: NextRequest) {
             const year = date.getFullYear();
             return `${day}/${month}/${year}`;
           })(),
-          montoPropuesta: `Bs. ${proposal.totalAmount.toFixed(2)}`,
+          montoPropuesta: getTotalAmountDisplay(),
           pagoConfirmado,
           citasProgramadas,
+          paymentPlan: proposal.paymentPlan,
+          selectedProposal: proposal.selectedProposal,
           // Additional data for the proposal
           proposalData: {
             title: proposal.title,
@@ -154,8 +196,10 @@ export async function GET(request: NextRequest) {
             frequency: proposal.frequency,
             sessionPrice: proposal.sessionPrice,
             totalAmount: proposal.totalAmount,
+            paymentPlan: proposal.paymentPlan,
             status: proposal.status,
             timeAvailability: proposal.timeAvailability,
+            selectedProposal: proposal.selectedProposal,
             consultationRequest: proposal.consultationRequest
               ? {
                   childName: proposal.consultationRequest.childName,

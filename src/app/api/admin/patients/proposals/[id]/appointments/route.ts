@@ -90,19 +90,33 @@ export async function POST(
       );
     }
 
-    // Get proposal services
-    const proposalServices = await prisma.proposalService.findMany({
+    // Get proposal services - filter by selected proposal type
+    const allProposalServices = await prisma.proposalService.findMany({
       where: { treatmentProposalId: proposalId },
     });
 
-    if (proposalServices.length === 0) {
+    if (allProposalServices.length === 0) {
       return NextResponse.json(
         { error: "No services found for this proposal" },
         { status: 400 }
       );
     }
 
-    // Validate that all services have appointments scheduled
+    // Filter services based on selected proposal type
+    const proposalServices = allProposalServices.filter(
+      (service) => service.proposalType === proposal.selectedProposal
+    );
+
+    if (proposalServices.length === 0) {
+      return NextResponse.json(
+        {
+          error: `No services found for selected proposal ${proposal.selectedProposal}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate that all services for the selected proposal have appointments scheduled
     const totalRequiredAppointments = proposalServices.reduce(
       (sum, service) => sum + service.sessions,
       0
@@ -113,10 +127,20 @@ export async function POST(
       0
     );
 
+    // Debug logging
+    console.log("🔍 Selected proposal:", proposal.selectedProposal);
+    console.log("🔍 All proposal services count:", allProposalServices.length);
+    console.log(
+      "🔍 Filtered proposal services count:",
+      proposalServices.length
+    );
+    console.log("🔍 Total required appointments:", totalRequiredAppointments);
+    console.log("🔍 Total provided appointments:", totalProvidedAppointments);
+
     if (totalProvidedAppointments !== totalRequiredAppointments) {
       return NextResponse.json(
         {
-          error: `Expected ${totalRequiredAppointments} appointments total, received ${totalProvidedAppointments}`,
+          error: `Expected ${totalRequiredAppointments} appointments for Proposal ${proposal.selectedProposal}, received ${totalProvidedAppointments}`,
         },
         { status: 400 }
       );
@@ -195,6 +219,7 @@ export async function POST(
           serviceId: service.id,
           sessions: service.sessions,
           slots: serviceSlots,
+          therapistId: service.therapistId,
         });
 
         for (const slot of serviceSlots) {
@@ -252,11 +277,13 @@ export async function POST(
             time: timeStr,
             appointmentDate: appointmentDate.toISOString(),
             endTime,
+            therapistId: service.therapistId,
+            service: service.service,
           });
 
           allAppointmentData.push({
             proposalId,
-            therapistId: proposal.therapistId, // Use therapistId from proposal since all services should have the same therapist
+            therapistId: service.therapistId, // Use therapistId from the specific service
             patientId: proposal.patientId,
             consultationRequestId: proposal.consultationRequestId,
             patientName,
@@ -282,25 +309,55 @@ export async function POST(
         data: allAppointmentData,
       });
 
-      // Create therapist-patient relationship if it doesn't exist
-      if (proposal.therapistId && proposal.patientId) {
-        await tx.therapistPatient.upsert({
-          where: {
-            therapistId_patientId: {
-              therapistId: proposal.therapistId,
-              patientId: proposal.patientId,
+      // Create therapist-patient relationships for all unique therapists involved
+      if (proposal.patientId) {
+        // Get unique therapist IDs from the services
+        const uniqueTherapistIds = [
+          ...new Set(proposalServices.map((service) => service.therapistId)),
+        ];
+
+        console.log(
+          "🔗 Creating therapist-patient relationships for therapists:",
+          uniqueTherapistIds
+        );
+
+        // Log which services each therapist is responsible for
+        const therapistServices = proposalServices.reduce(
+          (acc, service) => {
+            if (!acc[service.therapistId]) {
+              acc[service.therapistId] = [];
+            }
+            acc[service.therapistId].push(service.service);
+            return acc;
+          },
+          {} as Record<string, string[]>
+        );
+
+        console.log("🔗 Therapist services mapping:", therapistServices);
+
+        for (const therapistId of uniqueTherapistIds) {
+          await tx.therapistPatient.upsert({
+            where: {
+              therapistId_patientId: {
+                therapistId: therapistId,
+                patientId: proposal.patientId,
+              },
             },
-          },
-          update: {
-            // Update existing relationship if needed
-            active: true,
-          },
-          create: {
-            therapistId: proposal.therapistId,
-            patientId: proposal.patientId,
-            active: true,
-          },
-        });
+            update: {
+              // Update existing relationship if needed
+              active: true,
+            },
+            create: {
+              therapistId: therapistId,
+              patientId: proposal.patientId,
+              active: true,
+            },
+          });
+
+          console.log(
+            `✅ Created/updated therapist-patient relationship: ${therapistId} - ${proposal.patientId}`
+          );
+        }
       }
 
       // Update proposal status to appointments scheduled
