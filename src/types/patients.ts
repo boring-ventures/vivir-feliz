@@ -44,6 +44,11 @@ export interface AppointmentWithRelations extends Appointment {
   patient?: PatientWithRelations;
   proposal?: TreatmentProposalWithRelations;
   medicalRecords: MedicalRecord[];
+  sessionNote?: {
+    id: string;
+    sessionComment: string;
+    parentMessage: string | null;
+  } | null;
 }
 
 export interface MedicalRecordWithRelations extends MedicalRecord {
@@ -212,6 +217,7 @@ export interface ProposalDisplayData {
   canConfirmPayment: boolean;
   canScheduleAppointments: boolean;
   timeAvailability?: Record<string, { morning: boolean; afternoon: boolean }>;
+  selectedProposal?: string;
 }
 
 export interface AppointmentCalendarData {

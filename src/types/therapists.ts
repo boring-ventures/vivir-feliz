@@ -68,6 +68,7 @@ export interface TherapistAppointment {
   startTime: string;
   endTime: string;
   type: AppointmentType;
+  patientId: string | null;
   patientName: string;
   patientAge: number | null;
   parentName: string;
