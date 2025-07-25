@@ -33,6 +33,7 @@ interface ServiceItem {
   cost: number;
   therapistId?: string;
   code: string; // Add code field to track the selected service code
+  proposalType: "A" | "B"; // Add proposal type
 }
 
 // Service data from therapist proposal page
@@ -305,39 +306,85 @@ export default function AdminProposalEditPage() {
     }
   }, [currentProposal]);
 
-  // Initialize state for services
-  const [evaluations, setEvaluations] = useState<ServiceItem[]>([]);
-  const [treatments, setTreatments] = useState<ServiceItem[]>([]);
+  // Initialize state for services - separated by proposal type
+  const [evaluationsA, setEvaluationsA] = useState<ServiceItem[]>([]);
+  const [treatmentsA, setTreatmentsA] = useState<ServiceItem[]>([]);
+  const [evaluationsB, setEvaluationsB] = useState<ServiceItem[]>([]);
+  const [treatmentsB, setTreatmentsB] = useState<ServiceItem[]>([]);
 
-  // Update services when data loads from database
+  // Update services when data loads from database - separate by proposal type
   useEffect(() => {
     if (proposalServices) {
-      const evaluationServices = proposalServices
-        .filter((service) => service.type === "EVALUATION")
+      // Proposal A services
+      const evaluationServicesA = proposalServices
+        .filter(
+          (service) =>
+            service.type === "EVALUATION" && service.proposalType === "A"
+        )
         .map((service, index) => ({
-          id: 1000 + index, // Use 1000+ for evaluations to avoid conflicts
-          dbId: service.id, // Keep original DB ID for reference
+          id: 1000 + index, // Use 1000+ for evaluations A
+          dbId: service.id,
           name: service.service,
-          sessions: Number(service.sessions), // Convert to number
-          cost: Number(service.cost || 0), // Convert to number
-          therapistId: service.therapistId, // Add therapistId
-          code: service.code, // Add code field
+          sessions: Number(service.sessions),
+          cost: Number(service.cost || 0),
+          therapistId: service.therapistId,
+          code: service.code,
+          proposalType: "A" as const,
         }));
 
-      const treatmentServices = proposalServices
-        .filter((service) => service.type === "TREATMENT")
+      const treatmentServicesA = proposalServices
+        .filter(
+          (service) =>
+            service.type === "TREATMENT" && service.proposalType === "A"
+        )
         .map((service, index) => ({
-          id: 2000 + index, // Use 2000+ for treatments to avoid conflicts
-          dbId: service.id, // Keep original DB ID for reference
+          id: 2000 + index, // Use 2000+ for treatments A
+          dbId: service.id,
           name: service.service,
-          sessions: Number(service.sessions), // Convert to number
-          cost: Number(service.cost || 0), // Convert to number
-          therapistId: service.therapistId, // Add therapistId
-          code: service.code, // Add code field
+          sessions: Number(service.sessions),
+          cost: Number(service.cost || 0),
+          therapistId: service.therapistId,
+          code: service.code,
+          proposalType: "A" as const,
         }));
 
-      setEvaluations(evaluationServices);
-      setTreatments(treatmentServices);
+      // Proposal B services
+      const evaluationServicesB = proposalServices
+        .filter(
+          (service) =>
+            service.type === "EVALUATION" && service.proposalType === "B"
+        )
+        .map((service, index) => ({
+          id: 3000 + index, // Use 3000+ for evaluations B
+          dbId: service.id,
+          name: service.service,
+          sessions: Number(service.sessions),
+          cost: Number(service.cost || 0),
+          therapistId: service.therapistId,
+          code: service.code,
+          proposalType: "B" as const,
+        }));
+
+      const treatmentServicesB = proposalServices
+        .filter(
+          (service) =>
+            service.type === "TREATMENT" && service.proposalType === "B"
+        )
+        .map((service, index) => ({
+          id: 4000 + index, // Use 4000+ for treatments B
+          dbId: service.id,
+          name: service.service,
+          sessions: Number(service.sessions),
+          cost: Number(service.cost || 0),
+          therapistId: service.therapistId,
+          code: service.code,
+          proposalType: "B" as const,
+        }));
+
+      setEvaluationsA(evaluationServicesA);
+      setTreatmentsA(treatmentServicesA);
+      setEvaluationsB(evaluationServicesB);
+      setTreatmentsB(treatmentServicesB);
     }
   }, [proposalServices, params.id, servicesLoading]);
 
@@ -394,26 +441,27 @@ export default function AdminProposalEditPage() {
     return age;
   }
 
-  // Functions to handle evaluations
-  const addEvaluation = () => {
+  // Functions to handle evaluations A
+  const addEvaluationA = () => {
     const newEvaluation: ServiceItem = {
-      id: Math.max(...evaluations.map((e) => e.id), 999) + 1,
+      id: Math.max(...evaluationsA.map((e) => e.id), 999) + 1,
       name: "",
-      code: "", // Add code field to track the selected service code
+      code: "",
       sessions: 1,
       cost: 0,
       therapistId: "",
+      proposalType: "A",
     };
-    setEvaluations([...evaluations, newEvaluation]);
+    setEvaluationsA([...evaluationsA, newEvaluation]);
   };
 
-  const updateEvaluation = (
+  const updateEvaluationA = (
     id: number,
     field: keyof ServiceItem,
     value: string | number
   ) => {
-    setEvaluations(
-      evaluations.map((evaluation) => {
+    setEvaluationsA(
+      evaluationsA.map((evaluation) => {
         if (evaluation.id === id) {
           const updatedEvaluation = {
             ...evaluation,
@@ -428,18 +476,15 @@ export default function AdminProposalEditPage() {
             if (selectedService) {
               updatedEvaluation.name = selectedService.servicio;
               updatedEvaluation.sessions = selectedService.sesiones;
-              updatedEvaluation.cost = selectedService.sesiones * 150; // Example: 150 Bs per session
-              // Reset therapist when service changes
+              updatedEvaluation.cost = selectedService.sesiones * 150;
               updatedEvaluation.therapistId = "";
             }
           }
 
-          // If updating the cost field, ensure it's a number
           if (field === "cost") {
             updatedEvaluation.cost = Number(value) || 0;
           }
 
-          // If updating the sessions field, ensure it's a number
           if (field === "sessions") {
             updatedEvaluation.sessions = Number(value) || 1;
           }
@@ -451,37 +496,37 @@ export default function AdminProposalEditPage() {
     );
   };
 
-  const removeEvaluation = (id: number) => {
-    setEvaluations(evaluations.filter((evaluation) => evaluation.id !== id));
+  const removeEvaluationA = (id: number) => {
+    setEvaluationsA(evaluationsA.filter((evaluation) => evaluation.id !== id));
   };
 
-  // Functions to handle treatments
-  const addTreatment = () => {
+  // Functions to handle treatments A
+  const addTreatmentA = () => {
     const newTreatment: ServiceItem = {
-      id: Math.max(...treatments.map((t) => t.id), 1999) + 1,
+      id: Math.max(...treatmentsA.map((t) => t.id), 1999) + 1,
       name: "",
-      code: "", // Add code field to track the selected service code
+      code: "",
       sessions: 1,
       cost: 0,
       therapistId: "",
+      proposalType: "A",
     };
-    setTreatments([...treatments, newTreatment]);
+    setTreatmentsA([...treatmentsA, newTreatment]);
   };
 
-  const updateTreatment = (
+  const updateTreatmentA = (
     id: number,
     field: keyof ServiceItem,
     value: string | number
   ) => {
-    setTreatments(
-      treatments.map((treatment) => {
+    setTreatmentsA(
+      treatmentsA.map((treatment) => {
         if (treatment.id === id) {
           const updatedTreatment = {
             ...treatment,
             [field]: value,
           };
 
-          // If updating the code field
           if (field === "code") {
             const selectedService = serviciosTratamientoData.find(
               (s) => s.codigo === value
@@ -489,18 +534,15 @@ export default function AdminProposalEditPage() {
             if (selectedService) {
               updatedTreatment.name = selectedService.servicio;
               updatedTreatment.sessions = selectedService.sesiones;
-              updatedTreatment.cost = selectedService.sesiones * 150; // Example: 150 Bs per session
-              // Reset therapist when service changes
+              updatedTreatment.cost = selectedService.sesiones * 150;
               updatedTreatment.therapistId = "";
             }
           }
 
-          // If updating the cost field, ensure it's a number
           if (field === "cost") {
             updatedTreatment.cost = Number(value) || 0;
           }
 
-          // If updating the sessions field, ensure it's a number
           if (field === "sessions") {
             updatedTreatment.sessions = Number(value) || 1;
           }
@@ -512,36 +554,186 @@ export default function AdminProposalEditPage() {
     );
   };
 
-  const removeTreatment = (id: number) => {
-    setTreatments(treatments.filter((treatment) => treatment.id !== id));
+  const removeTreatmentA = (id: number) => {
+    setTreatmentsA(treatmentsA.filter((treatment) => treatment.id !== id));
   };
 
-  // Calculations
-  const totalEvaluations = evaluations.reduce(
-    (sum, item) => sum + (Number(item.cost) || 0),
-    0
-  );
-  const totalTreatments = treatments.reduce(
-    (sum, item) => sum + (Number(item.cost) || 0),
-    0
-  );
-  const totalGeneral = totalEvaluations + totalTreatments;
+  // Functions to handle evaluations B
+  const addEvaluationB = () => {
+    const newEvaluation: ServiceItem = {
+      id: Math.max(...evaluationsB.map((e) => e.id), 2999) + 1,
+      name: "",
+      code: "",
+      sessions: 1,
+      cost: 0,
+      therapistId: "",
+      proposalType: "B",
+    };
+    setEvaluationsB([...evaluationsB, newEvaluation]);
+  };
 
-  // Update the saveProposal function to include therapist IDs
+  const updateEvaluationB = (
+    id: number,
+    field: keyof ServiceItem,
+    value: string | number
+  ) => {
+    setEvaluationsB(
+      evaluationsB.map((evaluation) => {
+        if (evaluation.id === id) {
+          const updatedEvaluation = {
+            ...evaluation,
+            [field]: value,
+          };
+
+          if (field === "code") {
+            const selectedService = serviciosEvaluacionData.find(
+              (s) => s.codigo === value
+            );
+            if (selectedService) {
+              updatedEvaluation.name = selectedService.servicio;
+              updatedEvaluation.sessions = selectedService.sesiones;
+              updatedEvaluation.cost = selectedService.sesiones * 150;
+              updatedEvaluation.therapistId = "";
+            }
+          }
+
+          if (field === "cost") {
+            updatedEvaluation.cost = Number(value) || 0;
+          }
+
+          if (field === "sessions") {
+            updatedEvaluation.sessions = Number(value) || 1;
+          }
+
+          return updatedEvaluation;
+        }
+        return evaluation;
+      })
+    );
+  };
+
+  const removeEvaluationB = (id: number) => {
+    setEvaluationsB(evaluationsB.filter((evaluation) => evaluation.id !== id));
+  };
+
+  // Functions to handle treatments B
+  const addTreatmentB = () => {
+    const newTreatment: ServiceItem = {
+      id: Math.max(...treatmentsB.map((t) => t.id), 3999) + 1,
+      name: "",
+      code: "",
+      sessions: 1,
+      cost: 0,
+      therapistId: "",
+      proposalType: "B",
+    };
+    setTreatmentsB([...treatmentsB, newTreatment]);
+  };
+
+  const updateTreatmentB = (
+    id: number,
+    field: keyof ServiceItem,
+    value: string | number
+  ) => {
+    setTreatmentsB(
+      treatmentsB.map((treatment) => {
+        if (treatment.id === id) {
+          const updatedTreatment = {
+            ...treatment,
+            [field]: value,
+          };
+
+          if (field === "code") {
+            const selectedService = serviciosTratamientoData.find(
+              (s) => s.codigo === value
+            );
+            if (selectedService) {
+              updatedTreatment.name = selectedService.servicio;
+              updatedTreatment.sessions = selectedService.sesiones;
+              updatedTreatment.cost = selectedService.sesiones * 150;
+              updatedTreatment.therapistId = "";
+            }
+          }
+
+          if (field === "cost") {
+            updatedTreatment.cost = Number(value) || 0;
+          }
+
+          if (field === "sessions") {
+            updatedTreatment.sessions = Number(value) || 1;
+          }
+
+          return updatedTreatment;
+        }
+        return treatment;
+      })
+    );
+  };
+
+  const removeTreatmentB = (id: number) => {
+    setTreatmentsB(treatmentsB.filter((treatment) => treatment.id !== id));
+  };
+
+  // Calculations for both proposals
+  const totalEvaluationsA = evaluationsA.reduce(
+    (sum, item) => sum + (Number(item.cost) || 0),
+    0
+  );
+  const totalTreatmentsA = treatmentsA.reduce(
+    (sum, item) => sum + (Number(item.cost) || 0),
+    0
+  );
+  const totalProposalA = totalEvaluationsA + totalTreatmentsA;
+
+  // Calculate session totals for Proposal A
+  const totalSessionsEvaluationsA = evaluationsA.reduce(
+    (sum, item) => sum + (Number(item.sessions) || 0),
+    0
+  );
+  const totalSessionsTreatmentsA = treatmentsA.reduce(
+    (sum, item) => sum + (Number(item.sessions) || 0),
+    0
+  );
+  const totalSessionsProposalA =
+    totalSessionsEvaluationsA + totalSessionsTreatmentsA;
+
+  const totalEvaluationsB = evaluationsB.reduce(
+    (sum, item) => sum + (Number(item.cost) || 0),
+    0
+  );
+  const totalTreatmentsB = treatmentsB.reduce(
+    (sum, item) => sum + (Number(item.cost) || 0),
+    0
+  );
+  const totalProposalB = totalEvaluationsB + totalTreatmentsB;
+
+  // Calculate session totals for Proposal B
+  const totalSessionsEvaluationsB = evaluationsB.reduce(
+    (sum, item) => sum + (Number(item.sessions) || 0),
+    0
+  );
+  const totalSessionsTreatmentsB = treatmentsB.reduce(
+    (sum, item) => sum + (Number(item.sessions) || 0),
+    0
+  );
+  const totalSessionsProposalB =
+    totalSessionsEvaluationsB + totalSessionsTreatmentsB;
+
+  // Update the saveProposal function to include both proposals
   const saveProposal = async () => {
     try {
       // Validate that all services have therapists assigned
-      const evaluationsWithoutTherapist = evaluations.filter(
-        (evaluation) => !evaluation.therapistId
-      );
-      const treatmentsWithoutTherapist = treatments.filter(
-        (treatment) => !treatment.therapistId
+      const allServices = [
+        ...evaluationsA,
+        ...treatmentsA,
+        ...evaluationsB,
+        ...treatmentsB,
+      ];
+      const servicesWithoutTherapist = allServices.filter(
+        (service) => !service.therapistId
       );
 
-      if (
-        evaluationsWithoutTherapist.length > 0 ||
-        treatmentsWithoutTherapist.length > 0
-      ) {
+      if (servicesWithoutTherapist.length > 0) {
         toast({
           title: "Error de validación",
           description: "Todos los servicios deben tener un terapeuta asignado",
@@ -550,29 +742,53 @@ export default function AdminProposalEditPage() {
         return;
       }
 
-      const allServices = [
-        ...evaluations.map((evaluation) => ({
+      const allServicesData = [
+        // Proposal A services
+        ...evaluationsA.map((evaluation) => ({
           treatmentProposalId: params.id as string,
           type: "EVALUATION" as const,
-          code: `EVAL-${evaluation.id}`,
+          code: evaluation.code,
           service: evaluation.name,
           sessions: Number(evaluation.sessions),
           cost: Number(evaluation.cost) || 0,
           therapistId: evaluation.therapistId!,
+          proposalType: "A",
         })),
-        ...treatments.map((treatment) => ({
+        ...treatmentsA.map((treatment) => ({
           treatmentProposalId: params.id as string,
           type: "TREATMENT" as const,
-          code: `TREAT-${treatment.id}`,
+          code: treatment.code,
           service: treatment.name,
           sessions: Number(treatment.sessions),
           cost: Number(treatment.cost) || 0,
           therapistId: treatment.therapistId!,
+          proposalType: "A",
+        })),
+        // Proposal B services
+        ...evaluationsB.map((evaluation) => ({
+          treatmentProposalId: params.id as string,
+          type: "EVALUATION" as const,
+          code: evaluation.code,
+          service: evaluation.name,
+          sessions: Number(evaluation.sessions),
+          cost: Number(evaluation.cost) || 0,
+          therapistId: evaluation.therapistId!,
+          proposalType: "B",
+        })),
+        ...treatmentsB.map((treatment) => ({
+          treatmentProposalId: params.id as string,
+          type: "TREATMENT" as const,
+          code: treatment.code,
+          service: treatment.name,
+          sessions: Number(treatment.sessions),
+          cost: Number(treatment.cost) || 0,
+          therapistId: treatment.therapistId!,
+          proposalType: "B",
         })),
       ];
 
       // Filter out empty services
-      const validServices = allServices.filter(
+      const validServices = allServicesData.filter(
         (service) => service.service.trim() !== ""
       );
 
@@ -594,6 +810,170 @@ export default function AdminProposalEditPage() {
         variant: "destructive",
       });
     }
+  };
+
+  // Helper function to render service section
+  const renderServiceSection = (
+    title: string,
+    services: ServiceItem[],
+    addService: () => void,
+    updateService: (
+      id: number,
+      field: keyof ServiceItem,
+      value: string | number
+    ) => void,
+    removeService: (id: number) => void,
+    serviceData: Array<{
+      codigo: string;
+      servicio: string;
+      sesiones: number;
+      descripcion?: string;
+    }>,
+    proposalType: "A" | "B"
+  ) => {
+    const proposalColor = proposalType === "A" ? "blue" : "green";
+
+    return (
+      <Card className={`border-${proposalColor}-200`}>
+        <CardHeader
+          className={`flex flex-row items-center justify-between space-y-0 bg-${proposalColor}-50`}
+        >
+          <CardTitle className={`text-${proposalColor}-900`}>{title}</CardTitle>
+          <Button
+            onClick={addService}
+            size="sm"
+            variant="outline"
+            className={`border-${proposalColor}-200 text-${proposalColor}-600 hover:bg-${proposalColor}-50`}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Servicio
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {services.map((service) => {
+              // Get list of already selected services (excluding current service)
+              const selectedCodes = services
+                .filter((s) => s.id !== service.id)
+                .map((s) => s.code)
+                .filter(Boolean);
+
+              // Filter out already selected services
+              const availableServices = serviceData.filter(
+                (serviceItem) => !selectedCodes.includes(serviceItem.codigo)
+              );
+
+              return (
+                <div
+                  key={service.id}
+                  className={`p-4 border border-${proposalColor}-200 rounded-lg bg-${proposalColor}-25`}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    <div className="md:col-span-5">
+                      <Label className="text-sm font-medium">
+                        Nombre del Servicio
+                      </Label>
+                      <Select
+                        value={service.code}
+                        onValueChange={(value) =>
+                          updateService(service.id, "code", value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar servicio" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableServices.map((serviceItem) => (
+                            <SelectItem
+                              key={serviceItem.codigo}
+                              value={serviceItem.codigo}
+                            >
+                              {serviceItem.servicio}
+                            </SelectItem>
+                          ))}
+                          {service.code &&
+                            !availableServices.some(
+                              (s) => s.codigo === service.code
+                            ) && (
+                              <SelectItem value={service.code}>
+                                {
+                                  serviceData.find(
+                                    (s) => s.codigo === service.code
+                                  )?.servicio
+                                }
+                              </SelectItem>
+                            )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-4">
+                      <Label className="text-sm font-medium">Terapeuta</Label>
+                      <Select
+                        value={service.therapistId}
+                        onValueChange={(value) =>
+                          updateService(service.id, "therapistId", value)
+                        }
+                        disabled={!service.code}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar terapeuta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getTherapistsByService(service.code).map(
+                            (therapist) => (
+                              <SelectItem
+                                key={therapist.id}
+                                value={therapist.id}
+                              >
+                                {getTherapistDisplayName(therapist)}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-1">
+                      <Label className="text-sm font-medium">Sesiones</Label>
+                      <Input
+                        type="number"
+                        value={service.sessions}
+                        onChange={(e) =>
+                          updateService(service.id, "sessions", e.target.value)
+                        }
+                        min="1"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-sm font-medium">Costo (Bs.)</Label>
+                      <div className="flex mt-1">
+                        <Input
+                          type="number"
+                          value={service.cost}
+                          onChange={(e) =>
+                            updateService(service.id, "cost", e.target.value)
+                          }
+                          min="0"
+                          className="rounded-r-none"
+                        />
+                        <Button
+                          onClick={() => removeService(service.id)}
+                          variant="outline"
+                          size="sm"
+                          className="rounded-l-none border-l-0 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (isLoading || servicesLoading || !currentProposal || !patientInfo) {
@@ -625,9 +1005,11 @@ export default function AdminProposalEditPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold">Editar Propuesta Económica</h1>
+              <h1 className="text-3xl font-bold">
+                Editar Propuesta Económica (Dual)
+              </h1>
               <p className="text-gray-600">
-                Personaliza los servicios y costos para el paciente
+                Personaliza los servicios y costos para ambas propuestas (A y B)
               </p>
             </div>
           </div>
@@ -743,335 +1125,121 @@ export default function AdminProposalEditPage() {
           </CardContent>
         </Card>
 
-        {/* Evaluations */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Evaluaciones</CardTitle>
-            <Button onClick={addEvaluation} size="sm" variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar Evaluación
-            </Button>
-          </CardHeader>
-          <CardContent>
+        {/* Proposal A */}
             <div className="space-y-4">
-              {evaluations.map((evaluation) => {
-                // Get list of already selected services (excluding current evaluation)
-                const selectedCodes = evaluations
-                  .filter((e) => e.id !== evaluation.id)
-                  .map((e) => e.code)
-                  .filter(Boolean);
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-blue-500 rounded"></div>
+            <h2 className="text-2xl font-bold text-blue-900">Propuesta A</h2>
+          </div>
 
-                // Filter out already selected services
-                const availableServices = serviciosEvaluacionData.filter(
-                  (service) => !selectedCodes.includes(service.codigo)
-                );
+          {/* Evaluations A */}
+          {renderServiceSection(
+            "Evaluaciones - Propuesta A",
+            evaluationsA,
+            addEvaluationA,
+            updateEvaluationA,
+            removeEvaluationA,
+            serviciosEvaluacionData,
+            "A"
+          )}
 
-                return (
-                  <div
-                    key={evaluation.id}
-                    className="p-4 border border-gray-200 rounded-lg"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                      <div className="md:col-span-5">
-                        <Label className="text-sm font-medium">
-                          Nombre de la Evaluación
-                        </Label>
-                        <Select
-                          value={evaluation.code}
-                          onValueChange={(value) =>
-                            updateEvaluation(evaluation.id, "code", value)
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar evaluación" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableServices.map((service) => (
-                              <SelectItem
-                                key={service.codigo}
-                                value={service.codigo}
-                              >
-                                {service.servicio}
-                              </SelectItem>
-                            ))}
-                            {evaluation.code &&
-                              !availableServices.some(
-                                (s) => s.codigo === evaluation.code
-                              ) && (
-                                <SelectItem value={evaluation.code}>
-                                  {
-                                    serviciosEvaluacionData.find(
-                                      (s) => s.codigo === evaluation.code
-                                    )?.servicio
-                                  }
-                                </SelectItem>
-                              )}
-                          </SelectContent>
-                        </Select>
+          {/* Treatments A */}
+          {renderServiceSection(
+            "Tratamientos - Propuesta A (6 meses)",
+            treatmentsA,
+            addTreatmentA,
+            updateTreatmentA,
+            removeTreatmentA,
+            serviciosTratamientoData,
+            "A"
+          )}
+
+          {/* Proposal A Summary */}
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                <div className="flex justify-between text-lg">
+                  <span>Evaluaciones A:</span>
+                  <span>Bs. {totalEvaluationsA.toLocaleString()}</span>
                       </div>
-                      <div className="md:col-span-4">
-                        <Label className="text-sm font-medium">Terapeuta</Label>
-                        <Select
-                          value={evaluation.therapistId}
-                          onValueChange={(value) =>
-                            updateEvaluation(
-                              evaluation.id,
-                              "therapistId",
-                              value
-                            )
-                          }
-                          disabled={!evaluation.code} // Disable until service is selected
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar terapeuta" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getTherapistsByService(evaluation.code).map(
-                              (therapist) => (
-                                <SelectItem
-                                  key={therapist.id}
-                                  value={therapist.id}
-                                >
-                                  {getTherapistDisplayName(therapist)}
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
+                <div className="flex justify-between text-lg">
+                  <span>Tratamientos A:</span>
+                  <span>Bs. {totalTreatmentsA.toLocaleString()}</span>
                       </div>
-                      <div className="md:col-span-1">
-                        <Label className="text-sm font-medium">Sesiones</Label>
-                        <Input
-                          type="number"
-                          value={evaluation.sessions}
-                          onChange={(e) =>
-                            updateEvaluation(
-                              evaluation.id,
-                              "sessions",
-                              e.target.value
-                            )
-                          }
-                          min="1"
-                          className="mt-1"
-                        />
+                <div className="border-t border-blue-300 pt-3">
+                  <div className="flex justify-between text-xl font-bold">
+                    <span>TOTAL PROPUESTA A:</span>
+                    <span className="text-blue-600">
+                      Bs. {totalProposalA.toLocaleString()}
+                    </span>
                       </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-sm font-medium">
-                          Costo (Bs.)
-                        </Label>
-                        <div className="flex mt-1">
-                          <Input
-                            type="number"
-                            value={evaluation.cost}
-                            onChange={(e) =>
-                              updateEvaluation(
-                                evaluation.id,
-                                "cost",
-                                e.target.value
-                              )
-                            }
-                            min="0"
-                            className="rounded-r-none"
-                          />
-                          <Button
-                            onClick={() => removeEvaluation(evaluation.id)}
-                            variant="outline"
-                            size="sm"
-                            className="rounded-l-none border-l-0 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  <div className="flex justify-between text-sm text-blue-600">
+                    <span>Total Sesiones:</span>
+                    <span>{totalSessionsProposalA} sesiones</span>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div className="flex justify-between items-center pt-4 border-t border-gray-200 font-semibold">
-                <span>Total Evaluaciones:</span>
-                <span className="text-lg">
-                  Bs. {totalEvaluations.toLocaleString()}
-                </span>
               </div>
             </div>
           </CardContent>
         </Card>
+        </div>
 
-        {/* Treatments */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Tratamientos (6 meses)</CardTitle>
-            <Button onClick={addTreatment} size="sm" variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar Tratamiento
-            </Button>
-          </CardHeader>
-          <CardContent>
+        {/* Proposal B */}
             <div className="space-y-4">
-              {treatments.map((treatment) => {
-                // Get list of already selected services (excluding current treatment)
-                const selectedCodes = treatments
-                  .filter((t) => t.id !== treatment.id)
-                  .map((t) => t.code)
-                  .filter(Boolean);
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-green-500 rounded"></div>
+            <h2 className="text-2xl font-bold text-green-900">Propuesta B</h2>
+          </div>
 
-                // Filter out already selected services
-                const availableServices = serviciosTratamientoData.filter(
-                  (service) => !selectedCodes.includes(service.codigo)
-                );
+          {/* Evaluations B */}
+          {renderServiceSection(
+            "Evaluaciones - Propuesta B",
+            evaluationsB,
+            addEvaluationB,
+            updateEvaluationB,
+            removeEvaluationB,
+            serviciosEvaluacionData,
+            "B"
+          )}
 
-                return (
-                  <div
-                    key={treatment.id}
-                    className="p-4 border border-gray-200 rounded-lg"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                      <div className="md:col-span-5">
-                        <Label className="text-sm font-medium">
-                          Nombre del Tratamiento
-                        </Label>
-                        <Select
-                          value={treatment.code}
-                          onValueChange={(value) =>
-                            updateTreatment(treatment.id, "code", value)
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar tratamiento" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableServices.map((service) => (
-                              <SelectItem
-                                key={service.codigo}
-                                value={service.codigo}
-                              >
-                                {service.servicio}
-                              </SelectItem>
-                            ))}
-                            {treatment.code &&
-                              !availableServices.some(
-                                (s) => s.codigo === treatment.code
-                              ) && (
-                                <SelectItem value={treatment.code}>
-                                  {
-                                    serviciosTratamientoData.find(
-                                      (s) => s.codigo === treatment.code
-                                    )?.servicio
-                                  }
-                                </SelectItem>
-                              )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="md:col-span-4">
-                        <Label className="text-sm font-medium">Terapeuta</Label>
-                        <Select
-                          value={treatment.therapistId}
-                          onValueChange={(value) =>
-                            updateTreatment(treatment.id, "therapistId", value)
-                          }
-                          disabled={!treatment.code} // Disable until service is selected
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar terapeuta" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getTherapistsByService(treatment.code).map(
-                              (therapist) => (
-                                <SelectItem
-                                  key={therapist.id}
-                                  value={therapist.id}
-                                >
-                                  {getTherapistDisplayName(therapist)}
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="md:col-span-1">
-                        <Label className="text-sm font-medium">Sesiones</Label>
-                        <Input
-                          type="number"
-                          value={treatment.sessions}
-                          onChange={(e) =>
-                            updateTreatment(
-                              treatment.id,
-                              "sessions",
-                              e.target.value
-                            )
-                          }
-                          min="1"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-sm font-medium">
-                          Costo (Bs.)
-                        </Label>
-                        <div className="flex mt-1">
-                          <Input
-                            type="number"
-                            value={treatment.cost}
-                            onChange={(e) =>
-                              updateTreatment(
-                                treatment.id,
-                                "cost",
-                                e.target.value
-                              )
-                            }
-                            min="0"
-                            className="rounded-r-none"
-                          />
-                          <Button
-                            onClick={() => removeTreatment(treatment.id)}
-                            variant="outline"
-                            size="sm"
-                            className="rounded-l-none border-l-0 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          {/* Treatments B */}
+          {renderServiceSection(
+            "Tratamientos - Propuesta B (6 meses)",
+            treatmentsB,
+            addTreatmentB,
+            updateTreatmentB,
+            removeTreatmentB,
+            serviciosTratamientoData,
+            "B"
+          )}
 
-              <div className="flex justify-between items-center pt-4 border-t border-gray-200 font-semibold">
-                <span>Total Tratamientos:</span>
-                <span className="text-lg">
-                  Bs. {totalTreatments.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Summary */}
-        <Card className="bg-gray-50">
+          {/* Proposal B Summary */}
+          <Card className="bg-green-50 border-green-200">
           <CardContent className="p-6">
             <div className="space-y-3">
               <div className="flex justify-between text-lg">
-                <span>Evaluaciones:</span>
-                <span>Bs. {totalEvaluations.toLocaleString()}</span>
+                  <span>Evaluaciones B:</span>
+                  <span>Bs. {totalEvaluationsB.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-lg">
-                <span>Tratamientos:</span>
-                <span>Bs. {totalTreatments.toLocaleString()}</span>
+                  <span>Tratamientos B:</span>
+                  <span>Bs. {totalTreatmentsB.toLocaleString()}</span>
               </div>
-              <div className="border-t border-gray-300 pt-3">
-                <div className="flex justify-between text-2xl font-bold">
-                  <span>TOTAL GENERAL:</span>
-                  <span className="text-blue-600">
-                    Bs. {totalGeneral.toLocaleString()}
+                <div className="border-t border-green-300 pt-3">
+                  <div className="flex justify-between text-xl font-bold">
+                    <span>TOTAL PROPUESTA B:</span>
+                    <span className="text-green-600">
+                      Bs. {totalProposalB.toLocaleString()}
                   </span>
                 </div>
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Total Sesiones:</span>
+                    <span>{totalSessionsProposalB} sesiones</span>
+                  </div>
               </div>
             </div>
           </CardContent>
         </Card>
+        </div>
 
         {/* Action Buttons */}
         <div className="flex justify-between items-center pt-6 border-t border-gray-200">
