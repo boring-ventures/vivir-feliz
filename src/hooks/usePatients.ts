@@ -222,10 +222,14 @@ export function useUpdateProposalStatus() {
       proposalId,
       status,
       notes,
+      selectedProposal,
+      selectedPaymentPlan,
     }: {
       proposalId: string;
       status: string;
       notes?: string;
+      selectedProposal?: string;
+      selectedPaymentPlan?: string;
     }) => {
       const response = await fetch(
         `/api/admin/patients/proposals/${proposalId}`,
@@ -234,7 +238,12 @@ export function useUpdateProposalStatus() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ status, notes }),
+          body: JSON.stringify({
+            status,
+            notes,
+            selectedProposal,
+            selectedPaymentPlan,
+          }),
         }
       );
 
@@ -333,6 +342,7 @@ export function useProposalsDisplayData(
       canConfirmPayment: proposal.status === "PAYMENT_PENDING",
       canScheduleAppointments:
         proposal.status === "PAYMENT_CONFIRMED" && !appointmentsScheduled,
+      selectedProposal: proposal.selectedProposal,
     };
   });
 }
