@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { NextRequest, NextResponse } from "next/server";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 import { AppointmentStatus } from "@prisma/client";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = createRouteHandlerClient({ cookies });
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -22,7 +22,12 @@ export async function GET() {
       },
     });
 
+    console.log("Parent dashboard - User ID:", session.user.id);
+    console.log("Parent dashboard - Profile found:", !!profile);
+    console.log("Parent dashboard - Profile role:", profile?.role);
+
     if (!profile || profile.role !== "PARENT") {
+      console.log("Parent dashboard - Profile not found or not a parent");
       return NextResponse.json(
         { error: "Parent profile not found" },
         { status: 404 }
@@ -44,7 +49,11 @@ export async function GET() {
 
     const patientIds = patients.map((patient) => patient.id);
 
+    console.log("Parent dashboard - Found patients:", patients.length);
+    console.log("Parent dashboard - Patient IDs:", patientIds);
+
     if (patientIds.length === 0) {
+      console.log("Parent dashboard - No patients found, returning empty data");
       return NextResponse.json({
         stats: {
           totalPatients: 0,
@@ -179,7 +188,7 @@ export async function GET() {
       completedAppointments,
       totalDocuments,
       totalPaid,
-      totalPending,
+      treatmentProposals,
     ] = await Promise.all([
       prisma.appointment.count({
         where: {
@@ -214,19 +223,50 @@ export async function GET() {
           amount: true,
         },
       }),
-      prisma.treatmentProposal.aggregate({
+      prisma.treatmentProposal.findMany({
         where: {
           patientId: { in: patientIds },
         },
-        _sum: {
-          totalAmount: true,
+        select: {
+          sessionPrice: true,
+          totalSessions: true,
+          selectedProposal: true,
         },
       }),
     ]);
 
     // Calculate total pending amount
     const totalPaidAmount = Number(totalPaid._sum.amount) || 0;
-    const totalAmount = Number(totalPending._sum.totalAmount) || 0;
+
+    // Calculate total amount from treatment proposals
+    const totalAmount = treatmentProposals.reduce((sum, proposal) => {
+      const sessionPrice = Number(proposal.sessionPrice) || 0;
+      let totalSessions = 0;
+
+      if (
+        proposal.totalSessions &&
+        typeof proposal.totalSessions === "object"
+      ) {
+        const totalSessionsObj = proposal.totalSessions as {
+          A?: number;
+          B?: number;
+        };
+        if (proposal.selectedProposal === "A") {
+          totalSessions = totalSessionsObj.A || 0;
+        } else if (proposal.selectedProposal === "B") {
+          totalSessions = totalSessionsObj.B || 0;
+        } else {
+          // If no proposal selected, use the higher value
+          totalSessions = Math.max(
+            totalSessionsObj.A || 0,
+            totalSessionsObj.B || 0
+          );
+        }
+      }
+
+      return sum + sessionPrice * totalSessions;
+    }, 0);
+
     const pendingAmount = Math.max(0, totalAmount - totalPaidAmount);
 
     // Transform next appointment
@@ -245,7 +285,19 @@ export async function GET() {
           type: nextAppointment.type,
           status: nextAppointment.status,
           proposalTitle: nextAppointment.proposal?.title || "",
-          totalSessions: nextAppointment.proposal?.totalSessions || 0,
+          totalSessions: (() => {
+            const totalSessions = nextAppointment.proposal?.totalSessions;
+            if (totalSessions && typeof totalSessions === "object") {
+              const totalSessionsObj = totalSessions as {
+                A?: number;
+                B?: number;
+              };
+              return Math.max(totalSessionsObj.A || 0, totalSessionsObj.B || 0);
+            } else if (typeof totalSessions === "number") {
+              return totalSessions;
+            }
+            return 0;
+          })(),
         }
       : null;
 
@@ -254,6 +306,7 @@ export async function GET() {
       id: document.id,
       title: document.title,
       fileName: document.fileName,
+      fileUrl: document.fileUrl,
       documentType: document.documentType,
       patientName: document.patient
         ? `${document.patient.firstName} ${document.patient.lastName}`
@@ -291,7 +344,7 @@ export async function GET() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 10);
 
-    return NextResponse.json({
+    const response = {
       stats: {
         totalPatients: patients.length,
         upcomingAppointments,
@@ -303,7 +356,23 @@ export async function GET() {
       nextAppointment: transformedNextAppointment,
       recentDocuments: transformedRecentDocuments,
       recentActivity,
-    });
+    };
+
+    console.log("Parent dashboard - Response stats:", response.stats);
+    console.log(
+      "Parent dashboard - Next appointment:",
+      response.nextAppointment ? "Found" : "None"
+    );
+    console.log(
+      "Parent dashboard - Recent documents:",
+      response.recentDocuments.length
+    );
+    console.log(
+      "Parent dashboard - Recent activity:",
+      response.recentActivity.length
+    );
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Error fetching parent dashboard data:", error);
     return NextResponse.json(

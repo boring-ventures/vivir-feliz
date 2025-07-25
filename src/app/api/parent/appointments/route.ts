@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Build where clause
+    // Build where clause for filtered appointments
     const whereClause: {
       patientId: { in: string[] };
       status?: { in: AppointmentStatus[] } | AppointmentStatus;
@@ -91,8 +91,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch appointments with relations
-    const [appointments, total] = await Promise.all([
+    // Base where clause for all appointments (for stats)
+    const baseWhereClause = {
+      patientId: { in: patientIds },
+    };
+
+    // Optimized: Fetch appointments and statistics in parallel
+    const [appointments, total, allAppointments] = await Promise.all([
+      // Filtered appointments for current page
       prisma.appointment.findMany({
         where: whereClause,
         include: {
@@ -124,37 +130,39 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
       }),
+      // Total count for pagination
       prisma.appointment.count({ where: whereClause }),
+      // All appointments for statistics (optimized single query)
+      prisma.appointment.findMany({
+        where: baseWhereClause,
+        select: {
+          id: true,
+          status: true,
+          date: true,
+        },
+      }),
     ]);
 
-    // Calculate statistics
-    const [scheduledCount, completedCount, upcomingCount] = await Promise.all([
-      prisma.appointment.count({
-        where: {
-          patientId: { in: patientIds },
-          status: {
-            in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED],
-          },
-        },
-      }),
-      prisma.appointment.count({
-        where: {
-          patientId: { in: patientIds },
-          status: AppointmentStatus.COMPLETED,
-        },
-      }),
-      prisma.appointment.count({
-        where: {
-          patientId: { in: patientIds },
-          status: {
-            in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED],
-          },
-          date: {
-            gte: new Date(),
-          },
-        },
-      }),
-    ]);
+    // Calculate statistics from the single query result
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const scheduledCount = allAppointments.filter(
+      (apt) =>
+        apt.status === AppointmentStatus.SCHEDULED ||
+        apt.status === AppointmentStatus.CONFIRMED
+    ).length;
+
+    const completedCount = allAppointments.filter(
+      (apt) => apt.status === AppointmentStatus.COMPLETED
+    ).length;
+
+    const upcomingCount = allAppointments.filter(
+      (apt) =>
+        (apt.status === AppointmentStatus.SCHEDULED ||
+          apt.status === AppointmentStatus.CONFIRMED) &&
+        apt.date >= today
+    ).length;
 
     // Transform appointments for response
     const transformedAppointments = appointments.map((appointment) => {
@@ -209,11 +217,34 @@ export async function GET(request: NextRequest) {
         scheduled: scheduledCount,
         completed: completedCount,
         upcoming: upcomingCount,
-        total,
+        total: allAppointments.length,
       },
     });
   } catch (error) {
     console.error("Error fetching parent appointments:", error);
+
+    // More specific error handling
+    if (error instanceof Error) {
+      // Database connection issues
+      if (
+        error.message.includes("database") ||
+        error.message.includes("connection")
+      ) {
+        return NextResponse.json(
+          { error: "Database connection error. Please try again later." },
+          { status: 503 }
+        );
+      }
+
+      // Prisma specific errors
+      if (error.message.includes("Prisma")) {
+        return NextResponse.json(
+          { error: "Database query error. Please contact support." },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
