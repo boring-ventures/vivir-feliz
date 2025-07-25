@@ -102,13 +102,15 @@ model TreatmentProposal {
   diagnosis             String?
   objectives            String[]
   methodology           String?
-  totalSessions         Int                 @map("total_sessions")
+  totalSessions         Json                @map("total_sessions") // { "A": number, "B": number }
   sessionDuration       Int                 @map("session_duration")
   frequency             String
   estimatedDuration     String?             @map("estimated_duration")
   sessionPrice          Decimal             @map("session_price") @db.Decimal(10, 2)
-  totalAmount           Decimal             @map("total_amount") @db.Decimal(10, 2)
-  paymentPlan           String?             @map("payment_plan")
+  totalAmount           Json                @map("total_amount") // { "A": number, "B": number }
+  selectedProposal      String?             @map("selected_proposal") // "A" or "B" - which proposal parents chose
+  paymentPlan           Json?               @map("payment_plan") // { "A": { "single": number, "monthly": number, "bimonthly": number }, "B": { "single": number, "monthly": number, "bimonthly": number } }
+  selectedPaymentPlan   String?             @map("selected_payment_plan") // "single", "monthly", "bimonthly" - which payment plan parents chose
   status                ProposalStatus      @default(NEW_PROPOSAL)
   proposalDate          DateTime            @default(now()) @map("proposal_date")
   approvedDate          DateTime?           @map("approved_date")
@@ -139,6 +141,7 @@ model ProposalService {
   treatmentProposalId  String            @map("treatment_proposal_id")
   therapistId          String            @map("therapist_id")
   type                 ServiceType       @map("type")
+  proposalType         String            @default("A") @map("proposal_type") // "A" or "B"
   code                 String            @map("code")
   service              String            @map("service")
   sessions             Int               @map("sessions")
@@ -148,10 +151,10 @@ model ProposalService {
   treatmentProposal    TreatmentProposal @relation(fields: [treatmentProposalId], references: [id], onDelete: Cascade)
   therapist            Profile           @relation("TherapistServices", fields: [therapistId], references: [id])
 
-
   @@index([treatmentProposalId])
   @@index([therapistId])
   @@index([type])
+  @@index([proposalType])
   @@map("proposal_services")
 }
 
@@ -312,6 +315,7 @@ model Appointment {
   medicalForm        MedicalForm?
   payments           Payment[]
   analysis           Analysis?
+  developmentEvaluation DevelopmentEvaluation?
   sessionNote        SessionNote?
   objectiveProgress  ObjectiveProgress[]
 
@@ -590,6 +594,35 @@ model Analysis {
   @@map("analyses")
 }
 
+model DevelopmentEvaluation {
+  id                            String                    @id @default(cuid())
+  appointmentId                 String                    @unique @map("appointment_id")
+  
+  // Development Areas Evaluation - Using individual fields for better querying
+  comunicacionYLenguaje         EvaluationLevel?          @map("comunicacion_y_lenguaje")
+  habilidadesGruesas           EvaluationLevel?          @map("habilidades_gruesas")  
+  habilidadesFinas             EvaluationLevel?          @map("habilidades_finas")
+  atencionYAprendizaje         EvaluationLevel?          @map("atencion_y_aprendizaje")
+  relacionConOtros             EvaluationLevel?          @map("relacion_con_otros")
+  autonomiaYAdaptacion         EvaluationLevel?          @map("autonomia_y_adaptacion")
+  
+  // Text sections
+  fortalezas                   String?                   @map("fortalezas")
+  areasParaApoyar              String?                   @map("areas_para_apoyar")
+  recomendacionCasas           String?                   @map("recomendacion_casa")  
+  recomendacionColegio         String?                   @map("recomendacion_colegio")
+  
+  // System fields
+  createdAt                    DateTime                  @default(now()) @map("created_at")
+  updatedAt                    DateTime                  @updatedAt @map("updated_at")
+  
+  // Relations
+  appointment                  Appointment               @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@map("development_evaluations")
+}
+
 model SessionNote {
   id                String      @id @default(cuid())
   appointmentId     String      @unique @map("appointment_id")
@@ -765,6 +798,22 @@ enum MedicalFormStatus {
   DRAFT
   SUBMITTED
   REVIEWED
+}
+
+enum DevelopmentArea {
+  COMUNICACION_Y_LENGUAJE
+  HABILIDADES_MOTORAS_GRUESAS
+  HABILIDADES_MOTORAS_FINAS
+  ATENCION_Y_APRENDIZAJE
+  RELACION_CON_OTROS
+  AUTONOMIA_Y_ADAPTACION
+}
+
+enum EvaluationLevel {
+  NECESITA_APOYO
+  EN_DESARROLLO
+  SE_DESARROLLA_BIEN
+  CON_HABILIDADES_DESTACADAS
 }
 
 enum ServiceType {
