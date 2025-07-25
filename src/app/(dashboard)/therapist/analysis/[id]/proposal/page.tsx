@@ -45,17 +45,48 @@ export default function TerapeutaPropuestaServicioPage() {
 
   const [quienTomaConsulta, setQuienTomaConsulta] = useState("");
   const [derivacion, setDerivacion] = useState("");
-  const [serviciosEvaluacion, setServiciosEvaluacion] = useState<
-    Record<string, boolean>
-  >({});
-  const [serviciosTratamiento, setServiciosTratamiento] = useState<
-    Record<string, boolean>
-  >({});
-  const [terapeutasEvaluacion, setTerapeutasEvaluacion] = useState<
+
+  // Separate state for Proposal A and Proposal B
+  const [
+    serviciosEvaluacionSeleccionados,
+    setServiciosEvaluacionSeleccionados,
+  ] = useState<Record<string, boolean>>({});
+  const [
+    serviciosTratamientoSeleccionados,
+    setServiciosTratamientoSeleccionados,
+  ] = useState<Record<string, boolean>>({});
+  const [terapeutasEvaluacionA, setTerapeutasEvaluacionA] = useState<
     Record<string, string>
   >({});
-  const [terapeutasTratamiento, setTerapeutasTratamiento] = useState<
+  const [terapeutasTratamientoA, setTerapeutasTratamientoA] = useState<
     Record<string, string>
+  >({});
+
+  const [serviciosEvaluacionB, setServiciosEvaluacionB] = useState<
+    Record<string, boolean>
+  >({});
+  const [serviciosTratamientoB, setServiciosTratamientoB] = useState<
+    Record<string, boolean>
+  >({});
+  const [terapeutasEvaluacionB, setTerapeutasEvaluacionB] = useState<
+    Record<string, string>
+  >({});
+  const [terapeutasTratamientoB, setTerapeutasTratamientoB] = useState<
+    Record<string, string>
+  >({});
+
+  // Session count state for each proposal
+  const [sesionesEvaluacionA, setSesionesEvaluacionA] = useState<
+    Record<string, number>
+  >({});
+  const [sesionesTratamientoA, setSesionesTratamientoA] = useState<
+    Record<string, number>
+  >({});
+  const [sesionesEvaluacionB, setSesionesEvaluacionB] = useState<
+    Record<string, number>
+  >({});
+  const [sesionesTratamientoB, setSesionesTratamientoB] = useState<
+    Record<string, number>
   >({});
 
   // Time availability state
@@ -309,26 +340,76 @@ export default function TerapeutaPropuestaServicioPage() {
     },
   ];
 
-  const handleEvaluacionChange = (codigo: string, checked: boolean) => {
-    setServiciosEvaluacion((prev) => ({ ...prev, [codigo]: checked }));
-  };
-
-  const handleTratamientoChange = (codigo: string, checked: boolean) => {
-    setServiciosTratamiento((prev) => ({ ...prev, [codigo]: checked }));
-  };
-
-  const handleTerapeutaEvaluacionChange = (
+  const handleTerapeutaEvaluacionChangeA = (
     codigo: string,
     terapeuta: string
   ) => {
-    setTerapeutasEvaluacion((prev) => ({ ...prev, [codigo]: terapeuta }));
+    setTerapeutasEvaluacionA((prev) => ({ ...prev, [codigo]: terapeuta }));
   };
 
-  const handleTerapeutaTratamientoChange = (
+  const handleTerapeutaTratamientoChangeA = (
     codigo: string,
     terapeuta: string
   ) => {
-    setTerapeutasTratamiento((prev) => ({ ...prev, [codigo]: terapeuta }));
+    setTerapeutasTratamientoA((prev) => ({ ...prev, [codigo]: terapeuta }));
+  };
+
+  const handleTerapeutaEvaluacionChangeB = (
+    codigo: string,
+    terapeuta: string
+  ) => {
+    setTerapeutasEvaluacionB((prev) => ({ ...prev, [codigo]: terapeuta }));
+  };
+
+  const handleTerapeutaTratamientoChangeB = (
+    codigo: string,
+    terapeuta: string
+  ) => {
+    setTerapeutasTratamientoB((prev) => ({ ...prev, [codigo]: terapeuta }));
+  };
+
+  // Handler for evaluation select checkbox
+  const handleEvaluacionSelectChange = (codigo: string, checked: boolean) => {
+    setServiciosEvaluacionSeleccionados((prev) => ({
+      ...prev,
+      [codigo]: checked,
+    }));
+  };
+  // Handler for treatment select checkbox
+  const handleTratamientoSelectChange = (codigo: string, checked: boolean) => {
+    setServiciosTratamientoSeleccionados((prev) => ({
+      ...prev,
+      [codigo]: checked,
+    }));
+  };
+
+  // Session count handlers
+  const handleSesionesEvaluacionChangeA = (
+    codigo: string,
+    sesiones: number
+  ) => {
+    setSesionesEvaluacionA((prev) => ({ ...prev, [codigo]: sesiones }));
+  };
+
+  const handleSesionesTratamientoChangeA = (
+    codigo: string,
+    sesiones: number
+  ) => {
+    setSesionesTratamientoA((prev) => ({ ...prev, [codigo]: sesiones }));
+  };
+
+  const handleSesionesEvaluacionChangeB = (
+    codigo: string,
+    sesiones: number
+  ) => {
+    setSesionesEvaluacionB((prev) => ({ ...prev, [codigo]: sesiones }));
+  };
+
+  const handleSesionesTratamientoChangeB = (
+    codigo: string,
+    sesiones: number
+  ) => {
+    setSesionesTratamientoB((prev) => ({ ...prev, [codigo]: sesiones }));
   };
 
   const handleTimeAvailabilityChange = (
@@ -373,18 +454,52 @@ export default function TerapeutaPropuestaServicioPage() {
       return false;
     }
 
-    const hasEvaluacionSelected = Object.values(serviciosEvaluacion).some(
-      (v) => v
-    );
-    const hasTratamientoSelected = Object.values(serviciosTratamiento).some(
-      (v) => v
-    );
+    // Check if at least one proposal has services selected with sessions > 0
+    const hasEvaluacionA = Object.entries(
+      serviciosEvaluacionSeleccionados
+    ).some(([codigo, selected]) => {
+      const sessionCountA =
+        sesionesEvaluacionA[codigo] ||
+        serviciosEvaluacionData.find((s) => s.codigo === codigo)?.sesiones ||
+        0;
+      return selected && sessionCountA > 0;
+    });
+    const hasTratamientoA = Object.entries(
+      serviciosTratamientoSeleccionados
+    ).some(([codigo, selected]) => {
+      const sessionCountA =
+        sesionesTratamientoA[codigo] ||
+        serviciosTratamientoData.find((s) => s.codigo === codigo)?.sesiones ||
+        0;
+      return selected && sessionCountA > 0;
+    });
+    const hasEvaluacionB = Object.entries(
+      serviciosEvaluacionSeleccionados
+    ).some(([codigo, selected]) => {
+      const sessionCountB =
+        sesionesEvaluacionB[codigo] ||
+        serviciosEvaluacionData.find((s) => s.codigo === codigo)?.sesiones ||
+        0;
+      return selected && sessionCountB > 0;
+    });
+    const hasTratamientoB = Object.entries(
+      serviciosTratamientoSeleccionados
+    ).some(([codigo, selected]) => {
+      const sessionCountB =
+        sesionesTratamientoB[codigo] ||
+        serviciosTratamientoData.find((s) => s.codigo === codigo)?.sesiones ||
+        0;
+      return selected && sessionCountB > 0;
+    });
 
-    if (!hasEvaluacionSelected && !hasTratamientoSelected) {
+    const hasProposalA = hasEvaluacionA || hasTratamientoA;
+    const hasProposalB = hasEvaluacionB || hasTratamientoB;
+
+    if (!hasProposalA && !hasProposalB) {
       toast({
         title: "Error de validación",
         description:
-          "Debe seleccionar al menos un servicio de evaluación o tratamiento",
+          "Debe seleccionar al menos un servicio en alguna de las propuestas con sesiones > 0",
         variant: "destructive",
       });
       return false;
@@ -406,17 +521,19 @@ export default function TerapeutaPropuestaServicioPage() {
     }
 
     // Check if selected services have therapists assigned
-    const selectedEvaluacion = Object.entries(serviciosEvaluacion).filter(
-      ([, selected]) => selected
-    );
-    const selectedTratamiento = Object.entries(serviciosTratamiento).filter(
-      ([, selected]) => selected
-    );
+    const selectedEvaluacion = Object.entries(
+      serviciosEvaluacionSeleccionados
+    ).filter(([, selected]) => selected);
+    const selectedTratamiento = Object.entries(
+      serviciosTratamientoSeleccionados
+    ).filter(([, selected]) => selected);
 
     const missingTherapists = [
-      ...selectedEvaluacion.filter(([codigo]) => !terapeutasEvaluacion[codigo]),
+      ...selectedEvaluacion.filter(
+        ([codigo]) => !terapeutasEvaluacionA[codigo]
+      ),
       ...selectedTratamiento.filter(
-        ([codigo]) => !terapeutasTratamiento[codigo]
+        ([codigo]) => !terapeutasTratamientoA[codigo]
       ),
     ];
 
@@ -444,10 +561,18 @@ export default function TerapeutaPropuestaServicioPage() {
         quienTomaConsulta,
         derivacion,
         timeAvailability,
-        serviciosEvaluacion: Object.entries(serviciosEvaluacion)
-          .filter(([, selected]) => selected)
+        // Proposal A services - only include services with sessions > 0 for A
+        serviciosEvaluacionA: Object.entries(serviciosEvaluacionSeleccionados)
+          .filter(([codigo, selected]) => {
+            const sessionCountA =
+              sesionesEvaluacionA[codigo] ||
+              serviciosEvaluacionData.find((s) => s.codigo === codigo)
+                ?.sesiones ||
+              0;
+            return selected && sessionCountA > 0;
+          })
           .map(([codigo]) => {
-            const therapistId = terapeutasEvaluacion[codigo];
+            const therapistId = terapeutasEvaluacionA[codigo];
             const therapist = allTherapists.find((t) => t.id === therapistId);
             return {
               codigo,
@@ -458,14 +583,25 @@ export default function TerapeutaPropuestaServicioPage() {
               terapeutaEspecialidad: therapist?.specialty || "",
               servicio: serviciosEvaluacionData.find((s) => s.codigo === codigo)
                 ?.servicio,
-              sesiones: serviciosEvaluacionData.find((s) => s.codigo === codigo)
-                ?.sesiones,
+              sesiones:
+                sesionesEvaluacionA[codigo] ||
+                serviciosEvaluacionData.find((s) => s.codigo === codigo)
+                  ?.sesiones ||
+                0,
+              proposalType: "A",
             };
           }),
-        serviciosTratamiento: Object.entries(serviciosTratamiento)
-          .filter(([, selected]) => selected)
+        serviciosTratamientoA: Object.entries(serviciosTratamientoSeleccionados)
+          .filter(([codigo, selected]) => {
+            const sessionCountA =
+              sesionesTratamientoA[codigo] ||
+              serviciosTratamientoData.find((s) => s.codigo === codigo)
+                ?.sesiones ||
+              0;
+            return selected && sessionCountA > 0;
+          })
           .map(([codigo]) => {
-            const therapistId = terapeutasTratamiento[codigo];
+            const therapistId = terapeutasTratamientoA[codigo];
             const therapist = allTherapists.find((t) => t.id === therapistId);
             return {
               codigo,
@@ -477,9 +613,72 @@ export default function TerapeutaPropuestaServicioPage() {
               servicio: serviciosTratamientoData.find(
                 (s) => s.codigo === codigo
               )?.servicio,
-              sesiones: serviciosTratamientoData.find(
+              sesiones:
+                sesionesTratamientoA[codigo] ||
+                serviciosTratamientoData.find((s) => s.codigo === codigo)
+                  ?.sesiones ||
+                0,
+              proposalType: "A",
+            };
+          }),
+        // Proposal B services - only include services with sessions > 0 for B
+        serviciosEvaluacionB: Object.entries(serviciosEvaluacionSeleccionados)
+          .filter(([codigo, selected]) => {
+            const sessionCountB =
+              sesionesEvaluacionB[codigo] ||
+              serviciosEvaluacionData.find((s) => s.codigo === codigo)
+                ?.sesiones ||
+              0;
+            return selected && sessionCountB > 0;
+          })
+          .map(([codigo]) => {
+            const therapistId = terapeutasEvaluacionA[codigo]; // Use same therapist for both proposals
+            const therapist = allTherapists.find((t) => t.id === therapistId);
+            return {
+              codigo,
+              terapeutaId: therapistId,
+              terapeutaNombre: therapist
+                ? getTherapistDisplayName(therapist)
+                : "",
+              terapeutaEspecialidad: therapist?.specialty || "",
+              servicio: serviciosEvaluacionData.find((s) => s.codigo === codigo)
+                ?.servicio,
+              sesiones:
+                sesionesEvaluacionB[codigo] ||
+                serviciosEvaluacionData.find((s) => s.codigo === codigo)
+                  ?.sesiones ||
+                0,
+              proposalType: "B",
+            };
+          }),
+        serviciosTratamientoB: Object.entries(serviciosTratamientoSeleccionados)
+          .filter(([codigo, selected]) => {
+            const sessionCountB =
+              sesionesTratamientoB[codigo] ||
+              serviciosTratamientoData.find((s) => s.codigo === codigo)
+                ?.sesiones ||
+              0;
+            return selected && sessionCountB > 0;
+          })
+          .map(([codigo]) => {
+            const therapistId = terapeutasTratamientoA[codigo]; // Use same therapist for both proposals
+            const therapist = allTherapists.find((t) => t.id === therapistId);
+            return {
+              codigo,
+              terapeutaId: therapistId,
+              terapeutaNombre: therapist
+                ? getTherapistDisplayName(therapist)
+                : "",
+              terapeutaEspecialidad: therapist?.specialty || "",
+              servicio: serviciosTratamientoData.find(
                 (s) => s.codigo === codigo
-              )?.sesiones,
+              )?.servicio,
+              sesiones:
+                sesionesTratamientoB[codigo] ||
+                serviciosTratamientoData.find((s) => s.codigo === codigo)
+                  ?.sesiones ||
+                0,
+              proposalType: "B",
             };
           }),
       };
@@ -601,7 +800,7 @@ export default function TerapeutaPropuestaServicioPage() {
       </header>
 
       {/* Content */}
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-6 max-w-full mx-auto">
         <Card className="border-0 shadow-sm">
           <CardContent className="p-8 space-y-8">
             {/* Información del Cliente y Fecha */}
@@ -690,6 +889,67 @@ export default function TerapeutaPropuestaServicioPage() {
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-4">
                 <div className="bg-white rounded-lg border border-gray-200">
+                  {/* Proposal Summary */}
+                  <div className="p-4 bg-blue-50 border-b border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white p-3 rounded border">
+                        <h4 className="font-medium text-blue-900 mb-2">
+                          Propuesta A
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          Servicios seleccionados:{" "}
+                          {
+                            Object.values(
+                              serviciosEvaluacionSeleccionados
+                            ).filter(Boolean).length
+                          }
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Total sesiones:{" "}
+                          {Object.entries(serviciosEvaluacionSeleccionados)
+                            .filter(([, selected]) => selected)
+                            .reduce((total, [codigo]) => {
+                              return (
+                                total +
+                                (sesionesEvaluacionA[codigo] ||
+                                  serviciosEvaluacionData.find(
+                                    (s) => s.codigo === codigo
+                                  )?.sesiones ||
+                                  0)
+                              );
+                            }, 0)}
+                        </p>
+                      </div>
+                      <div className="bg-white p-3 rounded border">
+                        <h4 className="font-medium text-green-900 mb-2">
+                          Propuesta B
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          Servicios seleccionados:{" "}
+                          {
+                            Object.values(serviciosEvaluacionB).filter(Boolean)
+                              .length
+                          }
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Total sesiones:{" "}
+                          {Object.entries(serviciosEvaluacionB)
+                            .filter(([, selected]) => selected)
+                            .reduce((total, [codigo]) => {
+                              return (
+                                total +
+                                (sesionesEvaluacionB[codigo] ||
+                                  serviciosEvaluacionData.find(
+                                    (s) => s.codigo === codigo
+                                  )?.sesiones ||
+                                  0)
+                              );
+                            }, 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
@@ -700,11 +960,11 @@ export default function TerapeutaPropuestaServicioPage() {
                           <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
                             Servicio de Evaluación
                           </th>
-                          <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
-                            Descripción
+                          <th className="border border-gray-300 p-3 text-center font-medium text-blue-900 bg-blue-50">
+                            N° Sesiones A
                           </th>
-                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
-                            N° Sesiones
+                          <th className="border border-gray-300 p-3 text-center font-medium text-green-900 bg-green-50">
+                            N° Sesiones B
                           </th>
                           <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
                             Terapeuta
@@ -726,26 +986,65 @@ export default function TerapeutaPropuestaServicioPage() {
                             <td className="border border-gray-300 p-3">
                               {servicio.servicio}
                             </td>
-                            <td className="border border-gray-300 p-3 text-sm text-gray-600">
-                              {servicio.descripcion}
+                            <td className="border border-gray-300 p-3 text-center bg-blue-50">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={
+                                  sesionesEvaluacionA[servicio.codigo] ||
+                                  servicio.sesiones
+                                }
+                                onChange={(e) =>
+                                  handleSesionesEvaluacionChangeA(
+                                    servicio.codigo,
+                                    parseInt(e.target.value) || 0
+                                  )
+                                }
+                                className="w-16 text-center text-sm"
+                                disabled={
+                                  !serviciosEvaluacionSeleccionados[
+                                    servicio.codigo
+                                  ]
+                                }
+                              />
                             </td>
-                            <td className="border border-gray-300 p-3 text-center">
-                              {servicio.sesiones}
+                            <td className="border border-gray-300 p-3 text-center bg-green-50">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={
+                                  sesionesEvaluacionB[servicio.codigo] ||
+                                  servicio.sesiones
+                                }
+                                onChange={(e) =>
+                                  handleSesionesEvaluacionChangeB(
+                                    servicio.codigo,
+                                    parseInt(e.target.value) || 0
+                                  )
+                                }
+                                className="w-16 text-center text-sm"
+                                disabled={
+                                  !serviciosEvaluacionSeleccionados[
+                                    servicio.codigo
+                                  ]
+                                }
+                              />
                             </td>
                             <td className="border border-gray-300 p-3">
                               <Select
                                 value={
-                                  terapeutasEvaluacion[servicio.codigo] || ""
+                                  terapeutasEvaluacionA[servicio.codigo] || ""
                                 }
                                 onValueChange={(value) =>
-                                  handleTerapeutaEvaluacionChange(
+                                  handleTerapeutaEvaluacionChangeA(
                                     servicio.codigo,
                                     value
                                   )
                                 }
                                 disabled={
-                                  !serviciosEvaluacion[servicio.codigo] ||
-                                  therapistsLoading
+                                  !serviciosEvaluacionSeleccionados[
+                                    servicio.codigo
+                                  ] || therapistsLoading
                                 }
                               >
                                 <SelectTrigger className="text-xs h-8">
@@ -777,10 +1076,12 @@ export default function TerapeutaPropuestaServicioPage() {
                             <td className="border border-gray-300 p-3 text-center">
                               <Checkbox
                                 checked={
-                                  serviciosEvaluacion[servicio.codigo] || false
+                                  serviciosEvaluacionSeleccionados[
+                                    servicio.codigo
+                                  ] || false
                                 }
                                 onCheckedChange={(checked) =>
-                                  handleEvaluacionChange(
+                                  handleEvaluacionSelectChange(
                                     servicio.codigo,
                                     checked as boolean
                                   )
@@ -813,6 +1114,67 @@ export default function TerapeutaPropuestaServicioPage() {
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-4">
                 <div className="bg-white rounded-lg border border-gray-200">
+                  {/* Proposal Summary */}
+                  <div className="p-4 bg-blue-50 border-b border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white p-3 rounded border">
+                        <h4 className="font-medium text-blue-900 mb-2">
+                          Propuesta A
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          Servicios seleccionados:{" "}
+                          {
+                            Object.values(
+                              serviciosTratamientoSeleccionados
+                            ).filter(Boolean).length
+                          }
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Total sesiones:{" "}
+                          {Object.entries(serviciosTratamientoSeleccionados)
+                            .filter(([, selected]) => selected)
+                            .reduce((total, [codigo]) => {
+                              return (
+                                total +
+                                (sesionesTratamientoA[codigo] ||
+                                  serviciosTratamientoData.find(
+                                    (s) => s.codigo === codigo
+                                  )?.sesiones ||
+                                  0)
+                              );
+                            }, 0)}
+                        </p>
+                      </div>
+                      <div className="bg-white p-3 rounded border">
+                        <h4 className="font-medium text-green-900 mb-2">
+                          Propuesta B
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          Servicios seleccionados:{" "}
+                          {
+                            Object.values(serviciosTratamientoB).filter(Boolean)
+                              .length
+                          }
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Total sesiones:{" "}
+                          {Object.entries(serviciosTratamientoB)
+                            .filter(([, selected]) => selected)
+                            .reduce((total, [codigo]) => {
+                              return (
+                                total +
+                                (sesionesTratamientoB[codigo] ||
+                                  serviciosTratamientoData.find(
+                                    (s) => s.codigo === codigo
+                                  )?.sesiones ||
+                                  0)
+                              );
+                            }, 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
@@ -823,14 +1185,17 @@ export default function TerapeutaPropuestaServicioPage() {
                           <th className="border border-gray-300 p-3 text-left font-medium text-gray-900">
                             Servicio
                           </th>
-                          <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
-                            N° Sesiones
+                          <th className="border border-gray-300 p-3 text-center font-medium text-blue-900 bg-blue-50">
+                            N° Sesiones A
+                          </th>
+                          <th className="border border-gray-300 p-3 text-center font-medium text-green-900 bg-green-50">
+                            N° Sesiones B
                           </th>
                           <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
                             Terapeuta
                           </th>
                           <th className="border border-gray-300 p-3 text-center font-medium text-gray-900">
-                            Seleccionar
+                            Select
                           </th>
                         </tr>
                       </thead>
@@ -846,23 +1211,65 @@ export default function TerapeutaPropuestaServicioPage() {
                             <td className="border border-gray-300 p-3">
                               {servicio.servicio}
                             </td>
-                            <td className="border border-gray-300 p-3 text-center">
-                              {servicio.sesiones || ""}
+                            <td className="border border-gray-300 p-3 text-center bg-blue-50">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={
+                                  sesionesTratamientoA[servicio.codigo] ||
+                                  servicio.sesiones
+                                }
+                                onChange={(e) =>
+                                  handleSesionesTratamientoChangeA(
+                                    servicio.codigo,
+                                    parseInt(e.target.value) || 0
+                                  )
+                                }
+                                className="w-16 text-center text-sm"
+                                disabled={
+                                  !serviciosTratamientoSeleccionados[
+                                    servicio.codigo
+                                  ]
+                                }
+                              />
+                            </td>
+                            <td className="border border-gray-300 p-3 text-center bg-green-50">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={
+                                  sesionesTratamientoB[servicio.codigo] ||
+                                  servicio.sesiones
+                                }
+                                onChange={(e) =>
+                                  handleSesionesTratamientoChangeB(
+                                    servicio.codigo,
+                                    parseInt(e.target.value) || 0
+                                  )
+                                }
+                                className="w-16 text-center text-sm"
+                                disabled={
+                                  !serviciosTratamientoSeleccionados[
+                                    servicio.codigo
+                                  ]
+                                }
+                              />
                             </td>
                             <td className="border border-gray-300 p-3">
                               <Select
                                 value={
-                                  terapeutasTratamiento[servicio.codigo] || ""
+                                  terapeutasTratamientoA[servicio.codigo] || ""
                                 }
                                 onValueChange={(value) =>
-                                  handleTerapeutaTratamientoChange(
+                                  handleTerapeutaTratamientoChangeA(
                                     servicio.codigo,
                                     value
                                   )
                                 }
                                 disabled={
-                                  !serviciosTratamiento[servicio.codigo] ||
-                                  therapistsLoading
+                                  !serviciosTratamientoSeleccionados[
+                                    servicio.codigo
+                                  ] || therapistsLoading
                                 }
                               >
                                 <SelectTrigger className="text-xs h-8">
@@ -894,10 +1301,12 @@ export default function TerapeutaPropuestaServicioPage() {
                             <td className="border border-gray-300 p-3 text-center">
                               <Checkbox
                                 checked={
-                                  serviciosTratamiento[servicio.codigo] || false
+                                  serviciosTratamientoSeleccionados[
+                                    servicio.codigo
+                                  ] || false
                                 }
                                 onCheckedChange={(checked) =>
-                                  handleTratamientoChange(
+                                  handleTratamientoSelectChange(
                                     servicio.codigo,
                                     checked as boolean
                                   )
@@ -1052,6 +1461,235 @@ export default function TerapeutaPropuestaServicioPage() {
                 </div>
               </CollapsibleContent>
             </Collapsible>
+
+            {/* Proposal Summary */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Resumen de Propuestas
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Proposal A Summary */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h4 className="font-medium text-blue-900 mb-3">
+                    Propuesta A
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Evaluación:</span>
+                      <span className="font-medium">
+                        {
+                          Object.values(
+                            serviciosEvaluacionSeleccionados
+                          ).filter(Boolean).length
+                        }{" "}
+                        servicios
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tratamiento:</span>
+                      <span className="font-medium">
+                        {
+                          Object.values(
+                            serviciosTratamientoSeleccionados
+                          ).filter(Boolean).length
+                        }{" "}
+                        servicios
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total sesiones:</span>
+                      <span className="font-medium">
+                        {(() => {
+                          const evalSessions = Object.entries(
+                            serviciosEvaluacionSeleccionados
+                          )
+                            .filter(([, selected]) => selected)
+                            .reduce((sum, [codigo]) => {
+                              return (
+                                sum +
+                                (sesionesEvaluacionA[codigo] ||
+                                  serviciosEvaluacionData.find(
+                                    (s) => s.codigo === codigo
+                                  )?.sesiones ||
+                                  0)
+                              );
+                            }, 0);
+                          const treatSessions = Object.entries(
+                            serviciosTratamientoSeleccionados
+                          )
+                            .filter(([, selected]) => selected)
+                            .reduce((sum, [codigo]) => {
+                              return (
+                                sum +
+                                (sesionesTratamientoA[codigo] ||
+                                  serviciosTratamientoData.find(
+                                    (s) => s.codigo === codigo
+                                  )?.sesiones ||
+                                  0)
+                              );
+                            }, 0);
+                          return evalSessions + treatSessions;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Estado:</span>
+                      <span
+                        className={`font-medium ${
+                          Object.values(serviciosEvaluacionSeleccionados).some(
+                            Boolean
+                          ) ||
+                          Object.values(serviciosTratamientoSeleccionados).some(
+                            Boolean
+                          )
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {Object.values(serviciosEvaluacionSeleccionados).some(
+                          Boolean
+                        ) ||
+                        Object.values(serviciosTratamientoSeleccionados).some(
+                          Boolean
+                        )
+                          ? "Completa"
+                          : "Sin servicios"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Proposal B Summary */}
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <h4 className="font-medium text-green-900 mb-3">
+                    Propuesta B
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Evaluación:</span>
+                      <span className="font-medium">
+                        {
+                          Object.entries(
+                            serviciosEvaluacionSeleccionados
+                          ).filter(([codigo, selected]) => selected).length
+                        }{" "}
+                        servicios
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tratamiento:</span>
+                      <span className="font-medium">
+                        {
+                          Object.entries(
+                            serviciosTratamientoSeleccionados
+                          ).filter(
+                            ([codigo, selected]) =>
+                              selected &&
+                              (sesionesTratamientoB[codigo] || 0) > 0
+                          ).length
+                        }{" "}
+                        servicios
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total sesiones:</span>
+                      <span className="font-medium">
+                        {(() => {
+                          const evalSessions = Object.entries(
+                            serviciosEvaluacionSeleccionados
+                          )
+                            .filter(([codigo, selected]) => selected)
+                            .reduce((sum, [codigo]) => {
+                              return sum + (sesionesEvaluacionB[codigo] || 0);
+                            }, 0);
+                          const treatSessions = Object.entries(
+                            serviciosTratamientoSeleccionados
+                          )
+                            .filter(([codigo, selected]) => selected)
+                            .reduce((sum, [codigo]) => {
+                              return sum + (sesionesTratamientoB[codigo] || 0);
+                            }, 0);
+                          return evalSessions + treatSessions;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Estado:</span>
+                      <span
+                        className={`font-medium ${
+                          Object.entries(serviciosEvaluacionSeleccionados).some(
+                            ([codigo, selected]) =>
+                              selected && (sesionesEvaluacionB[codigo] || 0) > 0
+                          ) ||
+                          Object.entries(
+                            serviciosTratamientoSeleccionados
+                          ).some(
+                            ([codigo, selected]) =>
+                              selected &&
+                              (sesionesTratamientoB[codigo] || 0) > 0
+                          )
+                            ? "text-green-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {Object.entries(serviciosEvaluacionSeleccionados).some(
+                          ([codigo, selected]) =>
+                            selected && (sesionesEvaluacionB[codigo] || 0) > 0
+                        ) ||
+                        Object.entries(serviciosTratamientoSeleccionados).some(
+                          ([codigo, selected]) =>
+                            selected && (sesionesTratamientoB[codigo] || 0) > 0
+                        )
+                          ? "Completa"
+                          : "Sin servicios"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Overall Status */}
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">
+                    Estado General:
+                  </span>
+                  <span
+                    className={`text-sm font-medium ${
+                      Object.values(serviciosEvaluacionSeleccionados).some(
+                        Boolean
+                      ) ||
+                      Object.values(serviciosTratamientoSeleccionados).some(
+                        Boolean
+                      ) ||
+                      Object.values(serviciosEvaluacionB).some(Boolean) ||
+                      Object.values(serviciosTratamientoB).some(Boolean)
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {(() => {
+                      const hasProposalA =
+                        Object.values(serviciosEvaluacionSeleccionados).some(
+                          Boolean
+                        ) ||
+                        Object.values(serviciosTratamientoSeleccionados).some(
+                          Boolean
+                        );
+                      const hasProposalB =
+                        Object.values(serviciosEvaluacionB).some(Boolean) ||
+                        Object.values(serviciosTratamientoB).some(Boolean);
+
+                      if (hasProposalA && hasProposalB)
+                        return "Ambas propuestas completas";
+                      if (hasProposalA || hasProposalB)
+                        return "Una propuesta completa";
+                      return "Sin propuestas";
+                    })()}
+                  </span>
+                </div>
+              </div>
+            </div>
 
             {/* Botones de Acción */}
             <div className="flex justify-between items-center pt-6 border-t border-gray-200">
