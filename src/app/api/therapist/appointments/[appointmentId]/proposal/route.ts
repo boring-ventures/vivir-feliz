@@ -8,6 +8,7 @@ interface ServiceData {
   terapeutaEspecialidad: string;
   servicio: string;
   sesiones: number;
+  proposalType: string;
 }
 
 interface ProposalData {
@@ -15,8 +16,10 @@ interface ProposalData {
   quienTomaConsulta: string;
   derivacion: string;
   timeAvailability: Record<string, { morning: boolean; afternoon: boolean }>;
-  serviciosEvaluacion: ServiceData[];
-  serviciosTratamiento: ServiceData[];
+  serviciosEvaluacionA: ServiceData[];
+  serviciosTratamientoA: ServiceData[];
+  serviciosEvaluacionB: ServiceData[];
+  serviciosTratamientoB: ServiceData[];
 }
 
 export async function POST(
@@ -31,8 +34,10 @@ export async function POST(
       quienTomaConsulta,
       derivacion,
       timeAvailability,
-      serviciosEvaluacion,
-      serviciosTratamiento,
+      serviciosEvaluacionA,
+      serviciosTratamientoA,
+      serviciosEvaluacionB,
+      serviciosTratamientoB,
     } = body;
 
     // First, verify the appointment exists
@@ -68,33 +73,54 @@ export async function POST(
     // We can proceed without a patientId - the proposal will be linked to the appointment
     // and can be processed by admin later
 
-    // Calculate total sessions and estimated cost
-    const evaluationSessions = serviciosEvaluacion.reduce(
+    // Calculate total sessions and estimated cost for both proposals
+    const evaluationSessionsA = serviciosEvaluacionA.reduce(
       (total: number, service: ServiceData) => total + (service.sesiones || 0),
       0
     );
-    const treatmentSessions = serviciosTratamiento.reduce(
+    const treatmentSessionsA = serviciosTratamientoA.reduce(
       (total: number, service: ServiceData) => total + (service.sesiones || 0),
       0
     );
-    const totalSessions = evaluationSessions + treatmentSessions;
+    const totalSessionsA = evaluationSessionsA + treatmentSessionsA;
+
+    const evaluationSessionsB = serviciosEvaluacionB.reduce(
+      (total: number, service: ServiceData) => total + (service.sesiones || 0),
+      0
+    );
+    const treatmentSessionsB = serviciosTratamientoB.reduce(
+      (total: number, service: ServiceData) => total + (service.sesiones || 0),
+      0
+    );
+    const totalSessionsB = evaluationSessionsB + treatmentSessionsB;
 
     // Default pricing (this could be configurable)
     const sessionPrice = 150.0; // Price per session in Bs
-    const totalAmount = totalSessions * sessionPrice;
+    const totalAmountA = totalSessionsA * sessionPrice;
+    const totalAmountB = totalSessionsB * sessionPrice;
 
     // Prepare the proposal description
-    const evaluationList = serviciosEvaluacion
+    const evaluationListA = serviciosEvaluacionA
       .map((s: ServiceData) => `${s.servicio} (${s.sesiones} sesiones)`)
       .join(", ");
 
-    const treatmentList = serviciosTratamiento
+    const treatmentListA = serviciosTratamientoA
+      .map((s: ServiceData) => `${s.servicio} (${s.sesiones} sesiones)`)
+      .join(", ");
+
+    const evaluationListB = serviciosEvaluacionB
+      .map((s: ServiceData) => `${s.servicio} (${s.sesiones} sesiones)`)
+      .join(", ");
+
+    const treatmentListB = serviciosTratamientoB
       .map((s: ServiceData) => `${s.servicio} (${s.sesiones} sesiones)`)
       .join(", ");
 
     const proposalDescription = [
-      evaluationList && `Evaluación: ${evaluationList}`,
-      treatmentList && `Tratamiento: ${treatmentList}`,
+      evaluationListA && `Propuesta A - Evaluación: ${evaluationListA}`,
+      treatmentListA && `Propuesta A - Tratamiento: ${treatmentListA}`,
+      evaluationListB && `Propuesta B - Evaluación: ${evaluationListB}`,
+      treatmentListB && `Propuesta B - Tratamiento: ${treatmentListB}`,
     ]
       .filter(Boolean)
       .join(". ");
@@ -109,20 +135,27 @@ export async function POST(
         description: proposalDescription,
         diagnosis: `Derivación: ${derivacion}. Evaluado por: ${quienTomaConsulta}`,
         objectives: [
-          ...serviciosEvaluacion.map(
-            (s: ServiceData) => `Evaluar: ${s.servicio}`
+          ...serviciosEvaluacionA.map(
+            (s: ServiceData) => `Propuesta A - Evaluar: ${s.servicio}`
           ),
-          ...serviciosTratamiento.map(
-            (s: ServiceData) => `Tratar: ${s.servicio}`
+          ...serviciosTratamientoA.map(
+            (s: ServiceData) => `Propuesta A - Tratar: ${s.servicio}`
+          ),
+          ...serviciosEvaluacionB.map(
+            (s: ServiceData) => `Propuesta B - Evaluar: ${s.servicio}`
+          ),
+          ...serviciosTratamientoB.map(
+            (s: ServiceData) => `Propuesta B - Tratar: ${s.servicio}`
           ),
         ],
         methodology: "Metodología basada en los servicios seleccionados",
-        totalSessions,
+        totalSessions: { A: totalSessionsA, B: totalSessionsB },
         sessionDuration: 60, // Default 60 minutes
         frequency: "Semanal",
-        estimatedDuration: `${Math.ceil(totalSessions / 4)} meses`,
+        estimatedDuration: `${Math.ceil(Math.max(totalSessionsA, totalSessionsB) / 4)} meses`,
         sessionPrice,
-        totalAmount,
+        totalAmount: { A: totalAmountA, B: totalAmountB },
+        selectedProposal: null, // Parents haven't chosen yet
         paymentPlan: "Por definir con administración",
         status: "NEW_PROPOSAL",
         notes: JSON.stringify({
@@ -141,20 +174,44 @@ export async function POST(
       },
     });
 
-    // Create proposal services in the new table
+    // Create proposal services in the new table for both proposals
     const servicesToCreate = [
-      ...serviciosEvaluacion.map((service: ServiceData) => ({
+      // Proposal A services
+      ...serviciosEvaluacionA.map((service: ServiceData) => ({
         treatmentProposalId: proposal.id,
         type: "EVALUATION" as const,
+        proposalType: "A",
         code: service.codigo,
         service: service.servicio,
         sessions: service.sesiones,
         cost: sessionPrice * service.sesiones,
         therapistId: service.terapeutaId,
       })),
-      ...serviciosTratamiento.map((service: ServiceData) => ({
+      ...serviciosTratamientoA.map((service: ServiceData) => ({
         treatmentProposalId: proposal.id,
         type: "TREATMENT" as const,
+        proposalType: "A",
+        code: service.codigo,
+        service: service.servicio,
+        sessions: service.sesiones,
+        cost: sessionPrice * service.sesiones,
+        therapistId: service.terapeutaId,
+      })),
+      // Proposal B services
+      ...serviciosEvaluacionB.map((service: ServiceData) => ({
+        treatmentProposalId: proposal.id,
+        type: "EVALUATION" as const,
+        proposalType: "B",
+        code: service.codigo,
+        service: service.servicio,
+        sessions: service.sesiones,
+        cost: sessionPrice * service.sesiones,
+        therapistId: service.terapeutaId,
+      })),
+      ...serviciosTratamientoB.map((service: ServiceData) => ({
+        treatmentProposalId: proposal.id,
+        type: "TREATMENT" as const,
+        proposalType: "B",
         code: service.codigo,
         service: service.servicio,
         sessions: service.sesiones,

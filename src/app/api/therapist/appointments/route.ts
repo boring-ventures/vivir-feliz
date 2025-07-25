@@ -35,14 +35,13 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const skip = (page - 1) * limit;
 
-    // Build where clause - always filter for CONSULTA type
+    // Build where clause - include all appointment types
     const whereClause: {
       therapistId: string;
-      type: AppointmentType;
       status?: { in: AppointmentStatus[] } | AppointmentStatus;
     } = {
       therapistId: profile.id,
-      type: AppointmentType.CONSULTA, // Only fetch CONSULTA appointments
+      // Removed type filter to include all appointment types (CONSULTA, TERAPIA, ENTREVISTA, SEGUIMIENTO)
     };
 
     if (status !== "all") {
@@ -165,6 +164,7 @@ export async function GET(request: NextRequest) {
       return {
         id: appointment.id,
         appointmentId: `${appointment.type === AppointmentType.CONSULTA ? "CON" : "INT"}-${appointment.id}`,
+        patientId: appointment.patient?.id || null,
         patientName: appointment.patientName || "Nombre no disponible",
         patientAge: age,
         parentName: appointment.parentName || "No especificado",
@@ -200,16 +200,22 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Get stats for ALL CONSULTA appointments regardless of current filter
-    const allConsultationsWhereClause = {
+    // Get stats for ALL appointments regardless of current filter
+    const allAppointmentsWhereClause = {
       therapistId: profile.id,
-      type: AppointmentType.CONSULTA,
+      // Include all appointment types: CONSULTA, TERAPIA, ENTREVISTA, SEGUIMIENTO
     };
 
-    const [allScheduled, allCompleted, allHighPriority] = await Promise.all([
+    const [
+      allScheduled,
+      allCompleted,
+      allHighPriority,
+      consultationCount,
+      interviewCount,
+    ] = await Promise.all([
       prisma.appointment.count({
         where: {
-          ...allConsultationsWhereClause,
+          ...allAppointmentsWhereClause,
           status: {
             in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED],
           },
@@ -217,16 +223,30 @@ export async function GET(request: NextRequest) {
       }),
       prisma.appointment.count({
         where: {
-          ...allConsultationsWhereClause,
+          ...allAppointmentsWhereClause,
           status: AppointmentStatus.COMPLETED,
         },
       }),
       prisma.appointment.count({
         where: {
-          ...allConsultationsWhereClause,
+          ...allAppointmentsWhereClause,
           date: {
             lte: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // Within 3 days
           },
+        },
+      }),
+      // Count consultations specifically
+      prisma.appointment.count({
+        where: {
+          therapistId: profile.id,
+          type: AppointmentType.CONSULTA,
+        },
+      }),
+      // Count interviews specifically
+      prisma.appointment.count({
+        where: {
+          therapistId: profile.id,
+          type: AppointmentType.ENTREVISTA,
         },
       }),
     ]);
@@ -243,8 +263,8 @@ export async function GET(request: NextRequest) {
         scheduled: allScheduled,
         completed: allCompleted,
         highPriority: allHighPriority,
-        consultations: total, // Total consultations for current filter
-        interviews: 0, // No interviews since we only fetch CONSULTA
+        consultations: consultationCount,
+        interviews: interviewCount,
       },
     });
   } catch (error) {
