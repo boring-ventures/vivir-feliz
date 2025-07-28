@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -140,7 +140,7 @@ export function TherapeuticPlanModal({
     return age.toString();
   };
 
-  const findFirstTherapyAppointment = () => {
+  const findFirstTherapyAppointment = useCallback(() => {
     if (!patientData.appointments) return null;
 
     // Find the first therapy appointment (TERAPIA type)
@@ -149,9 +149,9 @@ export function TherapeuticPlanModal({
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     return therapyAppointments.length > 0 ? therapyAppointments[0] : null;
-  };
+  }, [patientData.appointments]);
 
-  const findConsultationAppointment = () => {
+  const findConsultationAppointment = useCallback(() => {
     if (!patientData.appointments) return null;
 
     // Find the first consultation appointment (CONSULTA type)
@@ -162,7 +162,7 @@ export function TherapeuticPlanModal({
     return consultationAppointments.length > 0
       ? consultationAppointments[0]
       : null;
-  };
+  }, [patientData.appointments]);
 
   // Initialize form data when modal opens
   useEffect(() => {
@@ -185,11 +185,19 @@ export function TherapeuticPlanModal({
             ? existingPlan.therapyStartDate.split("T")[0]
             : "",
           background: existingPlan.background || "",
-          diagnoses: existingPlan.diagnoses || [],
+          diagnoses: Array.isArray(existingPlan.diagnoses)
+            ? existingPlan.diagnoses
+            : [],
           generalObjective: existingPlan.generalObjective || "",
-          specificObjectives: existingPlan.specificObjectives || [],
-          indicators: existingPlan.indicators || [],
-          methodologies: existingPlan.methodologies || [],
+          specificObjectives: Array.isArray(existingPlan.specificObjectives)
+            ? existingPlan.specificObjectives
+            : [],
+          indicators: Array.isArray(existingPlan.indicators)
+            ? existingPlan.indicators
+            : [],
+          methodologies: Array.isArray(existingPlan.methodologies)
+            ? existingPlan.methodologies
+            : [],
           observations: existingPlan.observations || "",
         });
       } else {
@@ -237,7 +245,14 @@ export function TherapeuticPlanModal({
         });
       }
     }
-  }, [isOpen, patientData, profile, existingPlan]);
+  }, [
+    isOpen,
+    patientData,
+    profile,
+    existingPlan,
+    findFirstTherapyAppointment,
+    findConsultationAppointment,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
