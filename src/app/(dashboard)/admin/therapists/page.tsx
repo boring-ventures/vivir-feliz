@@ -591,11 +591,19 @@ export default function TherapistsPage() {
             <span className="text-xs">{appointment.type}</span>
             <Badge
               variant={
-                appointment.status === "CONFIRMED" ? "default" : "outline"
+                ["CONFIRMED", "COMPLETED", "IN_PROGRESS"].includes(
+                  appointment.status
+                )
+                  ? "default"
+                  : "outline"
               }
               className="text-xs"
             >
-              {appointment.status === "CONFIRMED" ? "Confirmada" : "Pendiente"}
+              {["CONFIRMED", "COMPLETED", "IN_PROGRESS"].includes(
+                appointment.status
+              )
+                ? "Confirmada"
+                : "Pendiente"}
             </Badge>
           </div>
         </div>
