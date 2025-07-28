@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { ProposalStatus } from "@prisma/client";
 import prisma from "@/lib/prisma";
 
+// Type for the totalAmount JSON field
+type TotalAmountData = {
+  [key: string]: number;
+} | null;
+
 // GET /api/admin/patients/proposals - Fetch treatment proposals
 export async function GET(request: NextRequest) {
   try {
@@ -111,7 +116,7 @@ export async function GET(request: NextRequest) {
         // Handle totalAmount as JSON field
         const getTotalAmountDisplay = () => {
           try {
-            const totalAmount = proposal.totalAmount as any;
+            const totalAmount = proposal.totalAmount as TotalAmountData;
 
             // If selectedProposal exists, use that specific amount
             if (
