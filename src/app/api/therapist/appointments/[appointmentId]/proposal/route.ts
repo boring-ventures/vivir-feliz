@@ -125,6 +125,25 @@ export async function POST(
       .filter(Boolean)
       .join(". ");
 
+    // Function to ensure time availability is saved in correct order (Monday to Friday)
+    const getOrderedTimeAvailability = (
+      availability: Record<string, { morning: boolean; afternoon: boolean }>
+    ) => {
+      const dayOrder = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+      const orderedAvailability: Record<
+        string,
+        { morning: boolean; afternoon: boolean }
+      > = {};
+
+      dayOrder.forEach((day) => {
+        if (availability[day]) {
+          orderedAvailability[day] = availability[day];
+        }
+      });
+
+      return orderedAvailability;
+    };
+
     // Create the treatment proposal
     const proposal = await prisma.treatmentProposal.create({
       data: {
@@ -170,7 +189,7 @@ export async function POST(
             parentEmail: appointment.parentEmail,
           },
         }),
-        timeAvailability,
+        timeAvailability: getOrderedTimeAvailability(timeAvailability),
       },
     });
 

@@ -35,13 +35,14 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const skip = (page - 1) * limit;
 
-    // Build where clause - include all appointment types
+    // Build where clause - include all appointment types for the therapist
     const whereClause: {
       therapistId: string;
+      type?: AppointmentType;
       status?: { in: AppointmentStatus[] } | AppointmentStatus;
     } = {
       therapistId: profile.id,
-      // Removed type filter to include all appointment types (CONSULTA, TERAPIA, ENTREVISTA, SEGUIMIENTO)
+      // Remove type filter to include all appointment types
     };
 
     if (status !== "all") {
@@ -200,10 +201,10 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Get stats for ALL appointments regardless of current filter
+    // Get stats for all appointment types
     const allAppointmentsWhereClause = {
       therapistId: profile.id,
-      // Include all appointment types: CONSULTA, TERAPIA, ENTREVISTA, SEGUIMIENTO
+      // Include all appointment types for stats
     };
 
     const [
