@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { PaymentStatus } from "@prisma/client";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Simple auth check - in a real app you'd use proper NextAuth
     // For now, we'll assume the request is authorized
@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
     const [
       totalPatients,
       activePatients,
-      totalAppointments,
       monthlyAppointments,
       previousMonthAppointments,
       totalRevenue,
@@ -60,9 +59,6 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-
-      // Total appointments
-      prisma.appointment.count(),
 
       // Monthly appointments
       prisma.appointment.count({
