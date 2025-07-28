@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export type EvaluationLevel =
-  | "NECESITA_APOYO"
-  | "EN_DESARROLLO"
-  | "SE_DESARROLLA_BIEN"
-  | "CON_HABILIDADES_DESTACADAS"
+  | "NEEDS_SUPPORT"
+  | "IN_DEVELOPMENT"
+  | "DEVELOPING_WELL"
+  | "WITH_OUTSTANDING_SKILLS"
   | null;
 
 export interface DevelopmentEvaluationData {
@@ -12,18 +12,18 @@ export interface DevelopmentEvaluationData {
   appointmentId: string;
 
   // Development Areas Evaluation
-  comunicacionYLenguaje: EvaluationLevel;
-  habilidadesGruesas: EvaluationLevel;
-  habilidadesFinas: EvaluationLevel;
-  atencionYAprendizaje: EvaluationLevel;
-  relacionConOtros: EvaluationLevel;
-  autonomiaYAdaptacion: EvaluationLevel;
+  communicationAndLanguage: EvaluationLevel;
+  grossMotorSkills: EvaluationLevel;
+  fineMotorSkills: EvaluationLevel;
+  attentionAndLearning: EvaluationLevel;
+  socialRelations: EvaluationLevel;
+  autonomyAndAdaptation: EvaluationLevel;
 
   // Text sections
-  fortalezas: string;
-  areasParaApoyar: string;
-  recomendacionCasas: string;
-  recomendacionColegio: string;
+  strengths: string;
+  areasToSupport: string;
+  homeRecommendations: string;
+  schoolRecommendations: string;
 
   // System fields
   createdAt?: string;
@@ -109,13 +109,13 @@ export const useSaveDevelopmentEvaluation = () => {
 // Helper function to get the display text for evaluation levels
 export const getEvaluationLevelText = (level: EvaluationLevel): string => {
   switch (level) {
-    case "NECESITA_APOYO":
+    case "NEEDS_SUPPORT":
       return "Necesita apoyo";
-    case "EN_DESARROLLO":
+    case "IN_DEVELOPMENT":
       return "En desarrollo";
-    case "SE_DESARROLLA_BIEN":
+    case "DEVELOPING_WELL":
       return "Se desarrolla bien";
-    case "CON_HABILIDADES_DESTACADAS":
+    case "WITH_OUTSTANDING_SKILLS":
       return "Con habilidades destacadas";
     default:
       return "";
@@ -125,17 +125,17 @@ export const getEvaluationLevelText = (level: EvaluationLevel): string => {
 // Helper function to get the display text for development areas
 export const getDevelopmentAreaText = (area: string): string => {
   switch (area) {
-    case "comunicacionYLenguaje":
+    case "communicationAndLanguage":
       return "Comunicación y lenguaje";
-    case "habilidadesGruesas":
+    case "grossMotorSkills":
       return "Habilidades motoras gruesas";
-    case "habilidadesFinas":
+    case "fineMotorSkills":
       return "Habilidades motoras finas";
-    case "atencionYAprendizaje":
+    case "attentionAndLearning":
       return "Atención y aprendizaje";
-    case "relacionConOtros":
+    case "socialRelations":
       return "Relación con otros";
-    case "autonomiaYAdaptacion":
+    case "autonomyAndAdaptation":
       return "Autonomía y adaptación";
     default:
       return area;
@@ -147,17 +147,17 @@ export const EVALUATION_LEVELS: Array<{
   value: EvaluationLevel;
   label: string;
 }> = [
-  { value: "NECESITA_APOYO", label: "Necesita apoyo" },
-  { value: "EN_DESARROLLO", label: "En desarrollo" },
-  { value: "SE_DESARROLLA_BIEN", label: "Se desarrolla bien" },
-  { value: "CON_HABILIDADES_DESTACADAS", label: "Con habilidades destacadas" },
+  { value: "NEEDS_SUPPORT", label: "Necesita apoyo" },
+  { value: "IN_DEVELOPMENT", label: "En desarrollo" },
+  { value: "DEVELOPING_WELL", label: "Se desarrolla bien" },
+  { value: "WITH_OUTSTANDING_SKILLS", label: "Con habilidades destacadas" },
 ];
 
 export const DEVELOPMENT_AREAS = [
-  { key: "comunicacionYLenguaje", label: "Comunicación y lenguaje" },
-  { key: "habilidadesGruesas", label: "Habilidades motoras gruesas" },
-  { key: "habilidadesFinas", label: "Habilidades motoras finas" },
-  { key: "atencionYAprendizaje", label: "Atención y aprendizaje" },
-  { key: "relacionConOtros", label: "Relación con otros" },
-  { key: "autonomiaYAdaptacion", label: "Autonomía y adaptación" },
+  { key: "communicationAndLanguage", label: "Comunicación y lenguaje" },
+  { key: "grossMotorSkills", label: "Habilidades motoras gruesas" },
+  { key: "fineMotorSkills", label: "Habilidades motoras finas" },
+  { key: "attentionAndLearning", label: "Atención y aprendizaje" },
+  { key: "socialRelations", label: "Relación con otros" },
+  { key: "autonomyAndAdaptation", label: "Autonomía y adaptación" },
 ] as const;

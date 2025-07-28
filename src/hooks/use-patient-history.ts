@@ -41,7 +41,12 @@ export interface PatientHistoryData {
       totalSessions: number;
       status: string;
       recommendations?: string;
+      frequency: string;
       createdAt: string;
+      consultationRequest?: {
+        schoolName?: string;
+        schoolLevel?: string;
+      };
     }>;
   };
 }

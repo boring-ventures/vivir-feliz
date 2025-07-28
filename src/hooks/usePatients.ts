@@ -294,7 +294,7 @@ export function useProposalsDisplayData(
       `${proposal.therapist.firstName || ""} ${proposal.therapist.lastName || ""}`.trim();
 
     const totalPaid = proposal.payments
-      .filter((p) => p.status === "COMPLETED")
+      .filter((p) => p.status === "COMPLETED" || p.status === "PARTIAL")
       .reduce((sum, p) => sum + Number(p.amount), 0);
 
     const paymentConfirmed = totalPaid >= Number(proposal.totalAmount);
@@ -342,7 +342,7 @@ export function useProposalsDisplayData(
       canConfirmPayment: proposal.status === "PAYMENT_PENDING",
       canScheduleAppointments:
         proposal.status === "PAYMENT_CONFIRMED" && !appointmentsScheduled,
-      selectedProposal: proposal.selectedProposal,
+      selectedProposal: proposal.selectedProposal || undefined,
     };
   });
 }
