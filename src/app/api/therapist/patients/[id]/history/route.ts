@@ -119,6 +119,14 @@ export async function GET(
           where: {
             therapistId: therapist.id,
           },
+          include: {
+            consultationRequest: {
+              select: {
+                schoolName: true,
+                schoolLevel: true,
+              },
+            },
+          },
           orderBy: {
             createdAt: "desc",
           },
@@ -170,36 +178,41 @@ export async function GET(
               })
             ) || [],
         })),
-        treatmentProposals: patient.treatmentProposals.map(
-          (proposal: TreatmentProposal) => {
-            // Calculate total sessions from the proposal's totalSessions JSON field
-            let calculatedTotalSessions = 0;
-            if (
-              proposal.totalSessions &&
-              typeof proposal.totalSessions === "object"
-            ) {
-              const totalSessionsObj = proposal.totalSessions as {
-                A?: number;
-                B?: number;
-              };
-              calculatedTotalSessions = Math.max(
-                totalSessionsObj.A || 0,
-                totalSessionsObj.B || 0
-              );
-            } else if (typeof proposal.totalSessions === "number") {
-              calculatedTotalSessions = proposal.totalSessions;
-            }
-
-            return {
-              id: proposal.id,
-              diagnosis: proposal.diagnosis,
-              totalSessions: calculatedTotalSessions,
-              status: proposal.status,
-              recommendations: proposal.notes, // Map notes to recommendations for frontend compatibility
-              createdAt: proposal.createdAt.toISOString(),
+        treatmentProposals: patient.treatmentProposals.map((proposal: any) => {
+          // Calculate total sessions from the proposal's totalSessions JSON field
+          let calculatedTotalSessions = 0;
+          if (
+            proposal.totalSessions &&
+            typeof proposal.totalSessions === "object"
+          ) {
+            const totalSessionsObj = proposal.totalSessions as {
+              A?: number;
+              B?: number;
             };
+            calculatedTotalSessions = Math.max(
+              totalSessionsObj.A || 0,
+              totalSessionsObj.B || 0
+            );
+          } else if (typeof proposal.totalSessions === "number") {
+            calculatedTotalSessions = proposal.totalSessions;
           }
-        ),
+
+          return {
+            id: proposal.id,
+            diagnosis: proposal.diagnosis,
+            totalSessions: calculatedTotalSessions,
+            status: proposal.status,
+            recommendations: proposal.notes, // Map notes to recommendations for frontend compatibility
+            frequency: proposal.frequency,
+            createdAt: proposal.createdAt.toISOString(),
+            consultationRequest: proposal.consultationRequest
+              ? {
+                  schoolName: proposal.consultationRequest.schoolName,
+                  schoolLevel: proposal.consultationRequest.schoolLevel,
+                }
+              : undefined,
+          };
+        }),
       },
     };
 
