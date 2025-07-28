@@ -8,15 +8,12 @@ import {
   Heart,
   CheckCircle,
   Calendar,
-  Phone,
-  Mail,
-  MapPin,
-  School,
-  Users,
   FileText,
   AlertTriangle,
   FileCheck,
   Clock,
+  Phone,
+  Mail,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -107,73 +104,6 @@ export default function ConsultationSuccessPage() {
     }
   }, [router]);
 
-  const calcularEdad = (fechaNacimiento: string) => {
-    if (!fechaNacimiento) return "";
-    const hoy = new Date();
-    const nacimiento = new Date(fechaNacimiento);
-    const edad = hoy.getFullYear() - nacimiento.getFullYear();
-    const mes = hoy.getMonth() - nacimiento.getMonth();
-    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
-      return (edad - 1).toString();
-    }
-    return edad.toString();
-  };
-
-  const formatLivingWith = (vivecon: string, otro?: string): string => {
-    const options: { [key: string]: string } = {
-      "ambos-padres": "Ambos padres",
-      "solo-madre": "Solo madre",
-      "solo-padre": "Solo padre",
-      "padres-adoptivos": "Padres adoptivos",
-      "algun-pariente": "Algún pariente",
-      "padre-madrastra": "Padre y madrastra",
-      "madre-padrastro": "Madre y padrastro",
-      otros: `Otros: ${otro || "No especificado"}`,
-    };
-    return options[vivecon] || vivecon;
-  };
-
-  const getSelectedReasons = (motivosConsulta: Record<string, unknown>) => {
-    const reasons: string[] = [];
-    const reasonLabels: { [key: string]: string } = {
-      dificultadesLenguaje: "Dificultades en el lenguaje/comunicación",
-      retrasoMotor: "Retraso en el desarrollo motor",
-      problemasCoordinacion: "Problemas de coordinación motora",
-      dificultadesAprendizaje:
-        "Dificultades en el aprendizaje y desarrollo escolar",
-      problemasAtencion: "Problemas de atención/concentración",
-      dificultadesInteraccion: "Dificultades en la interacción social",
-      indicadoresComportamiento:
-        "Presenta indicadores específicos de comportamiento",
-      problemasComportamiento:
-        "Problemas de comportamiento (rabietas, impulsividad)",
-      dificultadesAlimentacion: "Dificultades en la alimentación",
-      dificultadesSueno: "Dificultades en el sueño",
-      sensibilidadEstimulos:
-        "Sensibilidad a estímulos (ruidos, texturas, luces)",
-      bajaAutoestima: "Baja autoestima, timidez, introversión",
-      dificultadesControl: "Dificultades en el control de esfínteres",
-      dificultadesAutonomia:
-        "Dificultades en la autonomía y actividades diarias",
-      diagnosticoPrevio: `Diagnóstico previo: ${motivosConsulta.diagnosticoTexto || "No especificado"}`,
-      otro: `Otro motivo: ${motivosConsulta.otroTexto || "No especificado"}`,
-      necesitaOrientacion: "Necesita orientación general",
-      noSeguroDificultad: "No está seguro de la dificultad principal",
-      quiereValoracion: "Quiere una valoración general",
-      derivacionColegio: "Derivación del colegio",
-      evaluacionReciente: "Evaluación reciente (menos de 6 meses)",
-      evaluacionMedica: "Evaluación médica reciente",
-    };
-
-    Object.entries(motivosConsulta).forEach(([key, value]) => {
-      if (value === true && reasonLabels[key]) {
-        reasons.push(reasonLabels[key]);
-      }
-    });
-
-    return reasons;
-  };
-
   if (!data) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -189,7 +119,7 @@ export default function ConsultationSuccessPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center space-x-2">
               <Heart className="h-8 w-8 text-blue-600" />
@@ -201,7 +131,7 @@ export default function ConsultationSuccessPage() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Success Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
@@ -283,6 +213,45 @@ export default function ConsultationSuccessPage() {
                   </p>
                 </div>
               </div>
+
+              {/* Payment Status (if confirmed) */}
+              {data.paymentConfirmed && (
+                <div className="border-t border-green-200 pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-green-700">
+                        Estado del Pago
+                      </p>
+                      <Badge className="bg-green-600 text-white">
+                        ✓ Pago Confirmado
+                      </Badge>
+                      <p className="text-sm text-green-600 mt-1">
+                        Tu pago ha sido recibido y confirmado
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-green-700">
+                        Monto Pagado
+                      </p>
+                      <p className="text-lg font-semibold text-green-900">
+                        Bs. 250
+                      </p>
+                      <p className="text-sm text-green-600">Consulta Inicial</p>
+                    </div>
+                  </div>
+                  {data.referenceNumber && (
+                    <div className="mt-3">
+                      <p className="text-sm font-medium text-green-700">
+                        Número de Referencia
+                      </p>
+                      <p className="text-sm text-green-900 font-mono">
+                        {data.referenceNumber}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="p-4 bg-white rounded-md border border-green-200">
                 <p className="text-sm text-green-700">
                   <strong>Importante:</strong> Te contactaremos 24 horas antes
@@ -294,305 +263,9 @@ export default function ConsultationSuccessPage() {
           </Card>
         )}
 
-        {/* Payment Confirmation Card (if payment was confirmed) */}
-        {data.paymentConfirmed && (
-          <Card className="mb-6 border-blue-200 bg-blue-50">
-            <CardHeader>
-              <CardTitle className="flex items-center text-blue-800">
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Confirmación de Pago
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">
-                    Estado del Pago
-                  </p>
-                  <Badge className="bg-green-600 text-white">
-                    ✓ Pago Confirmado
-                  </Badge>
-                  <p className="text-sm text-blue-600 mt-1">
-                    Tu pago ha sido recibido y confirmado
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-blue-700">
-                    Monto Pagado
-                  </p>
-                  <p className="text-lg font-semibold text-blue-900">Bs. 250</p>
-                  <p className="text-sm text-blue-600">Consulta Inicial</p>
-                </div>
-              </div>
-              {data.referenceNumber && (
-                <div>
-                  <p className="text-sm font-medium text-blue-700">
-                    Número de Referencia
-                  </p>
-                  <p className="text-sm text-blue-900 font-mono">
-                    {data.referenceNumber}
-                  </p>
-                </div>
-              )}
-              {data.paymentDate && (
-                <div>
-                  <p className="text-sm font-medium text-blue-700">
-                    Fecha de Pago
-                  </p>
-                  <p className="text-sm text-blue-900">
-                    {new Date(data.paymentDate).toLocaleDateString("es-ES", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              )}
-              <div className="p-4 bg-white rounded-md border border-blue-200">
-                <p className="text-sm text-blue-700">
-                  <strong>Comprobante:</strong> Hemos registrado tu comprobante
-                  de pago. En caso de necesitar una factura o recibo oficial,
-                  contacta con nosotros después de tu cita.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Child Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Users className="h-5 w-5 mr-2 text-blue-600" />
-                Información del Niño/a
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="font-medium text-gray-900">{data.nombre}</p>
-                <p className="text-sm text-gray-600">
-                  {data.sexo === "masculino" ? "Masculino" : "Femenino"} •{" "}
-                  {calcularEdad(data.fechaNacimiento)} años
-                </p>
-                <p className="text-sm text-gray-600">
-                  Nacimiento:{" "}
-                  {new Date(data.fechaNacimiento).toLocaleDateString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-700">Vive con:</p>
-                <p className="text-sm text-gray-600">
-                  {formatLivingWith(data.vivecon, data.otroViveCon)}
-                </p>
-              </div>
-              <div className="flex items-start">
-                <MapPin className="h-4 w-4 mr-2 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">
-                    Domicilio:
-                  </p>
-                  <p className="text-sm text-gray-600">{data.domicilio}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Parents Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Users className="h-5 w-5 mr-2 text-blue-600" />
-                Información de los Padres
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {data.madre.nombre && (
-                <div>
-                  <p className="font-medium text-gray-900">
-                    Madre: {data.madre.nombre}
-                  </p>
-                  {data.madre.edad && (
-                    <p className="text-sm text-gray-600">
-                      Edad: {data.madre.edad} años
-                    </p>
-                  )}
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    {data.madre.celular && (
-                      <span className="flex items-center">
-                        <Phone className="h-3 w-3 mr-1" />
-                        {data.madre.celular}
-                      </span>
-                    )}
-                    {data.madre.email && (
-                      <span className="flex items-center">
-                        <Mail className="h-3 w-3 mr-1" />
-                        {data.madre.email}
-                      </span>
-                    )}
-                  </div>
-                  {data.madre.gradoEscolar && (
-                    <p className="text-sm text-gray-600">
-                      Educación: {data.madre.gradoEscolar}
-                    </p>
-                  )}
-                  {data.madre.ocupacion && (
-                    <p className="text-sm text-gray-600">
-                      Ocupación: {data.madre.ocupacion}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {data.padre.nombre && (
-                <div>
-                  <p className="font-medium text-gray-900">
-                    Padre: {data.padre.nombre}
-                  </p>
-                  {data.padre.edad && (
-                    <p className="text-sm text-gray-600">
-                      Edad: {data.padre.edad} años
-                    </p>
-                  )}
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    {data.padre.celular && (
-                      <span className="flex items-center">
-                        <Phone className="h-3 w-3 mr-1" />
-                        {data.padre.celular}
-                      </span>
-                    )}
-                    {data.padre.email && (
-                      <span className="flex items-center">
-                        <Mail className="h-3 w-3 mr-1" />
-                        {data.padre.email}
-                      </span>
-                    )}
-                  </div>
-                  {data.padre.gradoEscolar && (
-                    <p className="text-sm text-gray-600">
-                      Educación: {data.padre.gradoEscolar}
-                    </p>
-                  )}
-                  {data.padre.ocupacion && (
-                    <p className="text-sm text-gray-600">
-                      Ocupación: {data.padre.ocupacion}
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* School Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <School className="h-5 w-5 mr-2 text-blue-600" />
-                Información Escolar
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="font-medium text-gray-900">{data.institucion}</p>
-                <p className="text-sm text-gray-600">
-                  Nivel: {data.nivelEscolar}
-                </p>
-              </div>
-              {data.maestra && (
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Maestra:</p>
-                  <p className="text-sm text-gray-600">{data.maestra}</p>
-                </div>
-              )}
-              {data.telefono && (
-                <div className="flex items-center">
-                  <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                  <p className="text-sm text-gray-600">{data.telefono}</p>
-                </div>
-              )}
-              {data.direccion && (
-                <div className="flex items-start">
-                  <MapPin className="h-4 w-4 mr-2 text-gray-400 mt-0.5" />
-                  <p className="text-sm text-gray-600">{data.direccion}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Family History */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Users className="h-5 w-5 mr-2 text-blue-600" />
-                Historial Familiar
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {data.hijos
-                .filter((hijo) => hijo.nombre)
-                .map((hijo, index) => (
-                  <div key={index} className="border-l-2 border-blue-200 pl-3">
-                    <p className="font-medium text-gray-900">{hijo.nombre}</p>
-                    {hijo.fechaNacimiento && (
-                      <p className="text-sm text-gray-600">
-                        Edad: {calcularEdad(hijo.fechaNacimiento)} años
-                      </p>
-                    )}
-                    {hijo.gradoEscolar && (
-                      <p className="text-sm text-gray-600">
-                        Grado: {hijo.gradoEscolar}
-                      </p>
-                    )}
-                    {hijo.problemas && hijo.descripcionProblemas && (
-                      <div className="mt-1">
-                        <Badge variant="destructive" className="text-xs mb-1">
-                          Presenta problemas
-                        </Badge>
-                        <p className="text-sm text-gray-600">
-                          {hijo.descripcionProblemas}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Consultation Reasons */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileText className="h-5 w-5 mr-2 text-blue-600" />
-              Motivos de Consulta
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {getSelectedReasons(data.motivosConsulta).map((reason, index) => (
-                <div key={index} className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span className="text-sm text-gray-700">{reason}</span>
-                </div>
-              ))}
-            </div>
-            {data.quienDeriva && (
-              <div className="mt-4 pt-4 border-t">
-                <p className="text-sm font-medium text-gray-700">
-                  Derivado por:
-                </p>
-                <p className="text-sm text-gray-600">{data.quienDeriva}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Medical Form Action Card - Only show for consultations with appointments */}
         {data.appointmentId && data.paymentConfirmed && (
-          <Card className="mt-6 border-purple-200 bg-purple-50">
+          <Card className="mb-6 border-purple-200 bg-purple-50">
             <CardHeader>
               <CardTitle className="flex items-center text-purple-800">
                 <FileText className="h-5 w-5 mr-2" />
@@ -609,38 +282,9 @@ export default function ConsultationSuccessPage() {
                     </p>
                     <p className="text-amber-700 text-sm">
                       Antes de su consulta, debe completar un formulario médico
-                      detallado con información sobre su hijo/a. Este formulario
-                      incluye información médica detallada que el terapeuta
-                      necesitará para la evaluación.
+                      detallado con información sobre su hijo/a.
                     </p>
                   </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2 text-purple-700">
-                  <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm">
-                    Debe completar TODOS los datos del formulario
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 text-purple-700">
-                  <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm">
-                    El formulario incluye información médica detallada
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 text-purple-700">
-                  <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm">
-                    Guarde este ID para continuar más tarde si es necesario
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 text-purple-700">
-                  <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm">
-                    El terapeuta necesitará esta información para la evaluación
-                  </span>
                 </div>
               </div>
 
@@ -664,7 +308,7 @@ export default function ConsultationSuccessPage() {
         )}
 
         {/* Next Steps */}
-        <Card className="mt-6 bg-blue-50 border-blue-200">
+        <Card className="mb-6 bg-blue-50 border-blue-200">
           <CardHeader>
             <CardTitle className="flex items-center text-blue-800">
               <Clock className="h-5 w-5 mr-2" />
@@ -672,25 +316,78 @@ export default function ConsultationSuccessPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-blue-700">
-            <div className="space-y-2">
-              <p className="flex items-center">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Nuestro equipo revisará tu solicitud en las próximas 24 horas
-              </p>
-              <p className="flex items-center">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Te contactaremos para coordinar la cita de consulta
-              </p>
-              <p className="flex items-center">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Recibirás confirmación por teléfono o email
-              </p>
+            <div className="space-y-3">
+              {!data.appointmentId ? (
+                <>
+                  <p className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Nuestro equipo revisará tu solicitud en las próximas 24
+                    horas
+                  </p>
+                  <p className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Te contactaremos para coordinar la cita de consulta
+                  </p>
+                  <p className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Recibirás confirmación por teléfono o email
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Completa el formulario médico antes de tu cita
+                  </p>
+                  <p className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Llega 10 minutos antes de tu cita programada
+                  </p>
+                  <p className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Trae documentos médicos relevantes si los tienes
+                  </p>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact Information */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Phone className="h-5 w-5 mr-2 text-blue-600" />
+              Información de Contacto
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="font-medium text-gray-900">Centro Vivir Feliz</p>
+                <div className="space-y-1 text-sm text-gray-600 mt-2">
+                  <p className="flex items-center">
+                    <Phone className="h-4 w-4 mr-2" />
+                    +591 123 456 789
+                  </p>
+                  <p className="flex items-center">
+                    <Mail className="h-4 w-4 mr-2" />
+                    info@vivirfeliz.com
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">
+                  Si tienes alguna pregunta o necesitas reprogramar tu cita, no
+                  dudes en contactarnos.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Action Buttons */}
-        <div className="flex justify-center space-x-4 mt-8">
+        <div className="flex justify-center space-x-4">
           <Button asChild variant="outline">
             <Link href="/">Volver al Inicio</Link>
           </Button>
