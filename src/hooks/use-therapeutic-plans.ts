@@ -16,11 +16,11 @@ interface TherapeuticPlan {
   frequency?: string | null;
   therapyStartDate?: string | null;
   background?: string | null;
-  diagnoses?: any;
+  diagnoses?: unknown; // Json field from Prisma
   generalObjective?: string | null;
-  specificObjectives?: any;
-  indicators?: any;
-  methodologies?: any;
+  specificObjectives?: unknown; // Json field from Prisma
+  indicators?: unknown; // Json field from Prisma
+  methodologies?: unknown; // Json field from Prisma
   observations?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -40,11 +40,11 @@ interface CreateTherapeuticPlanData {
   frequency?: string;
   therapyStartDate?: string;
   background?: string;
-  diagnoses?: any;
+  diagnoses?: unknown; // Json field from Prisma
   generalObjective?: string;
-  specificObjectives?: any;
-  indicators?: any;
-  methodologies?: any;
+  specificObjectives?: unknown; // Json field from Prisma
+  indicators?: unknown; // Json field from Prisma
+  methodologies?: unknown; // Json field from Prisma
   observations?: string;
 }
 
