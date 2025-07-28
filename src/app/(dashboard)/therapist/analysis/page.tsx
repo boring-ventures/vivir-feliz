@@ -39,7 +39,7 @@ export default function TherapistAnalysisPage() {
 
   const sendAnalysisToAdmin = useSendAnalysisToAdmin();
 
-  // Filter appointments based on search and only show CONSULTA type
+  // Filter appointments based on search (API now only returns CONSULTA appointments)
   const filteredAppointments =
     data?.appointments?.filter(
       (appointment) =>
@@ -47,8 +47,7 @@ export default function TherapistAnalysisPage() {
           .toLowerCase()
           .includes(busqueda.toLowerCase()) ||
         appointment.parentName.toLowerCase().includes(busqueda.toLowerCase()) ||
-        appointment.notes.toLowerCase().includes(busqueda.toLowerCase()) ||
-        "consulta".includes(busqueda.toLowerCase())
+        appointment.notes.toLowerCase().includes(busqueda.toLowerCase())
     ) || [];
 
   const getPrioridadColor = (prioridad: string) => {
@@ -189,7 +188,7 @@ export default function TherapistAnalysisPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
-                      Citas Programadas
+                      Consultas Programadas
                     </p>
                     <p className="text-3xl font-bold text-blue-600">
                       {data?.stats?.scheduled || 0}
@@ -225,7 +224,7 @@ export default function TherapistAnalysisPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
-                      Alta Prioridad
+                      Consultas Alta Prioridad
                     </p>
                     <p className="text-3xl font-bold text-red-600">
                       {data?.stats?.highPriority || 0}
@@ -243,7 +242,7 @@ export default function TherapistAnalysisPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
-                      Consultas
+                      Consultas Filtradas
                     </p>
                     <p className="text-3xl font-bold text-purple-600">
                       {filteredAppointments.length}
