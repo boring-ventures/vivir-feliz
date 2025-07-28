@@ -47,11 +47,7 @@ export async function GET(request: NextRequest) {
           therapistId: therapist.id,
         },
         include: {
-          patient: {
-            include: {
-              user: true,
-            },
-          },
+          patient: true,
         },
         orderBy: { createdAt: "desc" },
       });
