@@ -21,6 +21,7 @@ import {
   Heart,
   Brain,
   Activity,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { usePatientHistory } from "@/hooks/use-patient-history";
@@ -49,7 +50,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Eye, Plus, Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
+import { TherapeuticPlanModal } from "@/components/therapist/therapeutic-plan-modal";
+import { ProgressReportModal } from "@/components/therapist/progress-report-modal";
 
 // Type definitions for appointment and objective data
 interface SessionNote {
@@ -122,6 +125,13 @@ export default function PatientHistoryPage() {
   const [tituloDocumento, setTituloDocumento] = useState("");
   const [tipoDocumento, setTipoDocumento] = useState("");
   const [descripcionDocumento, setDescripcionDocumento] = useState("");
+
+  // Therapeutic plan modal state
+  const [showTherapeuticPlanModal, setShowTherapeuticPlanModal] =
+    useState(false);
+
+  // Progress report modal state
+  const [showProgressReportModal, setShowProgressReportModal] = useState(false);
 
   const { data: patientData, isLoading, error } = usePatientHistory(patientId);
   const { data: objectivesData, isLoading: objectivesLoading } =
@@ -391,6 +401,22 @@ export default function PatientHistoryPage() {
             <h1 className="text-3xl font-bold">{patient.user.name}</h1>
             <p className="text-gray-600">Historial completo del paciente</p>
           </div>
+        </div>
+        <div className="flex space-x-2">
+          <Button
+            onClick={() => setShowTherapeuticPlanModal(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Plan Terapéutico
+          </Button>
+          <Button
+            onClick={() => setShowProgressReportModal(true)}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Informe de Avances
+          </Button>
         </div>
       </div>
 
@@ -1020,6 +1046,22 @@ export default function PatientHistoryPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Therapeutic Plan Modal */}
+      <TherapeuticPlanModal
+        isOpen={showTherapeuticPlanModal}
+        onClose={() => setShowTherapeuticPlanModal(false)}
+        patientId={patientId}
+        patientData={patient}
+      />
+
+      {/* Progress Report Modal */}
+      <ProgressReportModal
+        isOpen={showProgressReportModal}
+        onClose={() => setShowProgressReportModal(false)}
+        patientId={patientId}
+        patientData={patient}
+      />
 
       <Toaster />
     </div>
