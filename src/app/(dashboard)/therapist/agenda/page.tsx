@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -27,7 +26,6 @@ import {
 } from "@/hooks/use-therapist-appointments";
 import {
   TherapistProfile,
-  WeeklyAvailability,
   DayOfWeek,
   TherapistAppointment,
 } from "@/types/therapists";
@@ -86,16 +84,6 @@ const dayMapping: Record<string, DayOfWeek> = {
   viernes: "FRIDAY",
   sabado: "SATURDAY",
   domingo: "SUNDAY",
-};
-
-const reverseDayMapping: Record<DayOfWeek, string> = {
-  MONDAY: "lunes",
-  TUESDAY: "martes",
-  WEDNESDAY: "miercoles",
-  THURSDAY: "jueves",
-  FRIDAY: "viernes",
-  SATURDAY: "sabado",
-  SUNDAY: "domingo",
 };
 
 // Time slots and days
@@ -293,32 +281,6 @@ export default function TherapistAgendaPage() {
 
   // Get the dynamic time slots
   const horarios = getAvailableTimeSlots();
-
-  // Convert database schedule to weekly availability format
-  const getTherapistAvailability = (
-    therapist: TherapistProfile
-  ): WeeklyAvailability => {
-    const availability: WeeklyAvailability = {
-      lunes: [],
-      martes: [],
-      miercoles: [],
-      jueves: [],
-      viernes: [],
-    };
-
-    if (therapist.schedule?.timeSlots) {
-      therapist.schedule.timeSlots.forEach((slot) => {
-        const dayName = reverseDayMapping[slot.dayOfWeek];
-        if (dayName && availability[dayName as keyof WeeklyAvailability]) {
-          availability[dayName as keyof WeeklyAvailability].push(
-            slot.startTime
-          );
-        }
-      });
-    }
-
-    return availability;
-  };
 
   // Check if a time slot is blocked
   const isTimeSlotBlocked = (
