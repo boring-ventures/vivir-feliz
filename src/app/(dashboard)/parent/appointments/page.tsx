@@ -17,7 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useParentAppointments } from "@/hooks/use-parent-appointments";
 import type { ParentAppointment } from "@/hooks/use-parent-appointments";
 
@@ -166,24 +166,34 @@ export default function ParentAppointmentsPage() {
     );
   };
 
-  const isToday = (date: Date) => {
+  const isToday = useCallback((date: Date) => {
     const today = new Date();
     return isSameDay(date, today);
-  };
+  }, []);
 
-  const hasAppointment = (date: Date) => {
-    return allAppointments.some((appointment) => {
-      const appointmentDate = parseAppointmentDate(appointment.appointmentDate);
-      return isSameDay(appointmentDate, date);
-    });
-  };
+  const hasAppointment = useCallback(
+    (date: Date) => {
+      return allAppointments.some((appointment) => {
+        const appointmentDate = parseAppointmentDate(
+          appointment.appointmentDate
+        );
+        return isSameDay(appointmentDate, date);
+      });
+    },
+    [allAppointments]
+  );
 
-  const getAppointmentsForDate = (date: Date) => {
-    return allAppointments.filter((appointment) => {
-      const appointmentDate = parseAppointmentDate(appointment.appointmentDate);
-      return isSameDay(appointmentDate, date);
-    });
-  };
+  const getAppointmentsForDate = useCallback(
+    (date: Date) => {
+      return allAppointments.filter((appointment) => {
+        const appointmentDate = parseAppointmentDate(
+          appointment.appointmentDate
+        );
+        return isSameDay(appointmentDate, date);
+      });
+    },
+    [allAppointments]
+  );
 
   // Calendar navigation functions
   const goToPreviousMonth = () => {
