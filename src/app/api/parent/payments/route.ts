@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
         : "Terapeuta no disponible";
 
       const totalPaid = proposal.payments
-        .filter((p) => p.status === "COMPLETED")
+        .filter((p) => p.status === "COMPLETED" || p.status === "PARTIAL")
         .reduce((sum, p) => sum + Number(p.amount), 0);
 
       const totalAmount = Number(proposal.totalAmount);
@@ -170,14 +170,14 @@ export async function GET(request: NextRequest) {
       return (
         sum +
         proposal.payments
-          .filter((p) => p.status === "COMPLETED")
+          .filter((p) => p.status === "COMPLETED" || p.status === "PARTIAL")
           .reduce((pSum, p) => pSum + Number(p.amount), 0)
       );
     }, 0);
 
     const totalPending = proposals.reduce((sum, proposal) => {
       const totalPaid = proposal.payments
-        .filter((p) => p.status === "COMPLETED")
+        .filter((p) => p.status === "COMPLETED" || p.status === "PARTIAL")
         .reduce((pSum, p) => pSum + Number(p.amount), 0);
       return sum + Math.max(0, Number(proposal.totalAmount) - totalPaid);
     }, 0);

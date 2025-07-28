@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
       }),
       prisma.payment.aggregate({
         where: {
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PARTIAL"] },
           proposal: {
             patientId: { in: patientIds },
           },
