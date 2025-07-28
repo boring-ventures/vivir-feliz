@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+// Type definitions for JSON fields
+type ProposalTotalsData = {
+  A: number;
+  B: number;
+};
+
 // GET /api/admin/patients/proposals/[id]/services - Get proposal services
 export async function GET(
   request: NextRequest,
@@ -118,8 +124,8 @@ export async function PUT(
       await tx.treatmentProposal.update({
         where: { id },
         data: {
-          totalAmount: totalAmount as any, // Type assertion for now until Prisma client is regenerated
-          totalSessions: totalSessions as any, // Type assertion for now until Prisma client is regenerated
+          totalAmount: totalAmount as ProposalTotalsData,
+          totalSessions: totalSessions as ProposalTotalsData,
         },
       });
 
