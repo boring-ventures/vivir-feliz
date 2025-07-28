@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+// Type definitions for JSON fields
+type TotalAmountData = {
+  [key: string]: number;
+} | null;
+
+type PaymentPlanData = {
+  [proposalType: string]: {
+    single: number;
+    monthly: number;
+    bimonthly: number;
+  };
+};
+
 interface ConsultationRequestData {
   id: string;
   childName: string;
@@ -266,13 +279,13 @@ export async function PUT(
         console.log("🔍 Payment plan data:", {
           paymentPlan: proposal.paymentPlan,
           paymentPlanType: typeof proposal.paymentPlan,
-          selectedProposal: (proposal as any).selectedProposal,
-          selectedPaymentPlan: (proposal as any).selectedPaymentPlan,
+          selectedProposal: proposal.selectedProposal,
+          selectedPaymentPlan: proposal.selectedPaymentPlan,
         });
 
         if (proposal.paymentPlan) {
           // Handle both string and object payment plan data
-          let paymentPlanObj: any;
+          let paymentPlanObj: PaymentPlanData = {};
           if (typeof proposal.paymentPlan === "string") {
             try {
               paymentPlanObj = JSON.parse(proposal.paymentPlan);
@@ -281,11 +294,11 @@ export async function PUT(
               paymentPlanObj = {};
             }
           } else {
-            paymentPlanObj = proposal.paymentPlan as any;
+            paymentPlanObj = (proposal.paymentPlan as PaymentPlanData) ?? {};
           }
 
-          const selectedProposal = (proposal as any).selectedProposal;
-          const selectedPaymentPlan = (proposal as any).selectedPaymentPlan;
+          const selectedProposal = proposal.selectedProposal;
+          const selectedPaymentPlan = proposal.selectedPaymentPlan;
 
           console.log("🔍 Payment calculation debug:", {
             paymentPlanObj,
@@ -323,7 +336,8 @@ export async function PUT(
             console.log("❌ Missing required data for payment calculation:", {
               hasSelectedProposal: !!selectedProposal,
               hasSelectedPaymentPlan: !!selectedPaymentPlan,
-              hasPlanData: !!paymentPlanObj[selectedProposal],
+              hasPlanData:
+                !!selectedProposal && !!paymentPlanObj[selectedProposal],
             });
           }
         } else {
@@ -338,16 +352,17 @@ export async function PUT(
             proposal.totalAmount &&
             typeof proposal.totalAmount === "object"
           ) {
-            const totalAmountObj = proposal.totalAmount as any;
+            const totalAmountObj = proposal.totalAmount as TotalAmountData;
             if (
-              (proposal as any).selectedProposal &&
-              totalAmountObj[(proposal as any).selectedProposal]
+              proposal.selectedProposal &&
+              totalAmountObj &&
+              totalAmountObj[proposal.selectedProposal]
             ) {
-              paymentAmount = Number(
-                totalAmountObj[(proposal as any).selectedProposal]
-              );
+              paymentAmount = Number(totalAmountObj[proposal.selectedProposal]);
             } else {
-              const amounts = Object.values(totalAmountObj);
+              const amounts = totalAmountObj
+                ? Object.values(totalAmountObj)
+                : [];
               paymentAmount = amounts.length > 0 ? Number(amounts[0]) : 0;
             }
           } else {
@@ -385,7 +400,7 @@ export async function PUT(
           status === "TREATMENT_ACTIVE" ? new Date() : proposal.startDate,
         endDate:
           status === "TREATMENT_COMPLETED" ? new Date() : proposal.endDate,
-      } as any, // Type assertion to bypass TypeScript error until Prisma client is regenerated
+      },
       include: {
         patient: {
           include: {
@@ -512,7 +527,7 @@ export async function PATCH(
           `Pago confirmado el ${new Date().toLocaleDateString("es-ES")}`;
 
         if (proposal.paymentPlan && typeof proposal.paymentPlan === "object") {
-          const paymentPlanObj = proposal.paymentPlan as any;
+          const paymentPlanObj = proposal.paymentPlan as PaymentPlanData;
           const selectedProposal = proposal.selectedProposal;
           const selectedPaymentPlan = proposal.selectedPaymentPlan;
 
@@ -546,13 +561,14 @@ export async function PATCH(
             proposal.totalAmount &&
             typeof proposal.totalAmount === "object"
           ) {
-            const totalAmountObj = proposal.totalAmount as any;
+            const totalAmountObj = proposal.totalAmount as TotalAmountData;
             if (
               proposal.selectedProposal &&
+              totalAmountObj &&
               totalAmountObj[proposal.selectedProposal]
             ) {
               paymentAmount = Number(totalAmountObj[proposal.selectedProposal]);
-            } else {
+            } else if (totalAmountObj) {
               const amounts = Object.values(totalAmountObj);
               paymentAmount = amounts.length > 0 ? Number(amounts[0]) : 0;
             }
@@ -588,10 +604,10 @@ export async function PATCH(
           status === "TREATMENT_ACTIVE" ? new Date() : proposal.startDate,
         endDate:
           status === "TREATMENT_COMPLETED" ? new Date() : proposal.endDate,
-        paymentPlan: paymentPlan || (proposal as any).paymentPlan,
+        paymentPlan: paymentPlan || proposal.paymentPlan,
         selectedPaymentPlan:
-          selectedPaymentPlan || (proposal as any).selectedPaymentPlan,
-      } as any,
+          selectedPaymentPlan || proposal.selectedPaymentPlan,
+      },
       include: {
         patient: {
           include: {
