@@ -38,6 +38,8 @@ model Profile {
   patientObjectives  PatientObjective[]  @relation("TherapistObjectives")
   objectiveProgress  ObjectiveProgress[] @relation("TherapistObjectiveProgress")
   patientDocuments   PatientDocument[]   @relation("TherapistDocuments")
+  therapeuticPlans  TherapeuticPlan[]    @relation("TherapistTherapeuticPlans")
+  progressReports    ProgressReport[]    @relation("TherapistProgressReports")
 
   @@index([userId])
   @@index([nationalId])
@@ -71,6 +73,8 @@ model Patient {
   therapistPatients TherapistPatient[] @relation("PatientTherapist")
   patientObjectives  PatientObjective[]
   documents          PatientDocument[]
+  therapeuticPlans  TherapeuticPlan[]
+  progressReports    ProgressReport[]
 
   @@index([parentId])
   @@index([nationalId])
@@ -599,18 +603,18 @@ model DevelopmentEvaluation {
   appointmentId                 String                    @unique @map("appointment_id")
   
   // Development Areas Evaluation - Using individual fields for better querying
-  comunicacionYLenguaje         EvaluationLevel?          @map("comunicacion_y_lenguaje")
-  habilidadesGruesas           EvaluationLevel?          @map("habilidades_gruesas")  
-  habilidadesFinas             EvaluationLevel?          @map("habilidades_finas")
-  atencionYAprendizaje         EvaluationLevel?          @map("atencion_y_aprendizaje")
-  relacionConOtros             EvaluationLevel?          @map("relacion_con_otros")
-  autonomiaYAdaptacion         EvaluationLevel?          @map("autonomia_y_adaptacion")
+  communicationAndLanguage      EvaluationLevel?          @map("communication_and_language")
+  grossMotorSkills             EvaluationLevel?          @map("gross_motor_skills")  
+  fineMotorSkills              EvaluationLevel?          @map("fine_motor_skills")
+  attentionAndLearning         EvaluationLevel?          @map("attention_and_learning")
+  socialRelations              EvaluationLevel?          @map("social_relations")
+  autonomyAndAdaptation        EvaluationLevel?          @map("autonomy_and_adaptation")
   
   // Text sections
-  fortalezas                   String?                   @map("fortalezas")
-  areasParaApoyar              String?                   @map("areas_para_apoyar")
-  recomendacionCasas           String?                   @map("recomendacion_casa")  
-  recomendacionColegio         String?                   @map("recomendacion_colegio")
+  strengths                    String?                   @map("strengths")
+  areasToSupport               String?                   @map("areas_to_support")
+  homeRecommendations          String?                   @map("home_recommendations")  
+  schoolRecommendations        String?                   @map("school_recommendations")
   
   // System fields
   createdAt                    DateTime                  @default(now()) @map("created_at")
@@ -713,6 +717,92 @@ model PatientDocument {
   @@map("patient_documents")
 }
 
+model TherapeuticPlan {
+  id                    String   @id @default(cuid())
+  patientId             String   @map("patient_id")
+  therapistId           String   @map("therapist_id")
+  
+  // Datos generales
+  patientName           String   @map("patient_name")
+  patientDateOfBirth    DateTime @map("patient_date_of_birth")
+  patientAge            String
+  school                String?
+  grade                 String?
+  objectivesDate        DateTime? @map("objectives_date")
+  planning              String?
+  treatmentArea         String   @map("treatment_area")
+  frequency             String?
+  therapyStartDate      DateTime? @map("therapy_start_date")
+  
+  // Background
+  background            String?  // Text about patient coming to center
+  
+  // Diagnosis/Initial Difficulties
+  diagnoses             Json?    // Array of diagnostic texts
+  
+  // Objectives
+  generalObjective      String?  @map("general_objective")
+  specificObjectives    Json?    @map("specific_objectives") // Array of specific objectives
+  
+  // Indicators
+  indicators            Json?    // Array of indicator objects with radio button states
+  
+  // Methodologies/Strategies
+  methodologies         Json?    // Array of methodology texts
+  
+  // Observations
+  observations          String?
+  
+  // System fields
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  patient               Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  therapist             Profile  @relation("TherapistTherapeuticPlans", fields: [therapistId], references: [id])
+
+  @@index([patientId])
+  @@index([therapistId])
+  @@map("therapeutic_plans")
+}
+
+model ProgressReport {
+  id                    String   @id @default(cuid())
+  patientId             String   @map("patient_id")
+  therapistId           String   @map("therapist_id")
+  
+  // Patient Data (pre-filled from existing data)
+  patientName           String   @map("patient_name")
+  patientDateOfBirth    DateTime @map("patient_date_of_birth")
+  patientAge            String
+  school                String?
+  grade                 String?
+  reportDate            DateTime @map("report_date")
+  treatmentArea         String   @map("treatment_area")
+  
+  // Content from Therapeutic Plan (auto-loaded)
+  diagnoses             Json?    // Array of diagnostic texts
+  generalObjective      String?  @map("general_objective")
+  specificObjectives    Json?    @map("specific_objectives") // Array of objectives
+  indicators            Json?    // Array of indicator objects with radio button states
+  
+  // New Progress Report Content
+  progressEntries       Json?    @map("progress_entries") // Array of progress items
+  recommendations       Json?    @map("recommendations") // Array of recommendations
+  
+  // System fields
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  patient               Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  therapist             Profile  @relation("TherapistProgressReports", fields: [therapistId], references: [id])
+
+  @@index([patientId])
+  @@index([therapistId])
+  @@map("progress_reports")
+}
+
 
 enum UserRole {
   ADMIN
@@ -800,20 +890,11 @@ enum MedicalFormStatus {
   REVIEWED
 }
 
-enum DevelopmentArea {
-  COMUNICACION_Y_LENGUAJE
-  HABILIDADES_MOTORAS_GRUESAS
-  HABILIDADES_MOTORAS_FINAS
-  ATENCION_Y_APRENDIZAJE
-  RELACION_CON_OTROS
-  AUTONOMIA_Y_ADAPTACION
-}
-
 enum EvaluationLevel {
-  NECESITA_APOYO
-  EN_DESARROLLO
-  SE_DESARROLLA_BIEN
-  CON_HABILIDADES_DESTACADAS
+  NEEDS_SUPPORT
+  IN_DEVELOPMENT
+  DEVELOPING_WELL
+  WITH_OUTSTANDING_SKILLS
 }
 
 enum ServiceType {
