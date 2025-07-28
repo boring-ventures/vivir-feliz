@@ -35,7 +35,11 @@ import {
 } from "@/hooks/useProposals";
 import { useCreateUser } from "@/hooks/use-admin-users";
 import { useToast } from "@/components/ui/use-toast";
-import { ProposalDisplayData, ProposalStatus } from "@/types/patients";
+import {
+  ProposalDisplayData,
+  ProposalStatus,
+  TreatmentProposalWithRelations,
+} from "@/types/patients";
 import { useTherapistMonthlyAppointments } from "@/hooks/use-therapist-appointments";
 
 // Parent creation schema
@@ -255,7 +259,9 @@ export default function AdminNuevosPacientesPage() {
         "🔍 Searching in transformed data, total proposals:",
         response.data.length
       );
-      const proposal = response.data.find((p: any) => p.id === modalCitas.id);
+      const proposal = response.data.find(
+        (p: TreatmentProposalWithRelations) => p.id === modalCitas.id
+      );
       console.log("🔍 Found proposal in transformed data:", proposal);
       console.log("🔍 Proposal selectedProposal:", proposal?.selectedProposal);
       return proposal?.selectedProposal || null;
@@ -267,7 +273,9 @@ export default function AdminNuevosPacientesPage() {
         "🔍 Searching in raw data, total proposals:",
         response.length
       );
-      const proposal = response.find((p: any) => p.id === modalCitas.id);
+      const proposal = response.find(
+        (p: TreatmentProposalWithRelations) => p.id === modalCitas.id
+      );
       console.log("🔍 Found proposal in raw data:", proposal);
       console.log("🔍 Proposal selectedProposal:", proposal?.selectedProposal);
       return proposal?.selectedProposal || null;
@@ -703,7 +711,9 @@ export default function AdminNuevosPacientesPage() {
       "data" in response &&
       Array.isArray(response.data)
     ) {
-      rawProposal = response.data.find((p: any) => p.id === proposalId);
+      rawProposal = response.data.find(
+        (p: TreatmentProposalWithRelations) => p.id === proposalId
+      );
     }
 
     console.log("🔍 Looking for proposal:", proposalId);
