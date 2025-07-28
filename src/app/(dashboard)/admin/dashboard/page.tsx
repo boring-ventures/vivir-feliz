@@ -4,19 +4,93 @@ import { RoleGuard } from "@/components/auth/role-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users,
   Calendar,
   DollarSign,
   Star,
   TrendingUp,
+  TrendingDown,
   FileText,
   AlertCircle,
   CheckCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
 
 export default function AdminDashboardPage() {
+  const { data: dashboardData, isLoading, error } = useAdminDashboard();
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("es-BO", {
+      style: "currency",
+      currency: "BOB",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatPercentage = (value: number) => {
+    const sign = value >= 0 ? "+" : "";
+    return `${sign}${value.toFixed(1)}%`;
+  };
+
+  const getGrowthIcon = (value: number) => {
+    return value >= 0 ? (
+      <TrendingUp className="h-3 w-3 mr-1" />
+    ) : (
+      <TrendingDown className="h-3 w-3 mr-1" />
+    );
+  };
+
+  const getGrowthColor = (value: number) => {
+    return value >= 0 ? "text-green-600" : "text-red-600";
+  };
+
+  if (isLoading) {
+    return (
+      <RoleGuard allowedRoles={["ADMIN"]}>
+        <main className="p-6">
+          <div className="mb-8">
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <Skeleton className="h-4 w-24 mb-2" />
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-3 w-20" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </main>
+      </RoleGuard>
+    );
+  }
+
+  if (error) {
+    return (
+      <RoleGuard allowedRoles={["ADMIN"]}>
+        <main className="p-6">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">
+              Error al cargar datos
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              No se pudieron cargar los datos del dashboard
+            </p>
+            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+          </div>
+        </main>
+      </RoleGuard>
+    );
+  }
+
   return (
     <RoleGuard allowedRoles={["ADMIN"]}>
       <main className="p-6">
@@ -29,7 +103,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* KPIs Principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -37,10 +111,17 @@ export default function AdminDashboardPage() {
                   <p className="text-sm text-muted-foreground">
                     Pacientes Totales
                   </p>
-                  <p className="text-2xl font-bold">127</p>
-                  <p className="text-sm text-green-600 flex items-center">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    +12% vs mes anterior
+                  <p className="text-2xl font-bold">
+                    {dashboardData?.kpis.totalPatients || 0}
+                  </p>
+                  <p
+                    className={`text-sm flex items-center ${getGrowthColor(dashboardData?.kpis.patientGrowth || 0)}`}
+                  >
+                    {getGrowthIcon(dashboardData?.kpis.patientGrowth || 0)}
+                    {formatPercentage(
+                      dashboardData?.kpis.patientGrowth || 0
+                    )}{" "}
+                    vs mes anterior
                   </p>
                 </div>
                 <div className="bg-blue-100 p-3 rounded-full">
@@ -55,10 +136,17 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Citas del Mes</p>
-                  <p className="text-2xl font-bold">342</p>
-                  <p className="text-sm text-green-600 flex items-center">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    +8% vs mes anterior
+                  <p className="text-2xl font-bold">
+                    {dashboardData?.kpis.monthlyAppointments || 0}
+                  </p>
+                  <p
+                    className={`text-sm flex items-center ${getGrowthColor(dashboardData?.kpis.appointmentGrowth || 0)}`}
+                  >
+                    {getGrowthIcon(dashboardData?.kpis.appointmentGrowth || 0)}
+                    {formatPercentage(
+                      dashboardData?.kpis.appointmentGrowth || 0
+                    )}{" "}
+                    vs mes anterior
                   </p>
                 </div>
                 <div className="bg-green-100 p-3 rounded-full">
@@ -75,32 +163,21 @@ export default function AdminDashboardPage() {
                   <p className="text-sm text-muted-foreground">
                     Ingresos Mensuales
                   </p>
-                  <p className="text-2xl font-bold">Bs. 89,450</p>
-                  <p className="text-sm text-green-600 flex items-center">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    +15% vs mes anterior
+                  <p className="text-2xl font-bold">
+                    {formatCurrency(dashboardData?.kpis.monthlyRevenue || 0)}
+                  </p>
+                  <p
+                    className={`text-sm flex items-center ${getGrowthColor(dashboardData?.kpis.revenueGrowth || 0)}`}
+                  >
+                    {getGrowthIcon(dashboardData?.kpis.revenueGrowth || 0)}
+                    {formatPercentage(
+                      dashboardData?.kpis.revenueGrowth || 0
+                    )}{" "}
+                    vs mes anterior
                   </p>
                 </div>
                 <div className="bg-amber-100 p-3 rounded-full">
                   <DollarSign className="h-6 w-6 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Satisfacción</p>
-                  <p className="text-2xl font-bold">4.8/5</p>
-                  <p className="text-sm text-green-600 flex items-center">
-                    <Star className="h-3 w-3 mr-1" />
-                    +0.2 vs mes anterior
-                  </p>
-                </div>
-                <div className="bg-purple-100 p-3 rounded-full">
-                  <Star className="h-6 w-6 text-purple-600" />
                 </div>
               </div>
             </CardContent>
@@ -116,7 +193,10 @@ export default function AdminDashboardPage() {
                   <FileText className="h-5 w-5 mr-2 text-blue-600" />
                   Solicitudes de Consulta
                 </CardTitle>
-                <Badge variant="secondary">Nuevas</Badge>
+                <Badge variant="secondary">
+                  {dashboardData?.requests.consultationRequests.pending || 0}{" "}
+                  nuevas
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -127,11 +207,16 @@ export default function AdminDashboardPage() {
                 </p>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Pendientes</span>
-                  <Badge className="bg-yellow-100 text-yellow-800">5</Badge>
+                  <Badge className="bg-yellow-100 text-yellow-800">
+                    {dashboardData?.requests.consultationRequests.pending || 0}
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Programadas</span>
-                  <Badge className="bg-blue-100 text-blue-800">12</Badge>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {dashboardData?.requests.consultationRequests.scheduled ||
+                      0}
+                  </Badge>
                 </div>
                 <Link href="/admin/consultation-requests">
                   <Button className="w-full mt-2">
@@ -149,7 +234,10 @@ export default function AdminDashboardPage() {
                   <Users className="h-5 w-5 mr-2 text-green-600" />
                   Solicitudes de Entrevista
                 </CardTitle>
-                <Badge variant="secondary">Derivaciones</Badge>
+                <Badge variant="secondary">
+                  {dashboardData?.requests.interviewRequests.pending || 0}{" "}
+                  derivaciones
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -160,11 +248,15 @@ export default function AdminDashboardPage() {
                 </p>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Pendientes</span>
-                  <Badge className="bg-yellow-100 text-yellow-800">3</Badge>
+                  <Badge className="bg-yellow-100 text-yellow-800">
+                    {dashboardData?.requests.interviewRequests.pending || 0}
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Programadas</span>
-                  <Badge className="bg-blue-100 text-blue-800">8</Badge>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {dashboardData?.requests.interviewRequests.scheduled || 0}
+                  </Badge>
                 </div>
                 <Link href="/admin/interview-requests">
                   <Button variant="outline" className="w-full mt-2">
@@ -186,15 +278,21 @@ export default function AdminDashboardPage() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Activos</span>
-                  <Badge className="bg-green-100 text-green-800">89</Badge>
+                  <Badge className="bg-green-100 text-green-800">
+                    {dashboardData?.patients.active || 0}
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">En Evaluación</span>
-                  <Badge className="bg-yellow-100 text-yellow-800">23</Badge>
+                  <Badge className="bg-yellow-100 text-yellow-800">
+                    {dashboardData?.patients.inEvaluation || 0}
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Completados</span>
-                  <Badge className="bg-blue-100 text-blue-800">15</Badge>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {dashboardData?.patients.completed || 0}
+                  </Badge>
                 </div>
               </div>
             </CardContent>
@@ -206,12 +304,19 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="text-2xl font-bold">8</div>
-                <div className="text-sm text-muted-foreground">
-                  4 Psicólogos, 2 Terapeutas del Lenguaje, 2 Terapeutas
-                  Ocupacionales
+                <div className="text-2xl font-bold">
+                  {dashboardData?.staff.activeTherapists || 0}
                 </div>
-                <div className="text-sm text-green-600">Todos disponibles</div>
+                <div className="text-sm text-muted-foreground">
+                  De {dashboardData?.staff.totalTherapists || 0} terapeutas
+                  totales
+                </div>
+                <div className="text-sm text-green-600">
+                  {dashboardData?.staff.activeTherapists ===
+                  dashboardData?.staff.totalTherapists
+                    ? "Todos disponibles"
+                    : `${dashboardData?.staff.activeTherapists || 0} disponibles`}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -224,16 +329,20 @@ export default function AdminDashboardPage() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm">Pagado</span>
-                  <span className="text-sm font-medium">Bs. 67,200</span>
+                  <span className="text-sm font-medium">
+                    {formatCurrency(dashboardData?.financial.totalPaid || 0)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Pendiente</span>
-                  <span className="text-sm font-medium">Bs. 22,250</span>
+                  <span className="text-sm font-medium">
+                    {formatCurrency(dashboardData?.financial.pending || 0)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Tasa de Cobro</span>
                   <span className="text-sm font-medium text-green-600">
-                    75%
+                    {dashboardData?.financial.collectionRate.toFixed(0) || 0}%
                   </span>
                 </div>
               </div>
@@ -247,7 +356,7 @@ export default function AdminDashboardPage() {
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">Actividad de Hoy</CardTitle>
-                <Link href="/admin/reportes">
+                <Link href="/admin/appointments">
                   <Button variant="outline" size="sm">
                     Ver Todo
                   </Button>
@@ -261,7 +370,9 @@ export default function AdminDashboardPage() {
                     <Calendar className="h-4 w-4 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">15 citas programadas</p>
+                    <p className="text-sm font-medium">
+                      {dashboardData?.today.appointments || 0} citas programadas
+                    </p>
                     <p className="text-xs text-muted-foreground">Para hoy</p>
                   </div>
                 </div>
@@ -270,9 +381,13 @@ export default function AdminDashboardPage() {
                     <FileText className="h-4 w-4 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">3 nuevas propuestas</p>
+                    <p className="text-sm font-medium">
+                      {dashboardData?.requests.consultationRequests.pending ||
+                        0}{" "}
+                      nuevas solicitudes
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      Esperando aprobación
+                      Esperando revisión
                     </p>
                   </div>
                 </div>
@@ -281,10 +396,11 @@ export default function AdminDashboardPage() {
                     <DollarSign className="h-4 w-4 text-amber-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">Bs. 4,500 en pagos</p>
-                    <p className="text-xs text-muted-foreground">
-                      Recibidos hoy
+                    <p className="text-sm font-medium">
+                      {formatCurrency(dashboardData?.financial.pending || 0)}{" "}
+                      pendientes
                     </p>
+                    <p className="text-xs text-muted-foreground">Por cobrar</p>
                   </div>
                 </div>
               </div>
@@ -296,66 +412,142 @@ export default function AdminDashboardPage() {
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">Alertas Importantes</CardTitle>
                 <Badge variant="outline" className="text-xs">
-                  3 nuevas
+                  {(() => {
+                    const alerts = [];
+                    if (
+                      (dashboardData?.requests.consultationRequests.pending ||
+                        0) > 0
+                    )
+                      alerts.push("consultation");
+                    if (
+                      (dashboardData?.requests.interviewRequests.pending || 0) >
+                      0
+                    )
+                      alerts.push("interview");
+                    if ((dashboardData?.financial.pending || 0) > 0)
+                      alerts.push("payment");
+                    return `${alerts.length} nuevas`;
+                  })()}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-red-700">
-                      2 citas sin confirmar
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Para mañana - Contactar familias
-                    </p>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-xs"
-                    >
-                      Ver detalles
-                    </Button>
+                {(dashboardData?.requests.consultationRequests.pending || 0) >
+                  0 && (
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-red-700">
+                        {dashboardData?.requests.consultationRequests.pending ||
+                          0}{" "}
+                        solicitudes de consulta pendientes
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Requieren revisión y programación
+                      </p>
+                      <Link href="/admin/consultation-requests">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-xs"
+                        >
+                          Revisar solicitudes
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-amber-700">
-                      Pago pendiente desde hace 15 días
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Familia García - Bs. 1,200
-                    </p>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-xs"
-                    >
-                      Enviar recordatorio
-                    </Button>
+                )}
+
+                {(dashboardData?.requests.interviewRequests.pending || 0) >
+                  0 && (
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-amber-700">
+                        {dashboardData?.requests.interviewRequests.pending || 0}{" "}
+                        solicitudes de entrevista pendientes
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Derivaciones de colegios e instituciones
+                      </p>
+                      <Link href="/admin/interview-requests">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-xs"
+                        >
+                          Revisar entrevistas
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-green-700">
-                      Evaluación completada
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Juan Pérez - Lista para terapia
-                    </p>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-xs"
-                    >
-                      Programar sesiones
-                    </Button>
+                )}
+
+                {(dashboardData?.financial.pending || 0) > 0 && (
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-amber-700">
+                        Pagos pendientes por cobrar
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatCurrency(dashboardData?.financial.pending || 0)}{" "}
+                        en total
+                      </p>
+                      <Link href="/admin/payments">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-xs"
+                        >
+                          Ver pagos pendientes
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {(dashboardData?.patients.inEvaluation || 0) > 0 && (
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-blue-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-blue-700">
+                        {dashboardData?.patients.inEvaluation || 0} pacientes en
+                        evaluación
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Listos para asignar terapeutas
+                      </p>
+                      <Link href="/admin/patients">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-xs"
+                        >
+                          Ver pacientes
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                {!(dashboardData?.requests.consultationRequests.pending || 0) &&
+                  !(dashboardData?.requests.interviewRequests.pending || 0) &&
+                  !(dashboardData?.financial.pending || 0) &&
+                  !(dashboardData?.patients.inEvaluation || 0) && (
+                    <div className="flex items-start space-x-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-green-700">
+                          Todo bajo control
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          No hay alertas pendientes
+                        </p>
+                      </div>
+                    </div>
+                  )}
               </div>
             </CardContent>
           </Card>
