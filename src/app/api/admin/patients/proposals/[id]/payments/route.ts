@@ -37,7 +37,7 @@ export async function POST(
 
     // Calculate total paid so far
     const totalPaid = proposal.payments
-      .filter((p) => p.status === "COMPLETED")
+      .filter((p) => p.status === "COMPLETED" || p.status === "PARTIAL")
       .reduce((sum, p) => sum + Number(p.amount), 0);
 
     const newTotal = totalPaid + Number(amount);

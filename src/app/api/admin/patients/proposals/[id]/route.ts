@@ -251,31 +251,109 @@ export async function PUT(
       const existingPayment = await prisma.payment.findFirst({
         where: {
           proposalId: id,
-          status: "COMPLETED" as const,
+          status: { in: ["COMPLETED", "PARTIAL"] as const },
         },
       });
 
       if (!existingPayment) {
-        // Convert totalAmount from JSON to number for payment record
+        // Calculate payment amount based on selected payment plan
         let paymentAmount = 0;
-        if (proposal.totalAmount && typeof proposal.totalAmount === "object") {
-          // If totalAmount is JSON, use the selected proposal's amount
-          const totalAmountObj = proposal.totalAmount as any;
-          if (
-            (proposal as any).selectedProposal &&
-            totalAmountObj[(proposal as any).selectedProposal]
-          ) {
-            paymentAmount = Number(
-              totalAmountObj[(proposal as any).selectedProposal]
-            );
+        let paymentStatus: "COMPLETED" | "PARTIAL" = "COMPLETED";
+        let paymentNotes =
+          notes ||
+          `Pago confirmado el ${new Date().toLocaleDateString("es-ES")}`;
+
+        console.log("🔍 Payment plan data:", {
+          paymentPlan: proposal.paymentPlan,
+          paymentPlanType: typeof proposal.paymentPlan,
+          selectedProposal: (proposal as any).selectedProposal,
+          selectedPaymentPlan: (proposal as any).selectedPaymentPlan,
+        });
+
+        if (proposal.paymentPlan) {
+          // Handle both string and object payment plan data
+          let paymentPlanObj: any;
+          if (typeof proposal.paymentPlan === "string") {
+            try {
+              paymentPlanObj = JSON.parse(proposal.paymentPlan);
+            } catch (error) {
+              console.error("Error parsing payment plan JSON:", error);
+              paymentPlanObj = {};
+            }
           } else {
-            // Fallback to first available amount
-            const amounts = Object.values(totalAmountObj);
-            paymentAmount = amounts.length > 0 ? Number(amounts[0]) : 0;
+            paymentPlanObj = proposal.paymentPlan as any;
+          }
+
+          const selectedProposal = (proposal as any).selectedProposal;
+          const selectedPaymentPlan = (proposal as any).selectedPaymentPlan;
+
+          console.log("🔍 Payment calculation debug:", {
+            paymentPlanObj,
+            selectedProposal,
+            selectedPaymentPlan,
+          });
+
+          if (
+            selectedProposal &&
+            selectedPaymentPlan &&
+            paymentPlanObj[selectedProposal]
+          ) {
+            const planData = paymentPlanObj[selectedProposal];
+            console.log("🔍 Plan data for selected proposal:", planData);
+
+            if (selectedPaymentPlan === "single") {
+              // Single payment - full amount, completed status
+              paymentAmount = Number(planData.single) || 0;
+              paymentStatus = "COMPLETED";
+              paymentNotes = `${paymentNotes} - Pago único con 5% de descuento`;
+            } else if (selectedPaymentPlan === "monthly") {
+              // Monthly payment - first installment, partial status
+              paymentAmount = Number(planData.monthly) || 0;
+              paymentStatus = "PARTIAL";
+              paymentNotes = `${paymentNotes} - Primera cuota mensual (1 de 6)`;
+            } else if (selectedPaymentPlan === "bimonthly") {
+              // Bimonthly payment - first installment, partial status
+              paymentAmount = Number(planData.bimonthly) || 0;
+              paymentStatus = "PARTIAL";
+              paymentNotes = `${paymentNotes} - Primera cuota bimestral (1 de 3)`;
+            }
+
+            console.log("🔍 Calculated payment amount:", paymentAmount);
+          } else {
+            console.log("❌ Missing required data for payment calculation:", {
+              hasSelectedProposal: !!selectedProposal,
+              hasSelectedPaymentPlan: !!selectedPaymentPlan,
+              hasPlanData: !!paymentPlanObj[selectedProposal],
+            });
           }
         } else {
-          // Fallback for old format
-          paymentAmount = Number(proposal.totalAmount) || 0;
+          console.log("❌ No payment plan found, using fallback calculation");
+        }
+
+        // Ensure we have a valid payment amount
+        if (paymentAmount <= 0) {
+          console.log("⚠️ Payment amount is 0 or negative, using fallback");
+          // Fallback: use total amount from proposal
+          if (
+            proposal.totalAmount &&
+            typeof proposal.totalAmount === "object"
+          ) {
+            const totalAmountObj = proposal.totalAmount as any;
+            if (
+              (proposal as any).selectedProposal &&
+              totalAmountObj[(proposal as any).selectedProposal]
+            ) {
+              paymentAmount = Number(
+                totalAmountObj[(proposal as any).selectedProposal]
+              );
+            } else {
+              const amounts = Object.values(totalAmountObj);
+              paymentAmount = amounts.length > 0 ? Number(amounts[0]) : 0;
+            }
+          } else {
+            paymentAmount = Number(proposal.totalAmount) || 0;
+          }
+          console.log("🔍 Fallback payment amount:", paymentAmount);
         }
 
         // Create payment record
@@ -284,11 +362,9 @@ export async function PUT(
             proposalId: id,
             amount: paymentAmount,
             paymentMethod: "TRANSFER", // Default method
-            status: "COMPLETED" as const,
+            status: paymentStatus,
             referenceNumber: `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-            notes:
-              notes ||
-              `Pago confirmado el ${new Date().toLocaleDateString("es-ES")}`,
+            notes: paymentNotes,
             paymentDate: new Date(),
           },
         });
@@ -423,29 +499,66 @@ export async function PATCH(
       const existingPayment = await prisma.payment.findFirst({
         where: {
           proposalId: id,
-          status: "COMPLETED" as const,
+          status: { in: ["COMPLETED", "PARTIAL"] as const },
         },
       });
 
       if (!existingPayment) {
-        // Convert totalAmount from JSON to number for payment record
+        // Calculate payment amount based on selected payment plan
         let paymentAmount = 0;
-        if (proposal.totalAmount && typeof proposal.totalAmount === "object") {
-          // If totalAmount is JSON, use the selected proposal's amount
-          const totalAmountObj = proposal.totalAmount as any;
+        let paymentStatus: "COMPLETED" | "PARTIAL" = "COMPLETED";
+        let paymentNotes =
+          notes ||
+          `Pago confirmado el ${new Date().toLocaleDateString("es-ES")}`;
+
+        if (proposal.paymentPlan && typeof proposal.paymentPlan === "object") {
+          const paymentPlanObj = proposal.paymentPlan as any;
+          const selectedProposal = proposal.selectedProposal;
+          const selectedPaymentPlan = proposal.selectedPaymentPlan;
+
           if (
-            proposal.selectedProposal &&
-            totalAmountObj[proposal.selectedProposal]
+            selectedProposal &&
+            selectedPaymentPlan &&
+            paymentPlanObj[selectedProposal]
           ) {
-            paymentAmount = Number(totalAmountObj[proposal.selectedProposal]);
-          } else {
-            // Fallback to first available amount
-            const amounts = Object.values(totalAmountObj);
-            paymentAmount = amounts.length > 0 ? Number(amounts[0]) : 0;
+            const planData = paymentPlanObj[selectedProposal];
+
+            if (selectedPaymentPlan === "single") {
+              // Single payment - full amount, completed status
+              paymentAmount = Number(planData.single) || 0;
+              paymentStatus = "COMPLETED";
+              paymentNotes = `${paymentNotes} - Pago único con 5% de descuento`;
+            } else if (selectedPaymentPlan === "monthly") {
+              // Monthly payment - first installment, partial status
+              paymentAmount = Number(planData.monthly) || 0;
+              paymentStatus = "PARTIAL";
+              paymentNotes = `${paymentNotes} - Primera cuota mensual (1 de 6)`;
+            } else if (selectedPaymentPlan === "bimonthly") {
+              // Bimonthly payment - first installment, partial status
+              paymentAmount = Number(planData.bimonthly) || 0;
+              paymentStatus = "PARTIAL";
+              paymentNotes = `${paymentNotes} - Primera cuota bimestral (1 de 3)`;
+            }
           }
         } else {
-          // Fallback for old format
-          paymentAmount = Number(proposal.totalAmount) || 0;
+          // Fallback: use total amount from proposal
+          if (
+            proposal.totalAmount &&
+            typeof proposal.totalAmount === "object"
+          ) {
+            const totalAmountObj = proposal.totalAmount as any;
+            if (
+              proposal.selectedProposal &&
+              totalAmountObj[proposal.selectedProposal]
+            ) {
+              paymentAmount = Number(totalAmountObj[proposal.selectedProposal]);
+            } else {
+              const amounts = Object.values(totalAmountObj);
+              paymentAmount = amounts.length > 0 ? Number(amounts[0]) : 0;
+            }
+          } else {
+            paymentAmount = Number(proposal.totalAmount) || 0;
+          }
         }
 
         // Create payment record
@@ -454,11 +567,9 @@ export async function PATCH(
             proposalId: id,
             amount: paymentAmount,
             paymentMethod: "TRANSFER", // Default method
-            status: "COMPLETED" as const,
+            status: paymentStatus,
             referenceNumber: `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-            notes:
-              notes ||
-              `Pago confirmado el ${new Date().toLocaleDateString("es-ES")}`,
+            notes: paymentNotes,
             paymentDate: new Date(),
           },
         });
