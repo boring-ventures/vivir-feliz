@@ -9,7 +9,6 @@ import {
   Users,
   Calendar,
   DollarSign,
-  Star,
   TrendingUp,
   TrendingDown,
   FileText,
