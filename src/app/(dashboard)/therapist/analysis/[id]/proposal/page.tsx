@@ -89,7 +89,7 @@ export default function TerapeutaPropuestaServicioPage() {
     Record<string, number>
   >({});
 
-  // Time availability state
+  // Time availability state - only Monday to Friday, no Saturday
   const [timeAvailability, setTimeAvailability] = useState<
     Record<string, { morning: boolean; afternoon: boolean }>
   >({
@@ -98,7 +98,6 @@ export default function TerapeutaPropuestaServicioPage() {
     wednesday: { morning: false, afternoon: false },
     thursday: { morning: false, afternoon: false },
     friday: { morning: false, afternoon: false },
-    saturday: { morning: false, afternoon: false },
   });
 
   // Collapsible states
@@ -412,18 +411,42 @@ export default function TerapeutaPropuestaServicioPage() {
     setSesionesTratamientoB((prev) => ({ ...prev, [codigo]: sesiones }));
   };
 
+  // Function to ensure time availability is saved in correct order (Monday to Friday)
+  const getOrderedTimeAvailability = (
+    availability: Record<string, { morning: boolean; afternoon: boolean }>
+  ) => {
+    const dayOrder = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+    const orderedAvailability: Record<
+      string,
+      { morning: boolean; afternoon: boolean }
+    > = {};
+
+    dayOrder.forEach((day) => {
+      if (availability[day]) {
+        orderedAvailability[day] = availability[day];
+      }
+    });
+
+    return orderedAvailability;
+  };
+
   const handleTimeAvailabilityChange = (
     day: string,
     period: "morning" | "afternoon",
     checked: boolean
   ) => {
-    setTimeAvailability((prev) => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [period]: checked,
-      },
-    }));
+    setTimeAvailability((prev) => {
+      const updated = {
+        ...prev,
+        [day]: {
+          ...prev[day],
+          [period]: checked,
+        },
+      };
+
+      // Return the updated availability in the correct order
+      return getOrderedTimeAvailability(updated);
+    });
   };
 
   const calcularCosto = () => {
@@ -560,7 +583,7 @@ export default function TerapeutaPropuestaServicioPage() {
         appointmentId,
         quienTomaConsulta,
         derivacion,
-        timeAvailability,
+        timeAvailability: getOrderedTimeAvailability(timeAvailability),
         // Proposal A services - only include services with sessions > 0 for A
         serviciosEvaluacionA: Object.entries(serviciosEvaluacionSeleccionados)
           .filter(([codigo, selected]) => {

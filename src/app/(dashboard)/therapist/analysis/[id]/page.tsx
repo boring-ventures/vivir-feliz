@@ -370,14 +370,14 @@ export default function TherapistAnalysisDetailPage() {
 
     // Check if text sections are filled (optional but recommended)
     const hasRecommendations =
-      (developmentEvaluation.fortalezas &&
-        developmentEvaluation.fortalezas.trim()) ||
-      (developmentEvaluation.areasParaApoyar &&
-        developmentEvaluation.areasParaApoyar.trim()) ||
-      (developmentEvaluation.recomendacionCasas &&
-        developmentEvaluation.recomendacionCasas.trim()) ||
-      (developmentEvaluation.recomendacionColegio &&
-        developmentEvaluation.recomendacionColegio.trim());
+      (developmentEvaluation.strengths &&
+        developmentEvaluation.strengths.trim()) ||
+      (developmentEvaluation.areasToSupport &&
+        developmentEvaluation.areasToSupport.trim()) ||
+      (developmentEvaluation.homeRecommendations &&
+        developmentEvaluation.homeRecommendations.trim()) ||
+      (developmentEvaluation.schoolRecommendations &&
+        developmentEvaluation.schoolRecommendations.trim());
 
     if (!hasRecommendations) {
       toast({
@@ -394,9 +394,9 @@ export default function TherapistAnalysisDetailPage() {
 
   const completarAnalisis = async () => {
     // Validate form before proceeding
-    if (!validateForm()) {
-      return;
-    }
+    //if (!validateForm()) {
+    //  return;
+    //}
 
     setSaving(true);
     try {
@@ -1349,14 +1349,14 @@ export default function TherapistAnalysisDetailPage() {
                       );
 
                       const hasRecommendations =
-                        (developmentEvaluation.fortalezas &&
-                          developmentEvaluation.fortalezas.trim()) ||
-                        (developmentEvaluation.areasParaApoyar &&
-                          developmentEvaluation.areasParaApoyar.trim()) ||
-                        (developmentEvaluation.recomendacionCasas &&
-                          developmentEvaluation.recomendacionCasas.trim()) ||
-                        (developmentEvaluation.recomendacionColegio &&
-                          developmentEvaluation.recomendacionColegio.trim());
+                        (developmentEvaluation.strengths &&
+                          developmentEvaluation.strengths.trim()) ||
+                        (developmentEvaluation.areasToSupport &&
+                          developmentEvaluation.areasToSupport.trim()) ||
+                        (developmentEvaluation.homeRecommendations &&
+                          developmentEvaluation.homeRecommendations.trim()) ||
+                        (developmentEvaluation.schoolRecommendations &&
+                          developmentEvaluation.schoolRecommendations.trim());
 
                       const isComplete =
                         evaluatedAreas.length > 0 && hasRecommendations;
