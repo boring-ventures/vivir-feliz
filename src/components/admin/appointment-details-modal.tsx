@@ -316,30 +316,50 @@ export function AppointmentDetailsModal({
                       const orderedEntries = dayOrder
                         .map((day) => [
                           day,
-                          appointment.proposal.timeAvailability[day],
+                          appointment.proposal?.timeAvailability?.[day],
                         ])
-                        .filter(
-                          ([_, periods]) =>
-                            periods && (periods.morning || periods.afternoon)
-                        );
+                        .filter((entry) => {
+                          const [, periods] = entry;
+                          return (
+                            periods &&
+                            typeof periods === "object" &&
+                            (periods.morning || periods.afternoon)
+                          );
+                        });
 
                       return orderedEntries.map(([day, periods]) => {
+                        const dayLabels = {
+                          monday: "Lunes",
+                          tuesday: "Martes",
+                          wednesday: "Miércoles",
+                          thursday: "Jueves",
+                          friday: "Viernes",
+                        };
                         const dayLabel =
-                          {
-                            monday: "Lunes",
-                            tuesday: "Martes",
-                            wednesday: "Miércoles",
-                            thursday: "Jueves",
-                            friday: "Viernes",
-                          }[day] || day;
+                          dayLabels[day as keyof typeof dayLabels] || day;
 
                         const availablePeriods = [];
-                        if (periods.morning) availablePeriods.push("Mañana");
-                        if (periods.afternoon) availablePeriods.push("Tarde");
+                        if (
+                          periods &&
+                          typeof periods === "object" &&
+                          periods.morning
+                        )
+                          availablePeriods.push("Mañana");
+                        if (
+                          periods &&
+                          typeof periods === "object" &&
+                          periods.afternoon
+                        )
+                          availablePeriods.push("Tarde");
 
                         return (
-                          <span key={day} className="inline-block mr-3 mb-1">
-                            <span className="font-medium">{dayLabel}:</span>{" "}
+                          <span
+                            key={day as string}
+                            className="inline-block mr-3 mb-1"
+                          >
+                            <span className="font-medium">
+                              {dayLabel as string}:
+                            </span>{" "}
                             {availablePeriods.join(", ")}
                           </span>
                         );
@@ -524,30 +544,48 @@ export function AppointmentDetailsModal({
                       const orderedEntries = dayOrder
                         .map((day) => [
                           day,
-                          appointment.proposal.timeAvailability[day],
+                          appointment.proposal?.timeAvailability?.[day],
                         ])
                         .filter(
-                          ([_, periods]) =>
-                            periods && (periods.morning || periods.afternoon)
+                          ([, periods]) =>
+                            periods &&
+                            typeof periods === "object" &&
+                            (periods.morning || periods.afternoon)
                         );
 
                       return orderedEntries.map(([day, periods]) => {
+                        const dayLabels = {
+                          monday: "Lunes",
+                          tuesday: "Martes",
+                          wednesday: "Miércoles",
+                          thursday: "Jueves",
+                          friday: "Viernes",
+                        };
                         const dayLabel =
-                          {
-                            monday: "Lunes",
-                            tuesday: "Martes",
-                            wednesday: "Miércoles",
-                            thursday: "Jueves",
-                            friday: "Viernes",
-                          }[day] || day;
+                          dayLabels[day as keyof typeof dayLabels] || day;
 
                         const availablePeriods = [];
-                        if (periods.morning) availablePeriods.push("Mañana");
-                        if (periods.afternoon) availablePeriods.push("Tarde");
+                        if (
+                          periods &&
+                          typeof periods === "object" &&
+                          periods.morning
+                        )
+                          availablePeriods.push("Mañana");
+                        if (
+                          periods &&
+                          typeof periods === "object" &&
+                          periods.afternoon
+                        )
+                          availablePeriods.push("Tarde");
 
                         return (
-                          <span key={day} className="inline-block mr-3 mb-1">
-                            <span className="font-medium">{dayLabel}:</span>{" "}
+                          <span
+                            key={day as string}
+                            className="inline-block mr-3 mb-1"
+                          >
+                            <span className="font-medium">
+                              {dayLabel as string}:
+                            </span>{" "}
                             {availablePeriods.join(", ")}
                           </span>
                         );
@@ -595,30 +633,50 @@ export function AppointmentDetailsModal({
                   const orderedEntries = dayOrder
                     .map((day) => [
                       day,
-                      appointment.proposal.timeAvailability[day],
+                      appointment.proposal?.timeAvailability?.[day],
                     ])
-                    .filter(
-                      ([_, periods]) =>
-                        periods && (periods.morning || periods.afternoon)
-                    );
+                    .filter((entry) => {
+                      const [, periods] = entry;
+                      return (
+                        periods &&
+                        typeof periods === "object" &&
+                        (periods.morning || periods.afternoon)
+                      );
+                    });
 
                   return orderedEntries.map(([day, periods]) => {
+                    const dayLabels = {
+                      monday: "Lunes",
+                      tuesday: "Martes",
+                      wednesday: "Miércoles",
+                      thursday: "Jueves",
+                      friday: "Viernes",
+                    };
                     const dayLabel =
-                      {
-                        monday: "Lunes",
-                        tuesday: "Martes",
-                        wednesday: "Miércoles",
-                        thursday: "Jueves",
-                        friday: "Viernes",
-                      }[day] || day;
+                      dayLabels[day as keyof typeof dayLabels] || day;
 
                     const availablePeriods = [];
-                    if (periods.morning) availablePeriods.push("Mañana");
-                    if (periods.afternoon) availablePeriods.push("Tarde");
+                    if (
+                      periods &&
+                      typeof periods === "object" &&
+                      periods.morning
+                    )
+                      availablePeriods.push("Mañana");
+                    if (
+                      periods &&
+                      typeof periods === "object" &&
+                      periods.afternoon
+                    )
+                      availablePeriods.push("Tarde");
 
                     return (
-                      <div key={day} className="flex items-center gap-2">
-                        <span className="font-medium">{dayLabel}:</span>
+                      <div
+                        key={day as string}
+                        className="flex items-center gap-2"
+                      >
+                        <span className="font-medium">
+                          {dayLabel as string}:
+                        </span>
                         <span className="text-sm text-gray-600">
                           {availablePeriods.join(", ")}
                         </span>
