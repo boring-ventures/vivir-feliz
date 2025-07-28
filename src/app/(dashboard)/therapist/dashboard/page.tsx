@@ -32,7 +32,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 
 export default function TherapistDashboardPage() {
   // Fetch real data
-  const { user, profile, isLoading: isLoadingUser } = useCurrentUser();
+  const { profile, isLoading: isLoadingUser } = useCurrentUser();
   const { data: appointmentsData, isLoading: isLoadingAppointments } =
     useTherapistAppointments({
       status: "all",
@@ -194,7 +194,9 @@ export default function TherapistDashboardPage() {
             : apt.type === "SEGUIMIENTO"
               ? "Seguimiento"
               : apt.type, // fallback to original value
-    estado: apt.status === "CONFIRMED" ? "confirmada" : "pendiente",
+    estado: ["CONFIRMED", "COMPLETED", "IN_PROGRESS"].includes(apt.status)
+      ? "confirmada"
+      : "pendiente",
     duracion: "60 min",
     notas: apt.notes || "Sin notas adicionales",
   }));
