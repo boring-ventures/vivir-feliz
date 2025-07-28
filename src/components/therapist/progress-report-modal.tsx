@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Trash2 } from "lucide-react";
 import { useProgressReports } from "@/hooks/use-progress-reports";
 import { useTherapeuticPlans } from "@/hooks/use-therapeutic-plans";
@@ -93,7 +92,7 @@ export function ProgressReportModal({
     isCreating,
     isUpdating,
   } = useProgressReports(patientId);
-  const { therapeuticPlans, existingPlan } = useTherapeuticPlans(patientId);
+  const { existingPlan } = useTherapeuticPlans(patientId);
 
   const [formData, setFormData] = useState<FormData>({
     patientName: "",
@@ -110,6 +109,33 @@ export function ProgressReportModal({
     progressEntries: [],
     recommendations: [],
   });
+
+  // Helper function to map indicators from database format to display format
+  const mapIndicatorsFromDB = useCallback(
+    (
+      indicators: Array<{ indicator: string; status: string }> | undefined
+    ): Array<{
+      indicator: string;
+      status: string;
+      previousStatus?: string;
+    }> => {
+      if (!indicators || !Array.isArray(indicators)) return [];
+
+      return indicators.map((indicator) => {
+        const currentStatus = mapStatusToDisplay(
+          indicator.status || "not_achieved"
+        );
+        return {
+          indicator: indicator.indicator || "",
+          status: currentStatus,
+          // Set previousStatus to the original status from database
+          // This preserves the original value as the "previous" status
+          previousStatus: currentStatus,
+        };
+      });
+    },
+    []
+  );
 
   // Pre-populate form with patient data and load existing therapeutic plan
   useEffect(() => {
@@ -183,10 +209,19 @@ export function ProgressReportModal({
           grade: grade,
           reportDate: new Date().toISOString().split("T")[0],
           treatmentArea: existingPlan.treatmentArea,
-          diagnoses: existingPlan.diagnoses || [],
+          diagnoses: Array.isArray(existingPlan.diagnoses)
+            ? existingPlan.diagnoses
+            : [],
           generalObjective: existingPlan.generalObjective || "",
-          specificObjectives: existingPlan.specificObjectives || [],
-          indicators: mapIndicatorsFromDB(existingPlan.indicators),
+          specificObjectives: Array.isArray(existingPlan.specificObjectives)
+            ? existingPlan.specificObjectives
+            : [],
+          indicators: mapIndicatorsFromDB(
+            existingPlan.indicators as Array<{
+              indicator: string;
+              status: string;
+            }>
+          ),
           progressEntries: [],
           recommendations: [],
         });
@@ -220,6 +255,7 @@ export function ProgressReportModal({
     progressReports,
     isLoading,
     isOpen,
+    mapIndicatorsFromDB,
   ]);
 
   // Helper function to map database status values to Spanish display values
@@ -254,70 +290,50 @@ export function ProgressReportModal({
     }
   };
 
-  // Helper function to map indicators from database format to display format
-  const mapIndicatorsFromDB = (
-    indicators: any[] | undefined
-  ): Array<{ indicator: string; status: string; previousStatus?: string }> => {
-    if (!indicators || !Array.isArray(indicators)) return [];
+  // Helper functions for managing arrays (commented out as they're not currently used)
+  // const addDiagnosis = () => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     diagnoses: [...prev.diagnoses, ""],
+  //   }));
+  // };
 
-    return indicators.map((indicator: any) => {
-      const currentStatus = mapStatusToDisplay(
-        indicator.status || "not_achieved"
-      );
-      return {
-        indicator: indicator.indicator || "",
-        status: currentStatus,
-        // Set previousStatus to the original status from database
-        // This preserves the original value as the "previous" status
-        previousStatus: currentStatus,
-      };
-    });
-  };
+  // const updateDiagnosis = (index: number, value: string) => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     diagnoses: prev.diagnoses.map((item, i) => (i === index ? value : item)),
+  //   }));
+  // };
 
-  // Helper functions for managing arrays
-  const addDiagnosis = () => {
-    setFormData((prev) => ({
-      ...prev,
-      diagnoses: [...prev.diagnoses, ""],
-    }));
-  };
+  // const removeDiagnosis = (index: number) => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     diagnoses: prev.diagnoses.filter((_, i) => i !== index),
+  //   }));
+  // };
 
-  const updateDiagnosis = (index: number, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      diagnoses: prev.diagnoses.map((item, i) => (i === index ? value : item)),
-    }));
-  };
+  // const addSpecificObjective = () => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     specificObjectives: [...prev.specificObjectives, ""],
+  //   }));
+  // };
 
-  const removeDiagnosis = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      diagnoses: prev.diagnoses.filter((_, i) => i !== index),
-    }));
-  };
+  // const updateSpecificObjective = (index: number, value: string) => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     specificObjectives: prev.specificObjectives.map((item, i) =>
+  //       i === index ? value : item
+  //     ),
+  //   }));
+  // };
 
-  const addSpecificObjective = () => {
-    setFormData((prev) => ({
-      ...prev,
-      specificObjectives: [...prev.specificObjectives, ""],
-    }));
-  };
-
-  const updateSpecificObjective = (index: number, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      specificObjectives: prev.specificObjectives.map((item, i) =>
-        i === index ? value : item
-      ),
-    }));
-  };
-
-  const removeSpecificObjective = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      specificObjectives: prev.specificObjectives.filter((_, i) => i !== index),
-    }));
-  };
+  // const removeSpecificObjective = (index: number) => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     specificObjectives: prev.specificObjectives.filter((_, i) => i !== index),
+  //   }));
+  // };
 
   const addIndicator = () => {
     setFormData((prev) => ({
@@ -437,7 +453,7 @@ export function ProgressReportModal({
         description: "Informe de avances guardado exitosamente",
       });
       onClose();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Error al guardar el informe de avances",
