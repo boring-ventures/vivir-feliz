@@ -1064,11 +1064,11 @@ export default function AdminNuevosPacientesPage() {
                           <button
                             onClick={() => {
                               setSelectedProposal("A");
-                              setSelectedPaymentPlan("1");
+                              setSelectedPaymentPlan("single");
                             }}
                             className={`w-full text-left p-3 rounded-md border transition-colors ${
                               selectedProposal === "A" &&
-                              selectedPaymentPlan === "1"
+                              selectedPaymentPlan === "single"
                                 ? "bg-blue-100 border-blue-300"
                                 : "bg-white border-gray-200 hover:bg-blue-50"
                             }`}
@@ -1079,6 +1079,52 @@ export default function AdminNuevosPacientesPage() {
                             </div>
                             <div className="text-xs text-gray-600">
                               5% de descuento
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setSelectedProposal("A");
+                              setSelectedPaymentPlan("monthly");
+                            }}
+                            className={`w-full text-left p-3 rounded-md border transition-colors ${
+                              selectedProposal === "A" &&
+                              selectedPaymentPlan === "monthly"
+                                ? "bg-blue-100 border-blue-300"
+                                : "bg-white border-gray-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            <div className="font-medium">Pago Mensual</div>
+                            <div className="text-lg font-bold text-blue-900">
+                              {formatPaymentAmount(
+                                paymentPlans.A?.monthly || 0
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              6 cuotas mensuales
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setSelectedProposal("A");
+                              setSelectedPaymentPlan("bimonthly");
+                            }}
+                            className={`w-full text-left p-3 rounded-md border transition-colors ${
+                              selectedProposal === "A" &&
+                              selectedPaymentPlan === "bimonthly"
+                                ? "bg-blue-100 border-blue-300"
+                                : "bg-white border-gray-200 hover:bg-blue-50"
+                            }`}
+                          >
+                            <div className="font-medium">Pago Bimestral</div>
+                            <div className="text-lg font-bold text-blue-900">
+                              {formatPaymentAmount(
+                                paymentPlans.A?.bimonthly || 0
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              3 cuotas bimestrales
                             </div>
                           </button>
                         </div>
@@ -1093,11 +1139,11 @@ export default function AdminNuevosPacientesPage() {
                           <button
                             onClick={() => {
                               setSelectedProposal("B");
-                              setSelectedPaymentPlan("1");
+                              setSelectedPaymentPlan("single");
                             }}
                             className={`w-full text-left p-3 rounded-md border transition-colors ${
                               selectedProposal === "B" &&
-                              selectedPaymentPlan === "1"
+                              selectedPaymentPlan === "single"
                                 ? "bg-green-100 border-green-300"
                                 : "bg-white border-gray-200 hover:bg-green-50"
                             }`}
@@ -1108,6 +1154,52 @@ export default function AdminNuevosPacientesPage() {
                             </div>
                             <div className="text-xs text-gray-600">
                               5% de descuento
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setSelectedProposal("B");
+                              setSelectedPaymentPlan("monthly");
+                            }}
+                            className={`w-full text-left p-3 rounded-md border transition-colors ${
+                              selectedProposal === "B" &&
+                              selectedPaymentPlan === "monthly"
+                                ? "bg-green-100 border-green-300"
+                                : "bg-white border-gray-200 hover:bg-green-50"
+                            }`}
+                          >
+                            <div className="font-medium">Pago Mensual</div>
+                            <div className="text-lg font-bold text-green-900">
+                              {formatPaymentAmount(
+                                paymentPlans.B?.monthly || 0
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              6 cuotas mensuales
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setSelectedProposal("B");
+                              setSelectedPaymentPlan("bimonthly");
+                            }}
+                            className={`w-full text-left p-3 rounded-md border transition-colors ${
+                              selectedProposal === "B" &&
+                              selectedPaymentPlan === "bimonthly"
+                                ? "bg-green-100 border-green-300"
+                                : "bg-white border-gray-200 hover:bg-green-50"
+                            }`}
+                          >
+                            <div className="font-medium">Pago Bimestral</div>
+                            <div className="text-lg font-bold text-green-900">
+                              {formatPaymentAmount(
+                                paymentPlans.B?.bimonthly || 0
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              3 cuotas bimestrales
                             </div>
                           </button>
                         </div>
@@ -1183,7 +1275,7 @@ export default function AdminNuevosPacientesPage() {
                 </Button>
               </div>
             </CardHeader>
-            <div className="grid grid-cols-[375px_1fr] h-[calc(90vh-80px)]">
+            <div className="grid grid-cols-[450px_1fr] h-[calc(90vh-80px)]">
               {/* Left side - Service info and controls */}
               <div className="p-5 border-r overflow-y-auto space-y-5">
                 <div className="grid grid-cols-2 gap-4">

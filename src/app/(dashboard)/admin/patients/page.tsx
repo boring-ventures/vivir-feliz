@@ -88,8 +88,35 @@ export default function PatientsPage() {
 
     const getEstadoPago = () => {
       if (!latestProposal) return "Sin propuesta";
-      if (totalPayments >= Number(latestProposal.totalAmount || 0))
-        return "Pagado";
+
+      // Calculate total amount from JSON structure
+      let totalAmount = 0;
+      if (latestProposal.totalAmount) {
+        if (
+          typeof latestProposal.totalAmount === "object" &&
+          latestProposal.totalAmount !== null
+        ) {
+          const totalAmountObj = latestProposal.totalAmount as {
+            A?: number;
+            B?: number;
+          };
+          if (latestProposal.selectedProposal === "A") {
+            totalAmount = totalAmountObj.A || 0;
+          } else if (latestProposal.selectedProposal === "B") {
+            totalAmount = totalAmountObj.B || 0;
+          } else {
+            // If no proposal selected, use the higher value
+            totalAmount = Math.max(
+              totalAmountObj.A || 0,
+              totalAmountObj.B || 0
+            );
+          }
+        } else {
+          totalAmount = Number(latestProposal.totalAmount) || 0;
+        }
+      }
+
+      if (totalPayments >= totalAmount) return "Pagado";
       if (totalPayments > 0) return "Pago parcial";
       return "Pendiente";
     };
@@ -128,12 +155,64 @@ export default function PatientsPage() {
         : "Sin asignar",
       tipoTerapia: latestProposal?.title || "Sin especificar",
       sesionesCompletadas: completedAppointments.length,
-      sesionesTotales: latestProposal?.totalSessions || 0,
+      sesionesTotales: (() => {
+        if (!latestProposal?.totalSessions) return 0;
+
+        // Handle JSON structure for dual proposals
+        if (
+          typeof latestProposal.totalSessions === "object" &&
+          latestProposal.totalSessions !== null
+        ) {
+          const totalSessionsObj = latestProposal.totalSessions as {
+            A?: number;
+            B?: number;
+          };
+          // Use the selected proposal or the higher value if none selected
+          if (latestProposal.selectedProposal === "A") {
+            return totalSessionsObj.A || 0;
+          } else if (latestProposal.selectedProposal === "B") {
+            return totalSessionsObj.B || 0;
+          } else {
+            // If no proposal selected, use the higher value
+            return Math.max(totalSessionsObj.A || 0, totalSessionsObj.B || 0);
+          }
+        }
+
+        // Handle legacy number format
+        return Number(latestProposal.totalSessions) || 0;
+      })(),
       estadoTratamiento: getEstadoTratamiento(),
       estadoPago: getEstadoPago(),
-      montoTotal: latestProposal
-        ? `Bs. ${latestProposal.totalAmount?.toLocaleString()}`
-        : "Bs. 0",
+      montoTotal: (() => {
+        if (!latestProposal?.totalAmount) return "Bs. 0";
+
+        // Handle JSON structure for dual proposals
+        if (
+          typeof latestProposal.totalAmount === "object" &&
+          latestProposal.totalAmount !== null
+        ) {
+          const totalAmountObj = latestProposal.totalAmount as {
+            A?: number;
+            B?: number;
+          };
+          let amount = 0;
+
+          if (latestProposal.selectedProposal === "A") {
+            amount = totalAmountObj.A || 0;
+          } else if (latestProposal.selectedProposal === "B") {
+            amount = totalAmountObj.B || 0;
+          } else {
+            // If no proposal selected, use the higher value
+            amount = Math.max(totalAmountObj.A || 0, totalAmountObj.B || 0);
+          }
+
+          return `Bs. ${amount.toLocaleString()}`;
+        }
+
+        // Handle legacy number format
+        const amount = Number(latestProposal.totalAmount) || 0;
+        return `Bs. ${amount.toLocaleString()}`;
+      })(),
       montoPagado: `Bs. ${totalPayments.toLocaleString()}`,
       proximaCita: getProximaCita(),
       rawData: patient,
