@@ -29,16 +29,16 @@ export default function DevelopmentEvaluationForm({
   const saveDevelopmentEvaluation = useSaveDevelopmentEvaluation();
 
   const [formData, setFormData] = useState<Partial<DevelopmentEvaluationData>>({
-    comunicacionYLenguaje: null,
-    habilidadesGruesas: null,
-    habilidadesFinas: null,
-    atencionYAprendizaje: null,
-    relacionConOtros: null,
-    autonomiaYAdaptacion: null,
-    fortalezas: "",
-    areasParaApoyar: "",
-    recomendacionCasas: "",
-    recomendacionColegio: "",
+    communicationAndLanguage: null,
+    grossMotorSkills: null,
+    fineMotorSkills: null,
+    attentionAndLearning: null,
+    socialRelations: null,
+    autonomyAndAdaptation: null,
+    strengths: "",
+    areasToSupport: "",
+    homeRecommendations: "",
+    schoolRecommendations: "",
   });
 
   const [saving, setSaving] = useState(false);
@@ -93,13 +93,13 @@ export default function DevelopmentEvaluationForm({
 
   const getEvaluationColor = (level: EvaluationLevel) => {
     switch (level) {
-      case "NECESITA_APOYO":
+      case "NEEDS_SUPPORT":
         return "bg-red-100 text-red-800 border-red-200";
-      case "EN_DESARROLLO":
+      case "IN_DEVELOPMENT":
         return "bg-orange-100 text-orange-800 border-orange-200";
-      case "SE_DESARROLLA_BIEN":
+      case "DEVELOPING_WELL":
         return "bg-green-100 text-green-800 border-green-200";
-      case "CON_HABILIDADES_DESTACADAS":
+      case "WITH_OUTSTANDING_SKILLS":
         return "bg-blue-100 text-blue-800 border-blue-200";
       default:
         return "bg-gray-100 text-gray-600 border-gray-200";
@@ -226,8 +226,8 @@ export default function DevelopmentEvaluationForm({
             Fortalezas
           </Label>
           <Textarea
-            value={formData.fortalezas || ""}
-            onChange={(e) => handleTextChange("fortalezas", e.target.value)}
+            value={formData.strengths || ""}
+            onChange={(e) => handleTextChange("strengths", e.target.value)}
             placeholder="Describe las fortalezas principales observadas en el niño/a..."
             rows={4}
             className="border-gray-200"
@@ -240,10 +240,8 @@ export default function DevelopmentEvaluationForm({
             Áreas para Apoyar y Mejorar
           </Label>
           <Textarea
-            value={formData.areasParaApoyar || ""}
-            onChange={(e) =>
-              handleTextChange("areasParaApoyar", e.target.value)
-            }
+            value={formData.areasToSupport || ""}
+            onChange={(e) => handleTextChange("areasToSupport", e.target.value)}
             placeholder="Identifica las áreas que requieren apoyo adicional y mejora..."
             rows={4}
             className="border-gray-200"
@@ -262,9 +260,9 @@ export default function DevelopmentEvaluationForm({
                 En Casa
               </Label>
               <Textarea
-                value={formData.recomendacionCasas || ""}
+                value={formData.homeRecommendations || ""}
                 onChange={(e) =>
-                  handleTextChange("recomendacionCasas", e.target.value)
+                  handleTextChange("homeRecommendations", e.target.value)
                 }
                 placeholder="Recomendaciones específicas para implementar en el hogar..."
                 rows={5}
@@ -278,9 +276,9 @@ export default function DevelopmentEvaluationForm({
                 En el Colegio
               </Label>
               <Textarea
-                value={formData.recomendacionColegio || ""}
+                value={formData.schoolRecommendations || ""}
                 onChange={(e) =>
-                  handleTextChange("recomendacionColegio", e.target.value)
+                  handleTextChange("schoolRecommendations", e.target.value)
                 }
                 placeholder="Recomendaciones específicas para implementar en el entorno escolar..."
                 rows={5}
