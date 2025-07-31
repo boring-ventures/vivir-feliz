@@ -78,6 +78,7 @@ export async function PATCH(
     if (
       !currentUserProfile ||
       (currentUserProfile.role !== "ADMIN" &&
+        currentUserProfile.role !== "SUPER_ADMIN" &&
         currentUserProfile.role !== "THERAPIST")
     ) {
       return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
@@ -194,7 +195,11 @@ export async function DELETE(
       where: { userId: session.user.id },
     });
 
-    if (!currentUserProfile || currentUserProfile.role !== "ADMIN") {
+    if (
+      !currentUserProfile ||
+      (currentUserProfile.role !== "ADMIN" &&
+        currentUserProfile.role !== "SUPER_ADMIN")
+    ) {
       return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
     }
 

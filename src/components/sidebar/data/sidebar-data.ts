@@ -1,21 +1,30 @@
+import { SidebarData } from "../types";
 import {
+  Home,
   Users,
-  BarChart,
   Calendar,
   FileText,
-  CreditCard,
-  UserCog,
-  Heart,
-  BookOpen,
-  UserPlus,
-  History,
+  Settings,
+  LogOut,
+  User,
   Receipt,
-  MessageSquare,
+  ClipboardList,
+  BookOpen,
+  Heart,
+  BarChart,
+  UserPlus,
+  UserCog,
   CalendarPlus,
+  MessageSquare,
+  Clock,
+  CreditCard,
+  Package,
 } from "lucide-react";
-import type { SidebarData } from "../types";
 
-export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
+export const getRoleBasedSidebarData = (
+  userRole: string,
+  specialty?: string
+): SidebarData => {
   const baseTeam = {
     name: "Vivir Feliz",
     logo: Heart,
@@ -23,12 +32,54 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
   };
 
   switch (userRole) {
+    case "SUPER_ADMIN":
+      return {
+        user: {
+          name: "Super Administrador",
+          email: "superadmin@vivirfeliz.com",
+          avatar: "/avatars/superadmin.png",
+        },
+        teams: [baseTeam],
+        navGroups: [
+          {
+            title: "Super Administración",
+            items: [
+              {
+                title: "Dashboard",
+                url: "/super-admin/dashboard",
+                icon: BarChart,
+              },
+              {
+                title: "Usuarios",
+                url: "/super-admin/users",
+                icon: Users,
+              },
+              {
+                title: "Servicios",
+                url: "/super-admin/services",
+                icon: Package,
+              },
+              {
+                title: "Terapeutas",
+                url: "/admin/therapists",
+                icon: UserCog,
+              },
+              {
+                title: "Usuarios",
+                url: "/admin/users",
+                icon: Users,
+              },
+            ],
+          },
+        ],
+      };
+
     case "ADMIN":
       return {
         user: {
-          name: "Admin",
+          name: "Administrador",
           email: "admin@vivirfeliz.com",
-          avatar: "/avatars/admin.jpg",
+          avatar: "/avatars/admin.png",
         },
         teams: [baseTeam],
         navGroups: [
@@ -53,7 +104,7 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
               {
                 title: "Historial de pacientes",
                 url: "/admin/patients",
-                icon: History,
+                icon: Clock,
               },
               {
                 title: "Usuarios",
@@ -71,14 +122,14 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
                 icon: MessageSquare,
               },
               {
-                title: "Propuestas",
-                url: "/admin/proposals",
-                icon: Receipt,
-              },
-              {
                 title: "Citas",
                 url: "/admin/appointments",
                 icon: Calendar,
+              },
+              {
+                title: "Informes",
+                url: "/admin/reports",
+                icon: FileText,
               },
             ],
           },
@@ -86,11 +137,56 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
       };
 
     case "THERAPIST":
+      // Check if therapist is COORDINATOR
+      if (specialty === "COORDINATOR") {
+        return {
+          user: {
+            name: "Coordinador",
+            email: "coordinator@vivirfeliz.com",
+            avatar: "/avatars/therapist.png",
+          },
+          teams: [baseTeam],
+          navGroups: [
+            {
+              title: "Mi Trabajo",
+              items: [
+                {
+                  title: "Dashboard",
+                  url: "/therapist/dashboard",
+                  icon: Home,
+                },
+                {
+                  title: "Pacientes",
+                  url: "/therapist/patients",
+                  icon: Users,
+                },
+                {
+                  title: "Citas",
+                  url: "/therapist/appointments",
+                  icon: Calendar,
+                },
+                {
+                  title: "Propuestas",
+                  url: "/therapist/proposals",
+                  icon: Receipt,
+                },
+                {
+                  title: "Informes",
+                  url: "/therapist/reports",
+                  icon: FileText,
+                },
+              ],
+            },
+          ],
+        };
+      }
+
+      // Default therapist navigation
       return {
         user: {
-          name: "Dr. Carlos Mendoza",
-          email: "carlos@vivirfeliz.com",
-          avatar: "/avatars/therapist.jpg",
+          name: "Terapeuta",
+          email: "therapist@vivirfeliz.com",
+          avatar: "/avatars/therapist.png",
         },
         teams: [baseTeam],
         navGroups: [
@@ -123,17 +219,16 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
       };
 
     case "PARENT":
-    default:
       return {
         user: {
-          name: "María González",
-          email: "maria.gonzalez@email.com",
-          avatar: "/avatars/parent.jpg",
+          name: "Padre/Madre",
+          email: "parent@vivirfeliz.com",
+          avatar: "/avatars/parent.png",
         },
         teams: [baseTeam],
         navGroups: [
           {
-            title: "Mi Cuenta",
+            title: "Mi Familia",
             items: [
               {
                 title: "Dashboard",
@@ -159,6 +254,28 @@ export const getRoleBasedSidebarData = (userRole: string): SidebarData => {
                 title: "Progreso",
                 url: "/parent/progress",
                 icon: BarChart,
+              },
+            ],
+          },
+        ],
+      };
+
+    default:
+      return {
+        user: {
+          name: "Usuario",
+          email: "user@vivirfeliz.com",
+          avatar: "/avatars/default.png",
+        },
+        teams: [baseTeam],
+        navGroups: [
+          {
+            title: "Navegación",
+            items: [
+              {
+                title: "Dashboard",
+                url: "/dashboard",
+                icon: Home,
               },
             ],
           },

@@ -22,7 +22,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   useEffect(() => {
     if (!isLoading) {
       const userRole = profile?.role || "PARENT";
-      const roleBasedData = getRoleBasedSidebarData(userRole);
+      const specialty = profile?.specialty || undefined;
+      const roleBasedData = getRoleBasedSidebarData(userRole, specialty);
       setSidebarData(roleBasedData);
     }
   }, [profile, isLoading]);
