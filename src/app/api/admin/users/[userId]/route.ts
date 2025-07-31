@@ -23,12 +23,15 @@ export async function DELETE(
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Check if user is admin
+    // Check if user is admin or super admin
     const currentUserProfile = await prisma.profile.findUnique({
       where: { userId: session.user.id },
     });
 
-    if (currentUserProfile?.role !== "ADMIN") {
+    if (
+      currentUserProfile?.role !== "ADMIN" &&
+      currentUserProfile?.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -92,12 +95,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Check if user is admin
+    // Check if user is admin or super admin
     const currentUserProfile = await prisma.profile.findUnique({
       where: { userId: session.user.id },
     });
 
-    if (currentUserProfile?.role !== "ADMIN") {
+    if (
+      currentUserProfile?.role !== "ADMIN" &&
+      currentUserProfile?.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -108,7 +114,7 @@ export async function PATCH(
       firstName: string;
       lastName: string;
       phone: string;
-      role: "ADMIN" | "THERAPIST" | "PARENT";
+      role: "SUPER_ADMIN" | "ADMIN" | "THERAPIST" | "PARENT";
       nationalId: string | null;
       address: string | null;
       dateOfBirth: Date | null;

@@ -62,6 +62,11 @@ export function CredentialCard({ user, onClose }: CredentialCardProps) {
       ASD_THERAPIST: "Terapeuta TEA",
       NEUROPSYCHOLOGIST: "Neuropsicólogo",
       COORDINATOR: "Coordinador o Asistente",
+      PSYCHOMOTRICIAN: "Psicomotricista",
+      PEDIATRIC_KINESIOLOGIST: "Kinesiólogo Infantil",
+      PSYCHOLOGIST: "Psicólogo",
+      COORDINATION_ASSISTANT: "Asistente de Coordinación",
+      BEHAVIORAL_THERAPIST: "Terapeuta Conductual",
     };
     return specialties[specialty as keyof typeof specialties] || specialty;
   };

@@ -38,6 +38,11 @@ const specialties = [
   { value: "ASD_THERAPIST", label: "Terapeuta TEA" },
   { value: "NEUROPSYCHOLOGIST", label: "Neuropsicólogo" },
   { value: "COORDINATOR", label: "Coordinador o Asistente" },
+  { value: "PSYCHOMOTRICIAN", label: "Psicomotricista" },
+  { value: "PEDIATRIC_KINESIOLOGIST", label: "Kinesiólogo Infantil" },
+  { value: "PSYCHOLOGIST", label: "Psicólogo" },
+  { value: "COORDINATION_ASSISTANT", label: "Asistente de Coordinación" },
+  { value: "BEHAVIORAL_THERAPIST", label: "Terapeuta Conductual" },
 ] as const;
 
 // Enhanced validation schema
@@ -57,7 +62,7 @@ const editUserSchema = z.object({
     .min(7, "Teléfono debe tener al menos 7 dígitos")
     .max(15, "Teléfono no puede exceder 15 dígitos")
     .regex(/^[\+]?[0-9\-\s]+$/, "Formato de teléfono inválido"),
-  role: z.enum(["ADMIN", "THERAPIST", "PARENT"]),
+  role: z.enum(["SUPER_ADMIN", "ADMIN", "THERAPIST", "PARENT"]),
   nationalId: z
     .string()
     .optional()
@@ -81,6 +86,11 @@ const editUserSchema = z.object({
       "ASD_THERAPIST",
       "NEUROPSYCHOLOGIST",
       "COORDINATOR",
+      "PSYCHOMOTRICIAN",
+      "PEDIATRIC_KINESIOLOGIST",
+      "PSYCHOLOGIST",
+      "COORDINATION_ASSISTANT",
+      "BEHAVIORAL_THERAPIST",
     ])
     .optional(),
   active: z.boolean(),
@@ -269,7 +279,9 @@ export function UserEditModal({
             <div>
               <Label htmlFor="role">Rol *</Label>
               <Select
-                onValueChange={(value: "ADMIN" | "THERAPIST" | "PARENT") => {
+                onValueChange={(
+                  value: "SUPER_ADMIN" | "ADMIN" | "THERAPIST" | "PARENT"
+                ) => {
                   form.setValue("role", value);
                   // Reset specialty when role changes
                   if (value !== "THERAPIST") {
@@ -284,6 +296,9 @@ export function UserEditModal({
                   <SelectValue placeholder="Selecciona un rol" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="SUPER_ADMIN">
+                    Super Administrador
+                  </SelectItem>
                   <SelectItem value="ADMIN">Administrador</SelectItem>
                   <SelectItem value="THERAPIST">Terapeuta</SelectItem>
                   <SelectItem value="PARENT">Padre</SelectItem>
@@ -305,6 +320,11 @@ export function UserEditModal({
                       | "ASD_THERAPIST"
                       | "NEUROPSYCHOLOGIST"
                       | "COORDINATOR"
+                      | "PSYCHOMOTRICIAN"
+                      | "PEDIATRIC_KINESIOLOGIST"
+                      | "PSYCHOLOGIST"
+                      | "COORDINATION_ASSISTANT"
+                      | "BEHAVIORAL_THERAPIST"
                   ) => form.setValue("specialty", value)}
                   value={watchedFields.specialty}
                 >

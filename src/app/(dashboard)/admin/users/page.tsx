@@ -80,6 +80,11 @@ const specialties = [
   { value: "ASD_THERAPIST", label: "Terapeuta TEA" },
   { value: "NEUROPSYCHOLOGIST", label: "Neuropsicólogo" },
   { value: "COORDINATOR", label: "Coordinador o Asistente" },
+  { value: "PSYCHOMOTRICIAN", label: "Psicomotricista" },
+  { value: "PEDIATRIC_KINESIOLOGIST", label: "Kinesiólogo Infantil" },
+  { value: "PSYCHOLOGIST", label: "Psicólogo" },
+  { value: "COORDINATION_ASSISTANT", label: "Asistente de Coordinación" },
+  { value: "BEHAVIORAL_THERAPIST", label: "Terapeuta Conductual" },
 ] as const;
 
 // Enhanced validation schema with more comprehensive rules
@@ -103,7 +108,7 @@ const createUserSchema = z.object({
     .min(7, "Teléfono debe tener al menos 7 dígitos")
     .max(15, "Teléfono no puede exceder 15 dígitos")
     .regex(/^[\+]?[0-9\-\s]+$/, "Formato de teléfono inválido"),
-  role: z.enum(["ADMIN", "THERAPIST", "PARENT"]),
+  role: z.enum(["SUPER_ADMIN", "ADMIN", "THERAPIST", "PARENT"]),
   nationalId: z
     .string()
     .optional()
@@ -127,6 +132,11 @@ const createUserSchema = z.object({
       "ASD_THERAPIST",
       "NEUROPSYCHOLOGIST",
       "COORDINATOR",
+      "PSYCHOMOTRICIAN",
+      "PEDIATRIC_KINESIOLOGIST",
+      "PSYCHOLOGIST",
+      "COORDINATION_ASSISTANT",
+      "BEHAVIORAL_THERAPIST",
     ])
     .optional(),
   canTakeConsultations: z.boolean().optional(),
@@ -618,9 +628,6 @@ export default function AdminUsersPage() {
 
   // Handle form submission
   const onSubmit = (data: FormData) => {
-    console.log("Form data received:", data);
-    console.log("canTakeConsultations value:", data.canTakeConsultations);
-
     // Don't send specialty if user is not a therapist
     const userData: CreateUserData = {
       ...data,
@@ -628,8 +635,6 @@ export default function AdminUsersPage() {
       canTakeConsultations:
         data.role === "THERAPIST" ? data.canTakeConsultations : undefined,
     };
-
-    console.log("User data to be sent:", userData);
 
     createUserMutation.mutate(userData, {
       onSuccess: (response) => {
@@ -940,7 +945,7 @@ export default function AdminUsersPage() {
                     <Label htmlFor="role">Rol *</Label>
                     <Select
                       onValueChange={(
-                        value: "ADMIN" | "THERAPIST" | "PARENT"
+                        value: "SUPER_ADMIN" | "ADMIN" | "THERAPIST" | "PARENT"
                       ) => {
                         form.setValue("role", value);
                         // Reset specialty and canTakeConsultations when role changes
@@ -961,6 +966,9 @@ export default function AdminUsersPage() {
                         <SelectValue placeholder="Selecciona un rol" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="SUPER_ADMIN">
+                          Super Administrador
+                        </SelectItem>
                         <SelectItem value="ADMIN">Administrador</SelectItem>
                         <SelectItem value="THERAPIST">Terapeuta</SelectItem>
                         <SelectItem value="PARENT">Padre</SelectItem>
@@ -982,6 +990,11 @@ export default function AdminUsersPage() {
                             | "ASD_THERAPIST"
                             | "NEUROPSYCHOLOGIST"
                             | "COORDINATOR"
+                            | "PSYCHOMOTRICIAN"
+                            | "PEDIATRIC_KINESIOLOGIST"
+                            | "PSYCHOLOGIST"
+                            | "COORDINATION_ASSISTANT"
+                            | "BEHAVIORAL_THERAPIST"
                         ) => form.setValue("specialty", value)}
                         value={watchedFields.specialty}
                       >
@@ -1666,6 +1679,9 @@ export default function AdminUsersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos los roles</SelectItem>
+                    <SelectItem value="SUPER_ADMIN">
+                      Super Administradores
+                    </SelectItem>
                     <SelectItem value="ADMIN">Administradores</SelectItem>
                     <SelectItem value="THERAPIST">Terapeutas</SelectItem>
                     <SelectItem value="PARENT">Padres</SelectItem>

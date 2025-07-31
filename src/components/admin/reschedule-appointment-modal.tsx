@@ -19,9 +19,12 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { useRescheduleAppointment } from "@/hooks/use-reschedule-appointment";
 import { useTherapistMonthlyAppointments } from "@/hooks/use-therapist-appointments";
+import { usePatientAppointments } from "@/hooks/use-patient-appointments";
 
 interface Appointment {
   id: string;
@@ -46,7 +49,9 @@ interface Appointment {
   nextSessionPlan?: string;
   sessionNotes?: string;
   therapistId?: string;
+  patientId?: string;
   patient?: {
+    id: string;
     firstName: string;
     lastName: string;
     dateOfBirth?: string;
@@ -91,12 +96,18 @@ export function RescheduleAppointmentModal({
     appointment?.therapistId ||
     appointment?.therapistId;
 
+  // Get patient ID from appointment
+  const patientId = appointment?.patientId || appointment?.patient?.id;
+
   // Fetch therapist appointments for the current month
   const { data: therapistAppointments = [] } = useTherapistMonthlyAppointments(
     therapistId,
     mesActual.getFullYear(),
     mesActual.getMonth() + 1
   );
+
+  // Fetch patient appointments
+  const { data: patientAppointmentsData } = usePatientAppointments(patientId);
 
   // Reset selections when modal opens
   useEffect(() => {
@@ -121,11 +132,12 @@ export function RescheduleAppointmentModal({
           appointmentEndTime: appointment.endTime,
           appointmentType: appointment.type,
           therapistId: therapistId,
+          patientId: patientId,
           appointmentDateObj: new Date(appointment.date),
         });
       }
     }
-  }, [open, appointment, therapistId]);
+  }, [open, appointment, therapistId, patientId]);
 
   // Handle date and time selection
   const handleDateTimeSelect = (fecha: Date, hora: string) => {
@@ -224,7 +236,16 @@ export function RescheduleAppointmentModal({
     return fecha.toISOString().split("T")[0];
   };
 
-  // Add helper to check if a slot is busy - check for time overlaps like in new patients page
+  // Helper to add an hour to a time string
+  const addHour = (time: string) => {
+    const [hours, minutes] = time.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes);
+    date.setHours(date.getHours() + 1);
+    return `${date.getHours().toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+  };
+
+  // Check if a slot is busy - check for time overlaps like in new patients page
   const isSlotBusy = (fecha: Date, hora: string) => {
     if (!therapistAppointments) return false;
 
@@ -240,13 +261,21 @@ export function RescheduleAppointmentModal({
     );
   };
 
-  // Helper to add an hour to a time string
-  const addHour = (time: string) => {
-    const [hours, minutes] = time.split(":").map(Number);
-    const date = new Date();
-    date.setHours(hours, minutes);
-    date.setHours(date.getHours() + 1);
-    return `${date.getHours().toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+  // Check if patient has a conflict at this time
+  const hasPatientConflict = (fecha: Date, hora: string) => {
+    if (!patientAppointmentsData?.appointments) return false;
+
+    const fechaStr = formatearFecha(fecha);
+    const patientAppointments = patientAppointmentsData.appointments;
+
+    return patientAppointments.some(
+      (apt) =>
+        apt.id !== appointment?.id && // Exclude current appointment being rescheduled
+        apt.date === fechaStr &&
+        ((hora >= apt.startTime && hora < apt.endTime) ||
+          // Also block if patient has an appointment that starts during this hour
+          (apt.startTime >= hora && apt.startTime < addHour(hora)))
+    );
   };
 
   // Check if a date is selected
@@ -476,32 +505,60 @@ export function RescheduleAppointmentModal({
                               selectedDate === formatearFecha(diaInfo.fecha) &&
                               selectedTime === hora;
                             const isBusy = isSlotBusy(diaInfo.fecha, hora);
+                            const isPatientConflict = hasPatientConflict(
+                              diaInfo.fecha,
+                              hora
+                            );
                             const isOriginal = esCitaOriginal(
                               diaInfo.fecha,
                               hora
                             );
+
+                            // Find patient appointment for this time slot
+                            const patientAppointment =
+                              patientAppointmentsData?.appointments?.find(
+                                (apt) =>
+                                  apt.id !== appointment?.id && // Exclude current appointment
+                                  apt.date === formatearFecha(diaInfo.fecha) &&
+                                  apt.startTime === hora
+                              );
+
+                            // Determine button variant and disabled state
+                            let variant:
+                              | "default"
+                              | "destructive"
+                              | "outline"
+                              | "secondary" = "outline";
+                            let disabled = !isSelectable || isBusy;
+                            let className = "w-full text-xs p-0.5 h-5";
+                            let conflictText = "";
+
+                            if (isOriginal) {
+                              variant = "secondary";
+                              className +=
+                                " bg-purple-100 text-purple-800 border-purple-300";
+                            } else if (isBusy) {
+                              variant = "destructive";
+                              disabled = true;
+                              conflictText = "(Ocupado)";
+                            } else if (isPatientConflict) {
+                              variant = "destructive";
+                              disabled = true;
+                              conflictText = "(Conflicto)";
+                            } else if (isSelected) {
+                              variant = "default";
+                            }
+
                             return (
                               <Button
                                 key={hora}
                                 size="sm"
-                                variant={
-                                  isOriginal
-                                    ? "secondary"
-                                    : isBusy
-                                      ? "destructive"
-                                      : isSelected
-                                        ? "default"
-                                        : "outline"
-                                }
+                                variant={variant}
                                 onClick={() =>
                                   handleDateTimeSelect(diaInfo.fecha, hora)
                                 }
-                                disabled={!isSelectable || isBusy}
-                                className={`w-full text-xs p-0.5 h-5 ${
-                                  isOriginal
-                                    ? "bg-purple-100 text-purple-800 border-purple-300"
-                                    : ""
-                                }`}
+                                disabled={disabled}
+                                className={className}
                               >
                                 {hora}
                                 {isOriginal && (
@@ -509,14 +566,33 @@ export function RescheduleAppointmentModal({
                                     (Actual)
                                   </span>
                                 )}
-                                {isBusy && !isOriginal && (
+                                {conflictText && (
                                   <span className="ml-1 text-[10px]">
-                                    (Ocupado)
+                                    {conflictText}
                                   </span>
                                 )}
                               </Button>
                             );
                           })}
+
+                          {/* Show patient appointments as visual blocks */}
+                          {patientAppointmentsData?.appointments
+                            ?.filter(
+                              (apt) =>
+                                apt.id !== appointment?.id && // Exclude current appointment
+                                apt.date === formatearFecha(diaInfo.fecha)
+                            )
+                            .map((apt) => (
+                              <div
+                                key={apt.id}
+                                className="w-full text-xs p-1 h-5 bg-orange-100 text-orange-800 border border-orange-300 rounded flex items-center justify-center cursor-default"
+                                title={`${apt.therapist.firstName} ${apt.therapist.lastName} - ${apt.type} - ${formatTime(apt.startTime)}-${formatTime(apt.endTime)}`}
+                              >
+                                <span className="text-xs font-medium">
+                                  {apt.startTime} - {apt.therapist.firstName}
+                                </span>
+                              </div>
+                            ))}
                         </div>
                       )}
                     </div>
@@ -529,9 +605,9 @@ export function RescheduleAppointmentModal({
           {/* Legend */}
           <div className="bg-green-50 p-3 rounded-md space-y-2">
             <p className="text-sm text-green-800">
-              Selecciona una nueva fecha y hora para reprogramar la cita. Solo
-              se muestran los horarios disponibles según el horario del
-              terapeuta.
+              Selecciona una nueva fecha y hora para reprogramar la cita. Los
+              bloques naranjas muestran las citas existentes del paciente con
+              otros terapeutas.
             </p>
             <div className="flex gap-2 text-xs">
               <div className="flex items-center">
@@ -541,6 +617,14 @@ export function RescheduleAppointmentModal({
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-destructive rounded-sm mr-1" />
                 <span>Horario ocupado</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-destructive rounded-sm mr-1" />
+                <span>Conflicto paciente</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-orange-100 border border-orange-300 rounded-sm mr-1" />
+                <span>Cita del paciente</span>
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-primary rounded-sm mr-1" />

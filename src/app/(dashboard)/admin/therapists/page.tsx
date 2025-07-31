@@ -44,6 +44,11 @@ const getSpecialtyDisplay = (specialty: SpecialtyType | null): string => {
     ASD_THERAPIST: "Especialista TEA",
     NEUROPSYCHOLOGIST: "Neuropsicología",
     COORDINATOR: "Coordinación",
+    PSYCHOMOTRICIAN: "Psicomotricista",
+    PEDIATRIC_KINESIOLOGIST: "Kinesiólogo Infantil",
+    PSYCHOLOGIST: "Psicólogo",
+    COORDINATION_ASSISTANT: "Asistente de Coordinación",
+    BEHAVIORAL_THERAPIST: "Terapeuta Conductual",
   };
   return specialty ? specialtyMap[specialty] : "Sin especialidad";
 };

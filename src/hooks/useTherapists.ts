@@ -101,6 +101,11 @@ export const getSpecialtyDisplayName = (specialty: string | null): string => {
     ASD_THERAPIST: "Especialista en TGD",
     NEUROPSYCHOLOGIST: "Neuropsicólogo",
     COORDINATOR: "Coordinador",
+    PSYCHOMOTRICIAN: "Psicomotricista",
+    PEDIATRIC_KINESIOLOGIST: "Kinesiólogo Infantil",
+    PSYCHOLOGIST: "Psicólogo",
+    COORDINATION_ASSISTANT: "Asistente de Coordinación",
+    BEHAVIORAL_THERAPIST: "Terapeuta Conductual",
   };
 
   return specialty ? specialtyMap[specialty] || specialty : "No especificado";

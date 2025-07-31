@@ -9,7 +9,7 @@ export type AdminUser = {
   lastName: string | null;
   email: string | null;
   phone: string | null;
-  role: "ADMIN" | "THERAPIST" | "PARENT";
+  role: "SUPER_ADMIN" | "ADMIN" | "THERAPIST" | "PARENT";
   nationalId: string | null;
   address: string | null;
   dateOfBirth: Date | null;
@@ -21,6 +21,11 @@ export type AdminUser = {
     | "ASD_THERAPIST"
     | "NEUROPSYCHOLOGIST"
     | "COORDINATOR"
+    | "PSYCHOMOTRICIAN"
+    | "PEDIATRIC_KINESIOLOGIST"
+    | "PSYCHOLOGIST"
+    | "COORDINATION_ASSISTANT"
+    | "BEHAVIORAL_THERAPIST"
     | null;
   canTakeConsultations: boolean | null;
   active: boolean;
@@ -33,27 +38,7 @@ export type CreateUserData = {
   lastName: string;
   email: string;
   phone: string;
-  role: "ADMIN" | "THERAPIST" | "PARENT";
-  nationalId?: string;
-  address?: string;
-  dateOfBirth?: string;
-  biography?: string;
-  specialty?:
-    | "SPEECH_THERAPIST"
-    | "OCCUPATIONAL_THERAPIST"
-    | "PSYCHOPEDAGOGUE"
-    | "ASD_THERAPIST"
-    | "NEUROPSYCHOLOGIST"
-    | "COORDINATOR";
-  canTakeConsultations?: boolean | null;
-  password: string;
-};
-
-export type UpdateUserData = {
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  role?: "ADMIN" | "THERAPIST" | "PARENT";
+  role: "SUPER_ADMIN" | "ADMIN" | "THERAPIST" | "PARENT";
   nationalId?: string;
   address?: string;
   dateOfBirth?: string;
@@ -65,6 +50,36 @@ export type UpdateUserData = {
     | "ASD_THERAPIST"
     | "NEUROPSYCHOLOGIST"
     | "COORDINATOR"
+    | "PSYCHOMOTRICIAN"
+    | "PEDIATRIC_KINESIOLOGIST"
+    | "PSYCHOLOGIST"
+    | "COORDINATION_ASSISTANT"
+    | "BEHAVIORAL_THERAPIST";
+  canTakeConsultations?: boolean | null;
+  password: string;
+};
+
+export type UpdateUserData = {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  role?: "SUPER_ADMIN" | "ADMIN" | "THERAPIST" | "PARENT";
+  nationalId?: string;
+  address?: string;
+  dateOfBirth?: string;
+  biography?: string;
+  specialty?:
+    | "SPEECH_THERAPIST"
+    | "OCCUPATIONAL_THERAPIST"
+    | "PSYCHOPEDAGOGUE"
+    | "ASD_THERAPIST"
+    | "NEUROPSYCHOLOGIST"
+    | "COORDINATOR"
+    | "PSYCHOMOTRICIAN"
+    | "PEDIATRIC_KINESIOLOGIST"
+    | "PSYCHOLOGIST"
+    | "COORDINATION_ASSISTANT"
+    | "BEHAVIORAL_THERAPIST"
     | null;
   canTakeConsultations?: boolean | null;
   active?: boolean;

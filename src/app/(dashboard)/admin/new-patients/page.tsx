@@ -248,40 +248,24 @@ export default function AdminNuevosPacientesPage() {
   const getSelectedProposalFromDatabase = () => {
     if (!response || !modalCitas?.id) return null;
 
-    console.log("🔍 Looking for proposal ID:", modalCitas.id);
-    console.log("🔍 Response type:", typeof response);
-    console.log("🔍 Response has data property:", "data" in response);
-    console.log("🔍 Response is array:", Array.isArray(response));
-
     // If response has 'data' property, it's the transformed format
     if ("data" in response && Array.isArray(response.data)) {
-      console.log(
-        "🔍 Searching in transformed data, total proposals:",
-        response.data.length
-      );
       const proposal = response.data.find(
         (p: TreatmentProposalWithRelations) => p.id === modalCitas.id
       );
-      console.log("🔍 Found proposal in transformed data:", proposal);
-      console.log("🔍 Proposal selectedProposal:", proposal?.selectedProposal);
+
       return proposal?.selectedProposal || null;
     }
 
     // If response is an array, it's the raw format
     if (Array.isArray(response)) {
-      console.log(
-        "🔍 Searching in raw data, total proposals:",
-        response.length
-      );
       const proposal = response.find(
         (p: TreatmentProposalWithRelations) => p.id === modalCitas.id
       );
-      console.log("🔍 Found proposal in raw data:", proposal);
-      console.log("🔍 Proposal selectedProposal:", proposal?.selectedProposal);
+
       return proposal?.selectedProposal || null;
     }
 
-    console.log("🔍 No matching response format found");
     return null;
   };
 
@@ -293,19 +277,9 @@ export default function AdminNuevosPacientesPage() {
       (service) => service.proposalType === databaseSelectedProposal
     ) || [];
 
-  // Debug logging
-  console.log("🔍 Database selected proposal:", databaseSelectedProposal);
-  console.log("🔍 Modal citas ID:", modalCitas?.id);
-  console.log("🔍 Response data:", response);
-  console.log(
-    "🔍 Response data keys:",
-    response ? Object.keys(response) : "No response"
-  );
   if (response && "data" in response) {
     console.log("🔍 First proposal in data:", response.data[0]);
   }
-  console.log("🔍 All proposal services:", allProposalServices);
-  console.log("🔍 Filtered proposal services:", proposalServices);
 
   // Add therapist appointments fetching
   const currentService = proposalServices?.[currentServiceIndex];
@@ -415,21 +389,11 @@ export default function AdminNuevosPacientesPage() {
       return;
     }
 
-    // Add debugging to see what's being sent
-    console.log("📤 Sending appointment data:", {
-      proposalId: pacienteId,
-      serviceAppointments: citasSeleccionadasPorServicio,
-    });
-
     // Log each service's appointments
     Object.entries(citasSeleccionadasPorServicio).forEach(
       ([serviceId, appointments]) => {
-        console.log(`Service ${serviceId}:`, appointments);
         appointments.forEach((appointment, index) => {
           const [dateStr, timeStr] = appointment.split("-");
-          console.log(
-            `  Appointment ${index + 1}: date="${dateStr}", time="${timeStr}"`
-          );
         });
       }
     );
@@ -524,15 +488,6 @@ export default function AdminNuevosPacientesPage() {
     if (!currentService) return;
 
     const fechaHora = `${formatearFecha(fecha)}-${hora}`;
-
-    // Add debugging
-    console.log("🔄 Toggle cita:", {
-      fecha: fecha.toISOString(),
-      hora,
-      fechaHora,
-      serviceId: currentService.id,
-      serviceName: currentService.service,
-    });
 
     setCitasSeleccionadasPorServicio((prev) => {
       const serviceAppointments = prev[currentService.id] || [];
@@ -715,10 +670,6 @@ export default function AdminNuevosPacientesPage() {
         (p: TreatmentProposalWithRelations) => p.id === proposalId
       );
     }
-
-    console.log("🔍 Looking for proposal:", proposalId);
-    console.log("🔍 Raw proposal found:", rawProposal);
-    console.log("🔍 Payment plan data:", rawProposal?.paymentPlan);
 
     if (!rawProposal?.paymentPlan) {
       console.log("❌ No payment plan found for proposal:", proposalId);

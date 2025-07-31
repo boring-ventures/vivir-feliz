@@ -204,6 +204,16 @@ export function AppointmentDetailsModal({
         return "Neuropsicólogo";
       case "COORDINATOR":
         return "Coordinador";
+      case "PSYCHOMOTRICIAN":
+        return "Psicomotricista";
+      case "PEDIATRIC_KINESIOLOGIST":
+        return "Kinesiólogo Infantil";
+      case "PSYCHOLOGIST":
+        return "Psicólogo";
+      case "COORDINATION_ASSISTANT":
+        return "Asistente de Coordinación";
+      case "BEHAVIORAL_THERAPIST":
+        return "Terapeuta Conductual";
       default:
         return specialty;
     }
