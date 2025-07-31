@@ -23,7 +23,7 @@ export async function auth(): Promise<Session | null> {
     id: "user_123",
     email: "user@example.com",
     name: "Demo User",
-    role: "USER",
+    role: "THERAPIST",
   };
 
   return {

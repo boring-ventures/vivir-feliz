@@ -13,6 +13,8 @@ interface RoleGuardProps {
 // Helper function to get correct dashboard path for role
 function getRoleDashboardPath(role: string): string {
   switch (role) {
+    case "SUPER_ADMIN":
+      return "/super-admin/dashboard";
     case "ADMIN":
       return "/admin/dashboard";
     case "THERAPIST":
