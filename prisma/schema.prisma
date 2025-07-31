@@ -40,6 +40,8 @@ model Profile {
   patientDocuments   PatientDocument[]   @relation("TherapistDocuments")
   therapeuticPlans  TherapeuticPlan[]    @relation("TherapistTherapeuticPlans")
   progressReports    ProgressReport[]    @relation("TherapistProgressReports")
+  reportContributions TherapistReportContribution[] @relation("TherapistReportContributions")
+  finalReports       FinalReport[]       @relation("CoordinatorFinalReports")
 
   @@index([userId])
   @@index([nationalId])
@@ -75,6 +77,8 @@ model Patient {
   documents          PatientDocument[]
   therapeuticPlans  TherapeuticPlan[]
   progressReports    ProgressReport[]
+  reportContributions TherapistReportContribution[]
+  finalReports       FinalReport[]
 
   @@index([parentId])
   @@index([nationalId])
@@ -803,8 +807,93 @@ model ProgressReport {
   @@map("progress_reports")
 }
 
+model TherapistReportContribution {
+  id                    String   @id @default(cuid())
+  patientId             String   @map("patient_id")
+  therapistId           String   @map("therapist_id")
+  
+  // Therapist's contribution sections
+  objectives            Json?    // Array of objectives for this specialty
+  background            String?  // Background information from this specialty
+  indicators            Json?    // Indicators table data from this specialty
+  indicatorsComment     String?  @map("indicators_comment") // Therapist's comment about the indicators
+  
+  conclusions           String?  // Conclusions and recommendations from this specialty
+  
+  // System fields
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  patient               Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  therapist             Profile  @relation("TherapistReportContributions", fields: [therapistId], references: [id])
+
+  @@index([patientId])
+  @@index([therapistId])
+  @@map("therapist_report_contributions")
+}
+
+model FinalReport {
+  id                    String   @id @default(cuid())
+  patientId             String   @map("patient_id")
+  coordinatorId         String   @map("coordinator_id")
+  
+  // Patient Data (pre-filled from existing data)
+  patientName           String   @map("patient_name")
+  patientDateOfBirth    DateTime @map("patient_date_of_birth")
+  patientAge            String
+  reportDate            DateTime @map("report_date")
+  
+  // Coordinator's sections
+  generalObjective      String?  @map("general_objective")
+  generalBackground     String?  @map("general_background")
+  generalConclusions    String?  @map("general_conclusions")
+  
+  // Compiled sections from therapists
+  otherObjectives       Json?    @map("other_objectives") // Array of objectives from different therapists
+  therapistBackgrounds  Json?    @map("therapist_backgrounds") // Array of backgrounds from different therapists
+  therapistProgress     Json?    @map("therapist_progress") // Array of progress data from different therapists
+  therapistConclusions  Json?    @map("therapist_conclusions") // Array of conclusions from different therapists
+  
+  // Status
+  isPublished           Boolean  @default(false) @map("is_published")
+  
+  // System fields
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  patient               Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  coordinator           Profile  @relation("CoordinatorFinalReports", fields: [coordinatorId], references: [id])
+
+  @@index([patientId])
+  @@index([coordinatorId])
+  @@map("final_reports")
+}
+
+model Service {
+  id              String        @id @default(cuid())
+  code            String        @unique @map("code")
+  serviceName     String        @map("service_name")
+  description     String?
+  sessions        Int           @map("sessions")
+  costPerSession  Decimal       @map("cost_per_session") @db.Decimal(10, 2)
+  type            ServiceType   @map("type")
+  specialty       SpecialtyType @map("specialty")
+  status          Boolean       @default(true) @map("status")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@index([code])
+  @@index([type])
+  @@index([specialty])
+  @@index([status])
+  @@map("services")
+}
+
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   PARENT
   THERAPIST
@@ -817,6 +906,11 @@ enum SpecialtyType {
   ASD_THERAPIST
   NEUROPSYCHOLOGIST
   COORDINATOR
+  PSYCHOMOTRICIAN
+  PEDIATRIC_KINESIOLOGIST
+  PSYCHOLOGIST
+  COORDINATION_ASSISTANT
+  BEHAVIORAL_THERAPIST
 }
 
 enum DayOfWeek {
