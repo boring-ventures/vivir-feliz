@@ -16,6 +16,8 @@ import {
   Eye,
   Send,
   Loader2,
+  Receipt,
+  ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -29,9 +31,206 @@ import {
 import { useTherapistAppointments } from "@/hooks/use-therapist-appointments";
 import { useTherapistPatients } from "@/hooks/use-therapist-patients";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useProposals } from "@/hooks/useProposals";
 
-export default function TherapistDashboardPage() {
-  // Fetch real data
+// COORDINATOR Dashboard Component
+function CoordinatorDashboard() {
+  const { profile } = useCurrentUser();
+  const { data: proposalsData, isLoading: isLoadingProposals } = useProposals();
+  const { data: appointmentsData, isLoading: isLoadingAppointments } =
+    useTherapistAppointments({
+      status: "all",
+    });
+
+  // Get today's appointments
+  const today = new Date().toISOString().split("T")[0];
+  const todayAppointments =
+    appointmentsData?.appointments?.filter((apt) => {
+      const appointmentDateOnly = apt.appointmentDate.split(" ")[0];
+      const isToday = appointmentDateOnly === today;
+      const isNotCancelled = apt.status !== "CANCELLED";
+      return isToday && isNotCancelled;
+    }) || [];
+
+  // Filter proposals by status
+  const newProposals =
+    proposalsData?.filter((p) => p.status === "NEW_PROPOSAL") || [];
+  const pendingProposals =
+    proposalsData?.filter((p) => p.status === "PAYMENT_PENDING") || [];
+  const confirmedProposals =
+    proposalsData?.filter((p) => p.status === "PAYMENT_CONFIRMED") || [];
+
+  const coordinatorStats = [
+    {
+      titulo: "Propuestas Nuevas",
+      valor: newProposals.length.toString(),
+      color: "text-yellow-700",
+      bgColor: "bg-yellow-50",
+      icon: <ClipboardList className="h-6 w-6 text-yellow-600" />,
+    },
+    {
+      titulo: "Pago Pendiente",
+      valor: pendingProposals.length.toString(),
+      color: "text-orange-700",
+      bgColor: "bg-orange-50",
+      icon: <Receipt className="h-6 w-6 text-orange-600" />,
+    },
+    {
+      titulo: "Pago Confirmado",
+      valor: confirmedProposals.length.toString(),
+      color: "text-blue-700",
+      bgColor: "bg-blue-50",
+      icon: <Receipt className="h-6 w-6 text-blue-600" />,
+    },
+    {
+      titulo: "Citas de Hoy",
+      valor: todayAppointments.length.toString(),
+      color: "text-purple-700",
+      bgColor: "bg-purple-50",
+      icon: <Clock className="h-6 w-6 text-purple-600" />,
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm p-4 flex justify-between items-center">
+        <div>
+          <h1 className="text-xl font-semibold">
+            Bienvenido/a,{" "}
+            {profile?.firstName && profile?.lastName
+              ? `${profile.firstName} ${profile.lastName}`
+              : "Coordinador/a"}
+          </h1>
+          <p className="text-gray-600">
+            Panel de Coordinación -{" "}
+            {new Date().toLocaleDateString("es-ES", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            {todayAppointments.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {todayAppointments.length}
+              </span>
+            )}
+          </Button>
+          <Button variant="outline" size="icon">
+            <User className="h-5 w-5" />
+          </Button>
+        </div>
+      </header>
+
+      {/* Dashboard Content */}
+      <div className="p-6">
+        {/* Estadísticas Rápidas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {coordinatorStats.map((stat, index) => (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">{stat.titulo}</p>
+                    <p className={`text-2xl font-bold ${stat.color}`}>
+                      {stat.valor}
+                    </p>
+                  </div>
+                  <div className={`p-3 rounded-full ${stat.bgColor}`}>
+                    {stat.icon}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">
+                Acciones Rápidas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Link href="/therapist/proposals">
+                <Button className="w-full justify-start" variant="outline">
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Revisar Propuestas
+                </Button>
+              </Link>
+              <Link href="/therapist/agenda">
+                <Button className="w-full justify-start" variant="outline">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Ver Agenda
+                </Button>
+              </Link>
+              <Link href="/therapist/patients">
+                <Button className="w-full justify-start" variant="outline">
+                  <Users className="h-4 w-4 mr-2" />
+                  Gestionar Pacientes
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">
+                Propuestas Recientes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingProposals ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : newProposals.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">
+                  No hay propuestas nuevas para revisar
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {newProposals.slice(0, 3).map((proposal) => (
+                    <div
+                      key={proposal.id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {proposal.consultationRequest?.childName ||
+                            "Paciente"}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(proposal.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Link href={`/therapist/proposals/${proposal.id}`}>
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Revisar
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Regular Therapist Dashboard Component
+function RegularTherapistDashboard() {
   const { profile, isLoading: isLoadingUser } = useCurrentUser();
   const { data: appointmentsData, isLoading: isLoadingAppointments } =
     useTherapistAppointments({
@@ -226,19 +425,16 @@ export default function TherapistDashboardPage() {
 
   if (isLoading) {
     return (
-      <RoleGuard allowedRoles={["THERAPIST"]}>
         <div className="min-h-screen bg-gray-100 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
             <p className="text-gray-600">Cargando dashboard...</p>
           </div>
         </div>
-      </RoleGuard>
     );
   }
 
   return (
-    <RoleGuard allowedRoles={["THERAPIST"]}>
       <div className="min-h-screen bg-gray-100">
         {/* Header */}
         <header className="bg-white shadow-sm p-4 flex justify-between items-center">
@@ -350,10 +546,8 @@ export default function TherapistDashboardPage() {
                                   <p className="font-semibold text-lg">
                                     {cita.hora}
                                   </p>
-                                  <p className="text-gray-600">
-                                    {cita.duracion}
-                                  </p>
-                                </div>
+                                <p className="text-gray-600">{cita.duracion}</p>
+                              </div>
                               </div>
                               <div className="ml-11">
                                 <h4 className="font-medium">{cita.paciente}</h4>
@@ -492,6 +686,25 @@ export default function TherapistDashboardPage() {
           </DialogContent>
         </Dialog>
       </div>
+  );
+}
+
+// Main Dashboard Component with routing
+export default function TherapistDashboardPage() {
+  const { profile } = useCurrentUser();
+
+  // Route to specialty-specific dashboard
+  if (profile?.specialty === "COORDINATOR") {
+    return (
+      <RoleGuard allowedRoles={["THERAPIST"]}>
+        <CoordinatorDashboard />
+      </RoleGuard>
+    );
+  }
+
+  return (
+    <RoleGuard allowedRoles={["THERAPIST"]}>
+      <RegularTherapistDashboard />
     </RoleGuard>
   );
 }

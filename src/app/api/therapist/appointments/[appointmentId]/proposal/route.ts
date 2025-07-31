@@ -94,10 +94,43 @@ export async function POST(
     );
     const totalSessionsB = evaluationSessionsB + treatmentSessionsB;
 
-    // Default pricing (this could be configurable)
-    const sessionPrice = 150.0; // Price per session in Bs
-    const totalAmountA = totalSessionsA * sessionPrice;
-    const totalAmountB = totalSessionsB * sessionPrice;
+    // Calculate costs based on database service prices
+    const calculateServiceCost = async (
+      service: ServiceData,
+      serviceType: "EVALUATION" | "TREATMENT"
+    ) => {
+      // Find the service in the database to get its costPerSession
+      const dbService = await prisma.service.findFirst({
+        where: {
+          code: service.codigo,
+          type: serviceType,
+          status: true,
+        },
+      });
+
+      // If service not found in DB, use default price of 150
+      const costPerSession = dbService?.costPerSession || 150;
+      return Number(costPerSession) * service.sesiones;
+    };
+
+    // Calculate total amounts using database service costs
+    const totalAmountA = await Promise.all([
+      ...serviciosEvaluacionA.map((service) =>
+        calculateServiceCost(service, "EVALUATION")
+      ),
+      ...serviciosTratamientoA.map((service) =>
+        calculateServiceCost(service, "TREATMENT")
+      ),
+    ]).then((costs) => costs.reduce((total, cost) => total + cost, 0));
+
+    const totalAmountB = await Promise.all([
+      ...serviciosEvaluacionB.map((service) =>
+        calculateServiceCost(service, "EVALUATION")
+      ),
+      ...serviciosTratamientoB.map((service) =>
+        calculateServiceCost(service, "TREATMENT")
+      ),
+    ]).then((costs) => costs.reduce((total, cost) => total + cost, 0));
 
     // Prepare the proposal description
     const evaluationListA = serviciosEvaluacionA
@@ -172,7 +205,7 @@ export async function POST(
         sessionDuration: 60, // Default 60 minutes
         frequency: "Semanal",
         estimatedDuration: `${Math.ceil(Math.max(totalSessionsA, totalSessionsB) / 4)} meses`,
-        sessionPrice,
+        sessionPrice: 0, // This field is deprecated, costs are calculated per service
         totalAmount: { A: totalAmountA, B: totalAmountB },
         selectedProposal: null, // Parents haven't chosen yet
         paymentPlan: "Por definir con administración",
@@ -194,50 +227,50 @@ export async function POST(
     });
 
     // Create proposal services in the new table for both proposals
-    const servicesToCreate = [
+    const servicesToCreate = await Promise.all([
       // Proposal A services
-      ...serviciosEvaluacionA.map((service: ServiceData) => ({
+      ...serviciosEvaluacionA.map(async (service: ServiceData) => ({
         treatmentProposalId: proposal.id,
         type: "EVALUATION" as const,
         proposalType: "A",
         code: service.codigo,
         service: service.servicio,
         sessions: service.sesiones,
-        cost: sessionPrice * service.sesiones,
+        cost: await calculateServiceCost(service, "EVALUATION"),
         therapistId: service.terapeutaId,
       })),
-      ...serviciosTratamientoA.map((service: ServiceData) => ({
+      ...serviciosTratamientoA.map(async (service: ServiceData) => ({
         treatmentProposalId: proposal.id,
         type: "TREATMENT" as const,
         proposalType: "A",
         code: service.codigo,
         service: service.servicio,
         sessions: service.sesiones,
-        cost: sessionPrice * service.sesiones,
+        cost: await calculateServiceCost(service, "TREATMENT"),
         therapistId: service.terapeutaId,
       })),
       // Proposal B services
-      ...serviciosEvaluacionB.map((service: ServiceData) => ({
+      ...serviciosEvaluacionB.map(async (service: ServiceData) => ({
         treatmentProposalId: proposal.id,
         type: "EVALUATION" as const,
         proposalType: "B",
         code: service.codigo,
         service: service.servicio,
         sessions: service.sesiones,
-        cost: sessionPrice * service.sesiones,
+        cost: await calculateServiceCost(service, "EVALUATION"),
         therapistId: service.terapeutaId,
       })),
-      ...serviciosTratamientoB.map((service: ServiceData) => ({
+      ...serviciosTratamientoB.map(async (service: ServiceData) => ({
         treatmentProposalId: proposal.id,
         type: "TREATMENT" as const,
         proposalType: "B",
         code: service.codigo,
         service: service.servicio,
         sessions: service.sesiones,
-        cost: sessionPrice * service.sesiones,
+        cost: await calculateServiceCost(service, "TREATMENT"),
         therapistId: service.terapeutaId,
       })),
-    ];
+    ]);
 
     if (servicesToCreate.length > 0) {
       await prisma.proposalService.createMany({

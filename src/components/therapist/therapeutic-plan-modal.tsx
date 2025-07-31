@@ -65,6 +65,30 @@ interface TherapeuticPlanModalProps {
       }>;
     }>;
   };
+  existingReportData?: {
+    id: string;
+    patientId: string;
+    therapistId: string;
+    patientName: string;
+    patientDateOfBirth: string;
+    patientAge: string;
+    school?: string | null;
+    grade?: string | null;
+    objectivesDate?: string | null;
+    planning?: string | null;
+    treatmentArea: string;
+    frequency?: string | null;
+    therapyStartDate?: string | null;
+    background?: string | null;
+    diagnoses?: unknown;
+    generalObjective?: string | null;
+    specificObjectives?: unknown;
+    indicators?: unknown;
+    methodologies?: unknown;
+    observations?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
 }
 
 interface FormData {
@@ -92,6 +116,7 @@ export function TherapeuticPlanModal({
   onClose,
   patientId,
   patientData,
+  existingReportData,
 }: TherapeuticPlanModalProps) {
   const { profile } = useCurrentUser();
   const {
@@ -167,8 +192,45 @@ export function TherapeuticPlanModal({
   // Initialize form data when modal opens
   useEffect(() => {
     if (isOpen && patientData) {
-      // If there's an existing plan, load it
-      if (existingPlan) {
+      // If there's existing report data provided (for coordinator viewing), load it
+      if (existingReportData) {
+        setFormData({
+          patientName: existingReportData.patientName,
+          patientDateOfBirth:
+            existingReportData.patientDateOfBirth.split("T")[0],
+          patientAge: existingReportData.patientAge,
+          school: existingReportData.school || "",
+          grade: existingReportData.grade || "",
+          objectivesDate: existingReportData.objectivesDate
+            ? existingReportData.objectivesDate.split("T")[0]
+            : "",
+          planning: existingReportData.planning || "",
+          treatmentArea: existingReportData.treatmentArea,
+          frequency: existingReportData.frequency || "",
+          therapyStartDate: existingReportData.therapyStartDate
+            ? existingReportData.therapyStartDate.split("T")[0]
+            : "",
+          background: existingReportData.background || "",
+          diagnoses: Array.isArray(existingReportData.diagnoses)
+            ? existingReportData.diagnoses
+            : [],
+          generalObjective: existingReportData.generalObjective || "",
+          specificObjectives: Array.isArray(
+            existingReportData.specificObjectives
+          )
+            ? existingReportData.specificObjectives
+            : [],
+          indicators: Array.isArray(existingReportData.indicators)
+            ? existingReportData.indicators
+            : [],
+          methodologies: Array.isArray(existingReportData.methodologies)
+            ? existingReportData.methodologies
+            : [],
+          observations: existingReportData.observations || "",
+        });
+      }
+      // If there's an existing plan from the hook (for therapist editing), load it
+      else if (existingPlan) {
         setFormData({
           patientName: existingPlan.patientName,
           patientDateOfBirth: existingPlan.patientDateOfBirth.split("T")[0],
@@ -250,6 +312,7 @@ export function TherapeuticPlanModal({
     patientData,
     profile,
     existingPlan,
+    existingReportData,
     findFirstTherapyAppointment,
     findConsultationAppointment,
   ]);
@@ -267,8 +330,21 @@ export function TherapeuticPlanModal({
     }
 
     try {
-      if (existingPlan) {
-        // Update existing plan
+      if (existingReportData) {
+        // Update existing report (for coordinator editing)
+        await updateTherapeuticPlan({
+          id: existingReportData.id,
+          patientId,
+          therapistId: existingReportData.therapistId, // Keep original therapist ID
+          ...formData,
+        });
+
+        toast({
+          title: "Plan terapéutico actualizado exitosamente",
+          description: "El plan terapéutico se ha actualizado correctamente",
+        });
+      } else if (existingPlan) {
+        // Update existing plan (for therapist editing)
         await updateTherapeuticPlan({
           id: existingPlan.id,
           patientId,
@@ -297,9 +373,10 @@ export function TherapeuticPlanModal({
       onClose();
     } catch (error) {
       toast({
-        title: existingPlan
-          ? "Error al actualizar el plan terapéutico"
-          : "Error al crear el plan terapéutico",
+        title:
+          existingPlan || existingReportData
+            ? "Error al actualizar el plan terapéutico"
+            : "Error al crear el plan terapéutico",
         description:
           error instanceof Error ? error.message : "Error desconocido",
         variant: "destructive",
