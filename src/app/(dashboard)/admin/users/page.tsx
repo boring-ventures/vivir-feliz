@@ -628,6 +628,9 @@ export default function AdminUsersPage() {
 
   // Handle form submission
   const onSubmit = (data: FormData) => {
+    console.log("Form data received:", data);
+    console.log("canTakeConsultations value:", data.canTakeConsultations);
+
     // Don't send specialty if user is not a therapist
     const userData: CreateUserData = {
       ...data,
@@ -635,6 +638,8 @@ export default function AdminUsersPage() {
       canTakeConsultations:
         data.role === "THERAPIST" ? data.canTakeConsultations : undefined,
     };
+
+    console.log("User data to be sent:", userData);
 
     createUserMutation.mutate(userData, {
       onSuccess: (response) => {

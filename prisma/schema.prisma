@@ -80,6 +80,7 @@ model Patient {
   reportContributions TherapistReportContribution[]
   finalReports       FinalReport[]
 
+
   @@index([parentId])
   @@index([nationalId])
   @@map("patients")
@@ -890,7 +891,6 @@ model Service {
   @@index([status])
   @@map("services")
 }
-
 
 enum UserRole {
   SUPER_ADMIN
