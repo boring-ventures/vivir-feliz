@@ -246,7 +246,7 @@ export function useTherapistProposalServices(proposalId: string | null) {
   return useQuery({
     queryKey: ["therapist-proposal-services", proposalId],
     queryFn: async (): Promise<ProposalService[]> => {
-      if (!proposalId) return null;
+      if (!proposalId) return [];
       const response = await fetch(
         `/api/therapist/proposals/${proposalId}/services`
       );

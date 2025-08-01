@@ -13,19 +13,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Plus, Trash2, Target, FileText, CheckCircle } from "lucide-react";
+import { Target, FileText, CheckCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useTherapeuticPlans } from "@/hooks/use-therapeutic-plans";
 import { useProgressReports } from "@/hooks/use-progress-reports";
-import { useCurrentUser } from "@/hooks/use-current-user";
 
 interface TherapistReportContributionModalProps {
   isOpen: boolean;
   onClose: () => void;
   patientId: string;
-  patientData: any;
+  patientData: {
+    user: { name: string };
+    dateOfBirth?: string;
+    school?: string;
+  };
 }
 
 interface Objective {
@@ -42,15 +43,10 @@ interface Indicator {
   previousLevel?: "INITIAL" | "DEVELOPING" | "ACHIEVED" | "CONSOLIDATED";
 }
 
-const EVALUATION_LEVELS = {
-  INITIAL: { label: "Inicial", color: "bg-red-100 text-red-800" },
-  DEVELOPING: {
-    label: "En Desarrollo",
-    color: "bg-yellow-100 text-yellow-800",
-  },
-  ACHIEVED: { label: "Logrado", color: "bg-green-100 text-green-800" },
-  CONSOLIDATED: { label: "Consolidado", color: "bg-blue-100 text-blue-800" },
-};
+interface IndicatorData {
+  indicator: string;
+  status: string;
+}
 
 export function TherapistReportContributionModal({
   isOpen,
@@ -58,7 +54,6 @@ export function TherapistReportContributionModal({
   patientId,
   patientData,
 }: TherapistReportContributionModalProps) {
-  const { profile } = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [objectives, setObjectives] = useState<Objective[]>([]);
   const [background, setBackground] = useState("");
@@ -69,9 +64,8 @@ export function TherapistReportContributionModal({
   const [recommendations, setRecommendations] = useState<string[]>([]);
 
   // Fetch therapeutic plans and progress reports
-  const { therapeuticPlans, existingPlan } = useTherapeuticPlans(patientId);
-  const { progressReports, latestProgressReport } =
-    useProgressReports(patientId);
+  const { existingPlan } = useTherapeuticPlans(patientId);
+  const { latestProgressReport } = useProgressReports(patientId);
 
   // Get existing therapeutic plan and progress report
   const existingTherapeuticPlan = existingPlan;
@@ -90,22 +84,6 @@ export function TherapistReportContributionModal({
         return "Logrado";
       default:
         return "No logra";
-    }
-  };
-
-  // Map display values to database status values (same as progress-report-modal)
-  const mapDisplayToStatus = (display: string): string => {
-    switch (display) {
-      case "No logra":
-        return "not_achieved";
-      case "Con ayuda":
-        return "with_help";
-      case "En progreso":
-        return "in_progress";
-      case "Logrado":
-        return "achieved";
-      default:
-        return "not_achieved";
     }
   };
 
@@ -193,29 +171,33 @@ export function TherapistReportContributionModal({
           index === self.findIndex((i) => i.indicator === ind.indicator)
       );
 
-      indicatorsToLoad = uniqueIndicators.map((ind: any, index: number) => {
-        // Find initial status from therapeutic plan
-        const initialStatus = therapeuticPlanIndicators.find(
-          (tp) => tp.indicator === ind.indicator
-        )?.status;
+      indicatorsToLoad = uniqueIndicators.map(
+        (ind: IndicatorData, index: number) => {
+          // Find initial status from therapeutic plan
+          const initialStatus = therapeuticPlanIndicators.find(
+            (tp) => tp.indicator === ind.indicator
+          )?.status;
 
-        // Find current status from progress report
-        const currentStatus = progressReportIndicators.find(
-          (pr) => pr.indicator === ind.indicator
-        )?.status;
+          // Find current status from progress report
+          const currentStatus = progressReportIndicators.find(
+            (pr) => pr.indicator === ind.indicator
+          )?.status;
 
-        return {
-          id: `ind-${index}`,
-          name: ind.indicator || "",
-          description: "",
-          currentLevel: mapStatusToLevel(
-            mapStatusToDisplay(currentStatus || initialStatus || "not_achieved")
-          ),
-          previousLevel: initialStatus
-            ? mapStatusToLevel(mapStatusToDisplay(initialStatus))
-            : undefined,
-        };
-      });
+          return {
+            id: `ind-${index}`,
+            name: ind.indicator || "",
+            description: "",
+            currentLevel: mapStatusToLevel(
+              mapStatusToDisplay(
+                currentStatus || initialStatus || "not_achieved"
+              )
+            ),
+            previousLevel: initialStatus
+              ? mapStatusToLevel(mapStatusToDisplay(initialStatus))
+              : undefined,
+          };
+        }
+      );
 
       setIndicators(indicatorsToLoad);
     }
@@ -242,15 +224,6 @@ export function TherapistReportContributionModal({
     }
   }, [isOpen, existingProgressReport]);
 
-  const handleAddObjective = () => {
-    const newObjective: Objective = {
-      id: `obj-${Date.now()}`,
-      name: "",
-      description: "",
-    };
-    setObjectives([...objectives, newObjective]);
-  };
-
   const handleUpdateObjective = (
     id: string,
     field: keyof Objective,
@@ -263,62 +236,16 @@ export function TherapistReportContributionModal({
     );
   };
 
-  const handleRemoveObjective = (id: string) => {
-    setObjectives(objectives.filter((obj) => obj.id !== id));
-  };
-
-  const handleAddIndicator = () => {
-    const newIndicator: Indicator = {
-      id: `ind-${Date.now()}`,
-      name: "",
-      description: "",
-      currentLevel: "INITIAL",
-    };
-    setIndicators([...indicators, newIndicator]);
-  };
-
   const handleUpdateIndicator = (
     id: string,
     field: keyof Indicator,
-    value: any
+    value: string | "INITIAL" | "DEVELOPING" | "ACHIEVED" | "CONSOLIDATED"
   ) => {
     setIndicators(
       indicators.map((ind) =>
         ind.id === id ? { ...ind, [field]: value } : ind
       )
     );
-  };
-
-  const handleRemoveIndicator = (id: string) => {
-    setIndicators(indicators.filter((ind) => ind.id !== id));
-  };
-
-  const handleAddProgressEntry = () => {
-    setProgressEntries([...progressEntries, ""]);
-  };
-
-  const handleUpdateProgressEntry = (index: number, value: string) => {
-    const updatedEntries = [...progressEntries];
-    updatedEntries[index] = value;
-    setProgressEntries(updatedEntries);
-  };
-
-  const handleRemoveProgressEntry = (index: number) => {
-    setProgressEntries(progressEntries.filter((_, i) => i !== index));
-  };
-
-  const handleAddRecommendation = () => {
-    setRecommendations([...recommendations, ""]);
-  };
-
-  const handleUpdateRecommendation = (index: number, value: string) => {
-    const updatedRecommendations = [...recommendations];
-    updatedRecommendations[index] = value;
-    setRecommendations(updatedRecommendations);
-  };
-
-  const handleRemoveRecommendation = (index: number) => {
-    setRecommendations(recommendations.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
@@ -508,7 +435,7 @@ export function TherapistReportContributionModal({
                 <Label>Indicadores de Progreso</Label>
               </div>
 
-              {indicators.map((indicator, index) => (
+              {indicators.map((indicator) => (
                 <div
                   key={indicator.id}
                   className="space-y-2 p-4 border rounded-lg"

@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "./use-current-user";
+import { TherapistData } from "@/types/reports";
 
 interface TherapistContribution {
   id: string;
   patientId: string;
   therapistId: string;
-  objectives: any;
+  objectives: TherapistData[] | null;
   background: string | null;
-  indicators: any;
+  indicators: TherapistData[] | null;
   indicatorsComment: string | null;
   conclusions: string | null;
   createdAt: string;

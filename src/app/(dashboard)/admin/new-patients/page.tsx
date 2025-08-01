@@ -389,15 +389,6 @@ export default function AdminNuevosPacientesPage() {
       return;
     }
 
-    // Log each service's appointments
-    Object.entries(citasSeleccionadasPorServicio).forEach(
-      ([serviceId, appointments]) => {
-        appointments.forEach((appointment, index) => {
-          const [dateStr, timeStr] = appointment.split("-");
-        });
-      }
-    );
-
     try {
       await scheduleAppointments.mutateAsync({
         proposalId: pacienteId,

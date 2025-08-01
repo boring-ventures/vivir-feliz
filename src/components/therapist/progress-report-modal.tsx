@@ -131,33 +131,6 @@ export function ProgressReportModal({
     recommendations: [],
   });
 
-  // Helper function to map indicators from database format to display format
-  const mapIndicatorsFromDB = useCallback(
-    (
-      indicators: Array<{ indicator: string; status: string }> | undefined
-    ): Array<{
-      indicator: string;
-      status: string;
-      previousStatus?: string;
-    }> => {
-      if (!indicators || !Array.isArray(indicators)) return [];
-
-      return indicators.map((indicator) => {
-        const currentStatus = mapStatusToDisplay(
-          indicator.status || "not_achieved"
-        );
-        return {
-          indicator: indicator.indicator || "",
-          status: currentStatus,
-          // Set previousStatus to the original status from database
-          // This preserves the original value as the "previous" status
-          previousStatus: currentStatus,
-        };
-      });
-    },
-    []
-  );
-
   // Helper function to get the initial indicators from therapeutic plan
   const getInitialIndicators = useCallback(() => {
     if (existingPlan?.indicators && Array.isArray(existingPlan.indicators)) {
@@ -183,20 +156,6 @@ export function ProgressReportModal({
     }
     return [];
   }, [latestProgressReport, existingReportData]);
-
-  // Helper function to combine initial and current indicators
-  const getCombinedIndicators = useCallback(() => {
-    const initialIndicators = getInitialIndicators();
-    const currentIndicators = getCurrentIndicators();
-
-    // If we have current indicators, use them as the base
-    if (currentIndicators.length > 0) {
-      return currentIndicators;
-    }
-
-    // If no current indicators, use initial indicators
-    return initialIndicators;
-  }, [getInitialIndicators, getCurrentIndicators]);
 
   // Helper function to combine initial and current indicators with proper status mapping
   const mapCombinedIndicators = useCallback(() => {
@@ -395,32 +354,10 @@ export function ProgressReportModal({
     }
   };
 
-  // Helper functions for managing arrays (commented out as they're not currently used)
-  const addDiagnosis = () => {
-    setFormData((prev) => ({
-      ...prev,
-      diagnoses: [...prev.diagnoses, ""],
-    }));
-  };
-
   const updateDiagnosis = (index: number, value: string) => {
     setFormData((prev) => ({
       ...prev,
       diagnoses: prev.diagnoses.map((item, i) => (i === index ? value : item)),
-    }));
-  };
-
-  const removeDiagnosis = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      diagnoses: prev.diagnoses.filter((_, i) => i !== index),
-    }));
-  };
-
-  const addSpecificObjective = () => {
-    setFormData((prev) => ({
-      ...prev,
-      specificObjectives: [...prev.specificObjectives, ""],
     }));
   };
 
@@ -430,23 +367,6 @@ export function ProgressReportModal({
       specificObjectives: prev.specificObjectives.map((item, i) =>
         i === index ? value : item
       ),
-    }));
-  };
-
-  const removeSpecificObjective = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      specificObjectives: prev.specificObjectives.filter((_, i) => i !== index),
-    }));
-  };
-
-  const addIndicator = () => {
-    setFormData((prev) => ({
-      ...prev,
-      indicators: [
-        ...prev.indicators,
-        { indicator: "", status: "No logra", previousStatus: undefined },
-      ],
     }));
   };
 
@@ -467,13 +387,6 @@ export function ProgressReportModal({
             }
           : item
       ),
-    }));
-  };
-
-  const removeIndicator = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      indicators: prev.indicators.filter((_, i) => i !== index),
     }));
   };
 

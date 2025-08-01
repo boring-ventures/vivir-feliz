@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+
+interface Indicator {
+  name: string;
+  previousLevel?: string;
+  currentLevel: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,8 +74,6 @@ export async function POST(request: NextRequest) {
       indicators,
       indicatorsComment,
       conclusions,
-      progressEntries,
-      recommendations,
     } = body;
 
     // Validate patient exists
@@ -99,21 +104,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate patient age
-    const birthDate = new Date(patient.dateOfBirth);
-    const today = new Date();
-    const age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    const ageString =
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-        ? `${age - 1} años`
-        : `${age} años`;
+    // Calculate patient age (for future use if needed)
+    // const birthDate = new Date(patient.dateOfBirth);
+    // const today = new Date();
+    // const age = today.getFullYear() - birthDate.getFullYear();
+    // const monthDiff = today.getMonth() - birthDate.getMonth();
+    // const ageString =
+    //   monthDiff < 0 ||
+    //   (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    //     ? `${age - 1} años`
+    //     : `${age} años`;
 
     // Process indicators to store only initial status and new value
-    let processedIndicators: any = undefined;
+    let processedIndicators: Prisma.InputJsonValue | undefined = undefined;
     if (indicators && Array.isArray(indicators)) {
-      processedIndicators = indicators.map((indicator: any) => {
+      processedIndicators = indicators.map((indicator: Indicator) => {
         // Map the internal level system back to database status values
         const mapLevelToDatabaseStatus = (level: string): string => {
           switch (level) {

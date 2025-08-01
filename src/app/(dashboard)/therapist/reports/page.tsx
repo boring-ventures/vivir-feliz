@@ -28,11 +28,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Search,
   FileText,
-  ClipboardList,
   Loader2,
   Eye,
   Edit,
-  Calendar,
   User,
   BookOpen,
   TrendingUp,
@@ -48,6 +46,26 @@ import { useTherapistContributions } from "@/hooks/use-therapist-contributions";
 import { useFinalReport } from "@/hooks/use-final-report";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
+import { TherapistData } from "@/types/reports";
+
+interface TherapistContribution {
+  id: string;
+  patientId: string;
+  therapistId: string;
+  objectives: TherapistData[] | null;
+  background: string | null;
+  indicators: TherapistData[] | null;
+  indicatorsComment: string | null;
+  conclusions: string | null;
+  createdAt: string;
+  updatedAt: string;
+  therapist: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    specialty: string;
+  };
+}
 
 interface TherapeuticPlan {
   id: string;
@@ -112,12 +130,17 @@ export default function InformesPage() {
   const [reportTypeFilter, setReportTypeFilter] = useState("all");
   const [openPatients, setOpenPatients] = useState<Set<string>>(new Set());
   const [showFinalReportModal, setShowFinalReportModal] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [selectedPatient, setSelectedPatient] = useState<{
+    patientId: string;
+    patientName: string;
+    patientAge: string;
+    patientDateOfBirth: string;
+  } | null>(null);
   const { profile } = useCurrentUser();
   const { data: reportsData, isLoading, error } = useReports();
 
   // Get patient ID from selected patient for fetching contributions
-  const selectedPatientId = selectedPatient?.patientId;
+  const selectedPatientId = selectedPatient?.patientId || null;
   const {
     data: contributionsData,
     isLoading: contributionsLoading,
@@ -125,11 +148,8 @@ export default function InformesPage() {
   } = useTherapistContributions(selectedPatientId);
 
   // Get existing final report data
-  const {
-    finalReport: existingFinalReport,
-    isLoading: finalReportLoading,
-    error: finalReportError,
-  } = useFinalReport(selectedPatientId);
+  const { finalReport: existingFinalReport, isLoading: finalReportLoading } =
+    useFinalReport(selectedPatientId || undefined);
 
   // Final report form state
   const [finalReportData, setFinalReportData] = useState({
@@ -158,7 +178,14 @@ export default function InformesPage() {
     });
   };
 
-  const handleOpenFinalReportModal = (patientData: any, patientId: string) => {
+  const handleOpenFinalReportModal = (
+    patientData: {
+      patientName: string;
+      patientAge: string;
+      patientDateOfBirth: string;
+    },
+    patientId: string
+  ) => {
     setSelectedPatient({ ...patientData, patientId });
     setShowFinalReportModal(true);
   };
@@ -879,29 +906,17 @@ export default function InformesPage() {
                             contribution.objectives.length > 0 ? (
                               <div className="space-y-2">
                                 {contribution.objectives.map(
-                                  (objective: any, index: number) => {
-                                    // Handle different objective data structures
-                                    let objectiveText = "";
-                                    if (typeof objective === "string") {
-                                      objectiveText = objective;
-                                    } else if (
-                                      objective &&
-                                      typeof objective === "object"
-                                    ) {
-                                      objectiveText =
-                                        objective.description ||
-                                        objective.name ||
-                                        objective.text ||
-                                        "";
-                                    }
-
+                                  (
+                                    objectiveData: TherapistData,
+                                    index: number
+                                  ) => {
                                     return (
                                       <div
                                         key={index}
                                         className="text-sm text-gray-700"
                                       >
                                         <span className="font-medium">•</span>{" "}
-                                        {objectiveText ||
+                                        {objectiveData.objectives?.join(", ") ||
                                           "Objetivo sin descripción"}
                                       </div>
                                     );
@@ -1042,14 +1057,20 @@ export default function InformesPage() {
                             contribution.indicators.length > 0 ? (
                               <div className="space-y-4">
                                 {contribution.indicators.map(
-                                  (indicator: any, index: number) => (
+                                  (
+                                    indicatorData: TherapistData,
+                                    index: number
+                                  ) => (
                                     <div
                                       key={index}
                                       className="space-y-2 p-4 border rounded-lg"
                                     >
                                       <div className="flex gap-2">
                                         <Input
-                                          value={indicator.name}
+                                          value={
+                                            indicatorData.indicators?.[0]
+                                              ?.name || ""
+                                          }
                                           placeholder="Descripción del indicador..."
                                           className="flex-1"
                                           disabled
@@ -1078,10 +1099,11 @@ export default function InformesPage() {
                                             },
                                           ].map((status) => {
                                             const isSelected =
-                                              indicator.newStatus ===
-                                              status.value;
+                                              indicatorData.indicators?.[0]
+                                                ?.newStatus === status.value;
                                             const isPrevious =
-                                              indicator.initialStatus ===
+                                              indicatorData.indicators?.[0]
+                                                ?.initialStatus ===
                                               status.value;
 
                                             const getStatusColor = (
@@ -1274,46 +1296,35 @@ export default function InformesPage() {
                         contributionsData?.contributions || [];
                       const otherObjectives = contributions
                         .filter(
-                          (c: any) =>
+                          (c: TherapistContribution) =>
                             c.objectives &&
                             Array.isArray(c.objectives) &&
                             c.objectives.length > 0
                         )
-                        .map((c: any) => ({
+                        .map((c: TherapistContribution) => ({
                           therapistName: `${c.therapist.firstName} ${c.therapist.lastName}`,
                           specialty: c.therapist.specialty,
-                          objectives: c.objectives
-                            .map((objective: any) => {
-                              // Extract text content from objectives
-                              if (typeof objective === "string") {
-                                return objective;
-                              } else if (
-                                objective &&
-                                typeof objective === "object"
-                              ) {
-                                return (
-                                  objective.description ||
-                                  objective.name ||
-                                  objective.text ||
-                                  ""
-                                );
-                              }
-                              return "";
-                            })
-                            .filter((text: string) => text.trim() !== ""),
+                          objectives:
+                            c.objectives
+                              ?.map((objective: TherapistData) => {
+                                // Extract text content from objectives
+                                return objective.objectives?.join(", ") || "";
+                              })
+                              .filter((text: string) => text.trim() !== "") ||
+                            [],
                         }));
 
                       const therapistBackgrounds = contributions
-                        .filter((c: any) => c.background)
-                        .map((c: any) => ({
+                        .filter((c: TherapistContribution) => c.background)
+                        .map((c: TherapistContribution) => ({
                           therapistName: `${c.therapist.firstName} ${c.therapist.lastName}`,
                           specialty: c.therapist.specialty,
                           background: c.background,
                         }));
 
                       const therapistProgress = contributions
-                        .filter((c: any) => c.indicators)
-                        .map((c: any) => ({
+                        .filter((c: TherapistContribution) => c.indicators)
+                        .map((c: TherapistContribution) => ({
                           therapistName: `${c.therapist.firstName} ${c.therapist.lastName}`,
                           specialty: c.therapist.specialty,
                           indicators: c.indicators,
@@ -1321,8 +1332,8 @@ export default function InformesPage() {
                         }));
 
                       const therapistConclusions = contributions
-                        .filter((c: any) => c.conclusions)
-                        .map((c: any) => ({
+                        .filter((c: TherapistContribution) => c.conclusions)
+                        .map((c: TherapistContribution) => ({
                           therapistName: `${c.therapist.firstName} ${c.therapist.lastName}`,
                           specialty: c.therapist.specialty,
                           conclusions: c.conclusions,
@@ -1336,11 +1347,11 @@ export default function InformesPage() {
                             "Content-Type": "application/json",
                           },
                           body: JSON.stringify({
-                            patientId: selectedPatient.patientId,
-                            patientName: selectedPatient.patientName,
+                            patientId: selectedPatient?.patientId || "",
+                            patientName: selectedPatient?.patientName || "",
                             patientDateOfBirth:
-                              selectedPatient.patientDateOfBirth,
-                            patientAge: selectedPatient.patientAge,
+                              selectedPatient?.patientDateOfBirth || "",
+                            patientAge: selectedPatient?.patientAge || "",
                             reportDate: new Date().toISOString(),
                             generalObjective: finalReportData.generalObjective,
                             generalBackground:
@@ -1407,46 +1418,34 @@ export default function InformesPage() {
                       contributionsData?.contributions || [];
                     const otherObjectives = contributions
                       .filter(
-                        (c: any) =>
+                        (c: TherapistContribution) =>
                           c.objectives &&
                           Array.isArray(c.objectives) &&
                           c.objectives.length > 0
                       )
-                      .map((c: any) => ({
+                      .map((c: TherapistContribution) => ({
                         therapistName: `${c.therapist.firstName} ${c.therapist.lastName}`,
                         specialty: c.therapist.specialty,
-                        objectives: c.objectives
-                          .map((objective: any) => {
-                            // Extract text content from objectives
-                            if (typeof objective === "string") {
-                              return objective;
-                            } else if (
-                              objective &&
-                              typeof objective === "object"
-                            ) {
-                              return (
-                                objective.description ||
-                                objective.name ||
-                                objective.text ||
-                                ""
-                              );
-                            }
-                            return "";
-                          })
-                          .filter((text: string) => text.trim() !== ""),
+                        objectives:
+                          c.objectives
+                            ?.map((objective: TherapistData) => {
+                              // Extract text content from objectives
+                              return objective.objectives?.join(", ") || "";
+                            })
+                            .filter((text: string) => text.trim() !== "") || [],
                       }));
 
                     const therapistBackgrounds = contributions
-                      .filter((c: any) => c.background)
-                      .map((c: any) => ({
+                      .filter((c: TherapistContribution) => c.background)
+                      .map((c: TherapistContribution) => ({
                         therapistName: `${c.therapist.firstName} ${c.therapist.lastName}`,
                         specialty: c.therapist.specialty,
                         background: c.background,
                       }));
 
                     const therapistProgress = contributions
-                      .filter((c: any) => c.indicators)
-                      .map((c: any) => ({
+                      .filter((c: TherapistContribution) => c.indicators)
+                      .map((c: TherapistContribution) => ({
                         therapistName: `${c.therapist.firstName} ${c.therapist.lastName}`,
                         specialty: c.therapist.specialty,
                         indicators: c.indicators,
@@ -1454,8 +1453,8 @@ export default function InformesPage() {
                       }));
 
                     const therapistConclusions = contributions
-                      .filter((c: any) => c.conclusions)
-                      .map((c: any) => ({
+                      .filter((c: TherapistContribution) => c.conclusions)
+                      .map((c: TherapistContribution) => ({
                         therapistName: `${c.therapist.firstName} ${c.therapist.lastName}`,
                         specialty: c.therapist.specialty,
                         conclusions: c.conclusions,
@@ -1469,11 +1468,11 @@ export default function InformesPage() {
                           "Content-Type": "application/json",
                         },
                         body: JSON.stringify({
-                          patientId: selectedPatient.patientId,
-                          patientName: selectedPatient.patientName,
+                          patientId: selectedPatient?.patientId || "",
+                          patientName: selectedPatient?.patientName || "",
                           patientDateOfBirth:
-                            selectedPatient.patientDateOfBirth,
-                          patientAge: selectedPatient.patientAge,
+                            selectedPatient?.patientDateOfBirth || "",
+                          patientAge: selectedPatient?.patientAge || "",
                           reportDate: new Date().toISOString(),
                           generalObjective: finalReportData.generalObjective,
                           generalBackground: finalReportData.generalBackground,

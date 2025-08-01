@@ -1,121 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// Type definitions for JSON fields
-type TotalAmountData = {
-  [key: string]: number;
-} | null;
-
-type PaymentPlanData = {
-  [proposalType: string]: {
-    single: number;
-    monthly: number;
-    bimonthly: number;
-  };
-};
-
-interface ConsultationRequestData {
-  id: string;
-  childName: string;
-  childGender: string;
-  childDateOfBirth: Date | string;
-  childAddress?: string | null;
-  motherName?: string | null;
-  motherPhone?: string | null;
-  motherEmail?: string | null;
-  fatherName?: string | null;
-  fatherPhone?: string | null;
-  fatherEmail?: string | null;
-  status: string;
-  [key: string]: unknown; // Allow additional properties from Prisma
-}
-
-// Helper function to find or create parent profile from consultation request data
-async function findOrCreateParentFromConsultationRequest(
-  consultationRequest: ConsultationRequestData
-) {
-  // First, try to find existing parent by phone number
-  const existingParent = await prisma.profile.findFirst({
-    where: {
-      OR: [
-        { phone: consultationRequest.motherPhone },
-        { phone: consultationRequest.fatherPhone },
-      ],
-      role: "PARENT",
-    },
-  });
-
-  if (existingParent) {
-    console.log("Found existing parent profile:", existingParent.id);
-    return existingParent;
-  }
-
-  // If no existing parent found, create a new one
-  // Generate a unique userId for now (parent can claim this account later)
-  const uniqueUserId = `pending_parent_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-
-  // Parse parent name (prefer mother's data, fallback to father's)
-  const parentName =
-    consultationRequest.motherName ||
-    consultationRequest.fatherName ||
-    "Padre/Madre";
-  const nameParts = parentName.trim().split(" ");
-  const firstName = nameParts[0] || "Padre/Madre";
-  const lastName = nameParts.slice(1).join(" ") || "";
-
-  const parentData = {
-    userId: uniqueUserId,
-    firstName,
-    lastName,
-    phone:
-      consultationRequest.motherPhone || consultationRequest.fatherPhone || "",
-    role: "PARENT" as const,
-    active: true,
-  };
-
-  console.log("Creating new parent profile with data:", parentData);
-
-  const newParent = await prisma.profile.create({
-    data: parentData,
-  });
-
-  console.log("Created new parent profile:", newParent.id);
-  return newParent;
-}
-
-// Helper function to create patient from consultation request data
-async function createPatientFromConsultationRequest(
-  consultationRequest: ConsultationRequestData,
-  parentId: string
-) {
-  // Calculate age for patient
-  const birthDate = new Date(consultationRequest.childDateOfBirth);
-
-  // Parse child name (assuming format "FirstName LastName")
-  const nameParts = consultationRequest.childName.split(" ");
-  const firstName = nameParts[0] || consultationRequest.childName;
-  const lastName = nameParts.slice(1).join(" ") || "";
-
-  const patientData = {
-    parentId,
-    firstName,
-    lastName,
-    dateOfBirth: birthDate,
-    gender: consultationRequest.childGender,
-    address: consultationRequest.childAddress || "",
-    active: true,
-  };
-
-  console.log("Creating new patient with data:", patientData);
-
-  const newPatient = await prisma.patient.create({
-    data: patientData,
-  });
-
-  console.log("Created new patient:", newPatient.id);
-  return newPatient;
-}
-
 // GET /api/therapist/proposals/[id] - Get a specific treatment proposal
 export async function GET(
   request: NextRequest,
@@ -135,7 +20,6 @@ export async function GET(
                 firstName: true,
                 lastName: true,
                 phone: true,
-                email: true,
               },
             },
           },
@@ -164,7 +48,7 @@ export async function GET(
             specialty: true,
           },
         },
-        proposalServices: {
+        services: {
           include: {
             therapist: {
               select: {
@@ -225,7 +109,7 @@ export async function PUT(
       objectives,
     } = body;
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
@@ -246,7 +130,7 @@ export async function PUT(
         },
         consultationRequest: true,
         therapist: true,
-        proposalServices: {
+        services: {
           include: {
             therapist: true,
           },
@@ -283,7 +167,7 @@ export async function PATCH(
       objectives,
     } = body;
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (status !== undefined) updateData.status = status;
     if (title !== undefined) updateData.title = title;
@@ -305,7 +189,7 @@ export async function PATCH(
         },
         consultationRequest: true,
         therapist: true,
-        proposalServices: {
+        services: {
           include: {
             therapist: true,
           },

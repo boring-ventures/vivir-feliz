@@ -1,6 +1,6 @@
 "use client";
 
-import { FinalReport } from "@/types/reports";
+import { FinalReport, TherapistData, Indicator } from "@/types/reports";
 import { format } from "date-fns";
 
 interface ReportPDFTemplateProps {
@@ -104,7 +104,7 @@ export function ReportPDFTemplate({ report }: ReportPDFTemplateProps) {
             {/* Therapist Objectives */}
             {report.otherObjectives &&
               report.otherObjectives.map(
-                (therapistData: any, index: number) => (
+                (therapistData: TherapistData, index: number) => (
                   <div
                     key={index}
                     className="p-3 bg-gray-50 border-l-4 border-blue-500 rounded"
@@ -155,7 +155,7 @@ export function ReportPDFTemplate({ report }: ReportPDFTemplateProps) {
             {/* Therapist Backgrounds */}
             {report.therapistBackgrounds &&
               report.therapistBackgrounds.map(
-                (therapistData: any, index: number) => (
+                (therapistData: TherapistData, index: number) => (
                   <div
                     key={index}
                     className="p-3 bg-gray-50 border-l-4 border-green-500 rounded"
@@ -183,7 +183,7 @@ export function ReportPDFTemplate({ report }: ReportPDFTemplateProps) {
           <div className="space-y-4">
             {report.therapistProgress.length > 0 ? (
               report.therapistProgress.map(
-                (therapistData: any, index: number) => (
+                (therapistData: TherapistData, index: number) => (
                   <div
                     key={index}
                     className="p-3 bg-gray-50 border-l-4 border-orange-500 rounded"
@@ -197,7 +197,7 @@ export function ReportPDFTemplate({ report }: ReportPDFTemplateProps) {
                     therapistData.indicators.length > 0 ? (
                       <div className="space-y-3">
                         {therapistData.indicators.map(
-                          (indicator: any, indIndex: number) => (
+                          (indicator: Indicator, indIndex: number) => (
                             <div
                               key={indIndex}
                               className="space-y-2 p-4 border rounded-lg"
@@ -349,7 +349,7 @@ export function ReportPDFTemplate({ report }: ReportPDFTemplateProps) {
             {/* Therapist Conclusions */}
             {report.therapistConclusions &&
               report.therapistConclusions.map(
-                (therapistData: any, index: number) => (
+                (therapistData: TherapistData, index: number) => (
                   <div
                     key={index}
                     className="p-3 bg-gray-50 border-l-4 border-orange-500 rounded"
@@ -380,19 +380,4 @@ export function ReportPDFTemplate({ report }: ReportPDFTemplateProps) {
       </div>
     </div>
   );
-}
-
-function getStatusLabel(status: string): string {
-  switch (status) {
-    case "not_achieved":
-      return "No logra";
-    case "with_help":
-      return "Con ayuda";
-    case "in_progress":
-      return "En progreso";
-    case "achieved":
-      return "Logrado";
-    default:
-      return "No especificado";
-  }
 }

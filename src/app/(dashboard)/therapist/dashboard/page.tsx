@@ -37,10 +37,9 @@ import { useProposals } from "@/hooks/useProposals";
 function CoordinatorDashboard() {
   const { profile } = useCurrentUser();
   const { data: proposalsData, isLoading: isLoadingProposals } = useProposals();
-  const { data: appointmentsData, isLoading: isLoadingAppointments } =
-    useTherapistAppointments({
-      status: "all",
-    });
+  const { data: appointmentsData } = useTherapistAppointments({
+    status: "all",
+  });
 
   // Get today's appointments
   const today = new Date().toISOString().split("T")[0];
@@ -425,230 +424,160 @@ function RegularTherapistDashboard() {
 
   if (isLoading) {
     return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">Cargando dashboard...</p>
-          </div>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Cargando dashboard...</p>
         </div>
+      </div>
     );
   }
 
   return (
-      <div className="min-h-screen bg-gray-100">
-        {/* Header */}
-        <header className="bg-white shadow-sm p-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-semibold">
-              Bienvenido/a,{" "}
-              {profile?.firstName && profile?.lastName
-                ? `${profile.firstName} ${profile.lastName}`
-                : "Doctor/a"}
-            </h1>
-            <p className="text-gray-600">
-              HOY -{" "}
-              {new Date().toLocaleDateString("es-ES", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              {todayAppointments.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {todayAppointments.length}
-                </span>
-              )}
-            </Button>
-            <Button variant="outline" size="icon">
-              <User className="h-5 w-5" />
-            </Button>
-          </div>
-        </header>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm p-4 flex justify-between items-center">
+        <div>
+          <h1 className="text-xl font-semibold">
+            Bienvenido/a,{" "}
+            {profile?.firstName && profile?.lastName
+              ? `${profile.firstName} ${profile.lastName}`
+              : "Doctor/a"}
+          </h1>
+          <p className="text-gray-600">
+            HOY -{" "}
+            {new Date().toLocaleDateString("es-ES", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            {todayAppointments.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {todayAppointments.length}
+              </span>
+            )}
+          </Button>
+          <Button variant="outline" size="icon">
+            <User className="h-5 w-5" />
+          </Button>
+        </div>
+      </header>
 
-        {/* Dashboard Content */}
-        <div className="p-6">
-          {/* Estadísticas Rápidas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {estadisticasRapidas.map((stat, index) => (
-              <Card key={index}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">{stat.titulo}</p>
-                      <p className={`text-2xl font-bold ${stat.color}`}>
-                        {stat.valor}
-                      </p>
-                      <p
-                        className={`text-sm flex items-center ${
-                          stat.tendencia === "up"
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {stat.tendencia === "up" ? (
-                          <TrendingUp className="h-3 w-3 mr-1" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3 mr-1" />
-                        )}
-                        {stat.cambio}
-                      </p>
-                    </div>
-                    <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                      {stat.icon}
-                    </div>
+      {/* Dashboard Content */}
+      <div className="p-6">
+        {/* Estadísticas Rápidas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {estadisticasRapidas.map((stat, index) => (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">{stat.titulo}</p>
+                    <p className={`text-2xl font-bold ${stat.color}`}>
+                      {stat.valor}
+                    </p>
+                    <p
+                      className={`text-sm flex items-center ${
+                        stat.tendencia === "up"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {stat.tendencia === "up" ? (
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 mr-1" />
+                      )}
+                      {stat.cambio}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Próximas Citas */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg font-semibold">
-                      Citas de Hoy ({todayAppointments.length})
-                    </CardTitle>
-                    <Link href="/therapist/agenda">
-                      <Button variant="outline" size="sm">
-                        Ver Agenda Completa
-                      </Button>
-                    </Link>
+                  <div className={`p-3 rounded-full ${stat.bgColor}`}>
+                    {stat.icon}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {proximasCitas.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No tienes citas programadas para hoy</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {proximasCitas.map((cita) => (
-                        <div
-                          key={cita.id}
-                          className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-2">
-                                <div className="bg-blue-100 p-2 rounded-full">
-                                  <Clock className="h-4 w-4 text-blue-600" />
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-lg">
-                                    {cita.hora}
-                                  </p>
-                                <p className="text-gray-600">{cita.duracion}</p>
-                              </div>
-                              </div>
-                              <div className="ml-11">
-                                <h4 className="font-medium">{cita.paciente}</h4>
-                                <p className="text-sm text-gray-600">
-                                  {cita.edad} años - {cita.tipo}
-                                </p>
-                                <p className="text-sm text-gray-500 mt-1">
-                                  {cita.notas}
-                                </p>
-                                <Badge
-                                  className={
-                                    cita.estado === "confirmada"
-                                      ? "bg-green-100 text-green-800 mt-2"
-                                      : "bg-yellow-100 text-yellow-800 mt-2"
-                                  }
-                                >
-                                  {cita.estado === "confirmada"
-                                    ? "✅ Confirmada"
-                                    : "⏳ Pendiente"}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="flex space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenModal(cita.paciente)}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                Ver Paciente
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-          {/* Pacientes Recientes */}
-          <div className="grid grid-cols-1">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Próximas Citas */}
+          <div className="lg:col-span-2">
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg font-semibold">
-                    Pacientes Activos ({patientsData?.total || 0})
+                    Citas de Hoy ({todayAppointments.length})
                   </CardTitle>
-                  <Link href="/therapist/patients">
+                  <Link href="/therapist/agenda">
                     <Button variant="outline" size="sm">
-                      Ver Todos
+                      Ver Agenda Completa
                     </Button>
                   </Link>
                 </div>
               </CardHeader>
-              <CardContent className="p-0">
-                {pacientesRecientes.length === 0 ? (
+              <CardContent>
+                {proximasCitas.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No tienes pacientes asignados</p>
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No tienes citas programadas para hoy</p>
                   </div>
                 ) : (
-                  <div className="divide-y">
-                    {pacientesRecientes.map((paciente) => (
+                  <div className="space-y-4">
+                    {proximasCitas.map((cita) => (
                       <div
-                        key={paciente.id}
-                        className="p-4 hover:bg-gray-50 transition-colors"
+                        key={cita.id}
+                        className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                       >
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h4 className="font-medium">{paciente.nombre}</h4>
-                            <p className="text-sm text-gray-600">
-                              {paciente.edad} años - {paciente.diagnostico}
-                            </p>
-                          </div>
-                          <Badge className={paciente.estadoColor}>
-                            {paciente.estado}
-                          </Badge>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Progreso del tratamiento</span>
-                            <span>{paciente.sesiones} sesiones</span>
-                          </div>
-                          <Progress value={paciente.progreso} className="h-2" />
-                          <div className="flex justify-between items-center">
-                            <p className="text-sm text-gray-600">
-                              Próxima: {paciente.proximaCita}
-                            </p>
-                            <div className="flex space-x-1">
-                              <Link href={`/therapist/patients/${paciente.id}`}>
-                                <Button variant="outline" size="sm">
-                                  <Eye className="h-3 w-3" />
-                                </Button>
-                              </Link>
-                              <Button variant="outline" size="sm">
-                                <Send className="h-3 w-3" />
-                              </Button>
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <div className="bg-blue-100 p-2 rounded-full">
+                                <Clock className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-lg">
+                                  {cita.hora}
+                                </p>
+                                <p className="text-gray-600">{cita.duracion}</p>
+                              </div>
                             </div>
+                            <div className="ml-11">
+                              <h4 className="font-medium">{cita.paciente}</h4>
+                              <p className="text-sm text-gray-600">
+                                {cita.edad} años - {cita.tipo}
+                              </p>
+                              <p className="text-sm text-gray-500 mt-1">
+                                {cita.notas}
+                              </p>
+                              <Badge
+                                className={
+                                  cita.estado === "confirmada"
+                                    ? "bg-green-100 text-green-800 mt-2"
+                                    : "bg-yellow-100 text-yellow-800 mt-2"
+                                }
+                              >
+                                {cita.estado === "confirmada"
+                                  ? "✅ Confirmada"
+                                  : "⏳ Pendiente"}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenModal(cita.paciente)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Ver Paciente
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -660,32 +589,102 @@ function RegularTherapistDashboard() {
           </div>
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Detalles del Paciente</DialogTitle>
-              <DialogDescription>
-                Información detallada del paciente seleccionado.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="name" className="text-right text-gray-900">
-                  Nombre
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  value={selectedPaciente || ""}
-                  className="col-span-3 flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Nombre del paciente"
-                  disabled
-                />
+        {/* Pacientes Recientes */}
+        <div className="grid grid-cols-1">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg font-semibold">
+                  Pacientes Activos ({patientsData?.total || 0})
+                </CardTitle>
+                <Link href="/therapist/patients">
+                  <Button variant="outline" size="sm">
+                    Ver Todos
+                  </Button>
+                </Link>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </CardHeader>
+            <CardContent className="p-0">
+              {pacientesRecientes.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No tienes pacientes asignados</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {pacientesRecientes.map((paciente) => (
+                    <div
+                      key={paciente.id}
+                      className="p-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-medium">{paciente.nombre}</h4>
+                          <p className="text-sm text-gray-600">
+                            {paciente.edad} años - {paciente.diagnostico}
+                          </p>
+                        </div>
+                        <Badge className={paciente.estadoColor}>
+                          {paciente.estado}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progreso del tratamiento</span>
+                          <span>{paciente.sesiones} sesiones</span>
+                        </div>
+                        <Progress value={paciente.progreso} className="h-2" />
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-gray-600">
+                            Próxima: {paciente.proximaCita}
+                          </p>
+                          <div className="flex space-x-1">
+                            <Link href={`/therapist/patients/${paciente.id}`}>
+                              <Button variant="outline" size="sm">
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                            </Link>
+                            <Button variant="outline" size="sm">
+                              <Send className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Detalles del Paciente</DialogTitle>
+            <DialogDescription>
+              Información detallada del paciente seleccionado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="name" className="text-right text-gray-900">
+                Nombre
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={selectedPaciente || ""}
+                className="col-span-3 flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Nombre del paciente"
+                disabled
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 

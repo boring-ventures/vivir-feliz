@@ -43,32 +43,7 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { ReportPDFTemplate } from "@/components/admin/report-pdf-template";
 import { createRoot } from "react-dom/client";
-
-interface FinalReport {
-  id: string;
-  patientId: string;
-  coordinatorId: string;
-  patientName: string;
-  patientDateOfBirth: string;
-  patientAge: string;
-  reportDate: string;
-  generalObjective: string | null;
-  generalBackground: string | null;
-  generalConclusions: string | null;
-  otherObjectives: any | null;
-  therapistBackgrounds: any | null;
-  therapistProgress: any | null;
-  therapistConclusions: any | null;
-  isPublished: boolean;
-  createdAt: string;
-  updatedAt: string;
-  coordinator: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    specialty: string;
-  };
-}
+import { FinalReport, TherapistData, Indicator } from "@/types/reports";
 
 export default function AdminReportsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -692,7 +667,7 @@ export default function AdminReportsPage() {
                         {/* Therapist Objectives */}
                         {selectedReport.otherObjectives &&
                           selectedReport.otherObjectives.map(
-                            (therapistData: any, index: number) => (
+                            (therapistData: TherapistData, index: number) => (
                               <div
                                 key={index}
                                 className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500"
@@ -748,7 +723,7 @@ export default function AdminReportsPage() {
                         {/* Therapist Backgrounds */}
                         {selectedReport.therapistBackgrounds &&
                           selectedReport.therapistBackgrounds.map(
-                            (therapistData: any, index: number) => (
+                            (therapistData: TherapistData, index: number) => (
                               <div
                                 key={index}
                                 className="p-4 bg-gray-50 rounded-lg border-l-4 border-green-500"
@@ -781,7 +756,7 @@ export default function AdminReportsPage() {
                         {selectedReport.therapistProgress.length > 0 ? (
                           <div className="space-y-4">
                             {selectedReport.therapistProgress.map(
-                              (therapistData: any, index: number) => (
+                              (therapistData: TherapistData, index: number) => (
                                 <div
                                   key={index}
                                   className="p-4 bg-gray-50 rounded-lg border-l-4 border-orange-500"
@@ -797,7 +772,10 @@ export default function AdminReportsPage() {
                                   therapistData.indicators.length > 0 ? (
                                     <div className="space-y-4">
                                       {therapistData.indicators.map(
-                                        (indicator: any, indIndex: number) => (
+                                        (
+                                          indicator: Indicator,
+                                          indIndex: number
+                                        ) => (
                                           <div
                                             key={indIndex}
                                             className="space-y-2 p-4 border rounded-lg"
@@ -966,7 +944,7 @@ export default function AdminReportsPage() {
                         {/* Therapist Conclusions */}
                         {selectedReport.therapistConclusions &&
                           selectedReport.therapistConclusions.map(
-                            (therapistData: any, index: number) => (
+                            (therapistData: TherapistData, index: number) => (
                               <div
                                 key={index}
                                 className="p-4 bg-gray-50 rounded-lg border-l-4 border-orange-500"

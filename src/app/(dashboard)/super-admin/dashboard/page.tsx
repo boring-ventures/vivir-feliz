@@ -2,26 +2,17 @@
 
 import { RoleGuard } from "@/components/auth/role-guard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users,
   DollarSign,
   TrendingUp,
   TrendingDown,
-  FileText,
   AlertCircle,
-  CheckCircle,
   Shield,
-  Settings,
-  Database,
   Activity,
-  BarChart3,
-  Globe,
-  HardDrive,
 } from "lucide-react";
-import Link from "next/link";
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
 
 export default function SuperAdminDashboardPage() {

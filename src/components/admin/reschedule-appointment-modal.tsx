@@ -19,8 +19,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle,
-  AlertTriangle,
-  Info,
 } from "lucide-react";
 import { useRescheduleAppointment } from "@/hooks/use-reschedule-appointment";
 import { useTherapistMonthlyAppointments } from "@/hooks/use-therapist-appointments";
@@ -513,15 +511,6 @@ export function RescheduleAppointmentModal({
                               diaInfo.fecha,
                               hora
                             );
-
-                            // Find patient appointment for this time slot
-                            const patientAppointment =
-                              patientAppointmentsData?.appointments?.find(
-                                (apt) =>
-                                  apt.id !== appointment?.id && // Exclude current appointment
-                                  apt.date === formatearFecha(diaInfo.fecha) &&
-                                  apt.startTime === hora
-                              );
 
                             // Determine button variant and disabled state
                             let variant:

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { RoleGuard } from "@/components/auth/role-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -23,7 +22,6 @@ import {
   DollarSign,
   Clock,
   CheckCircle,
-  XCircle,
 } from "lucide-react";
 import {
   useServices,
@@ -156,10 +154,6 @@ export default function SuperAdminServicesPage() {
   const treatmentServices = services.filter(
     (s) => s.type === "TREATMENT"
   ).length;
-  const totalRevenue = services.reduce(
-    (sum, service) => sum + service.costPerSession * service.sessions,
-    0
-  );
 
   return (
     <RoleGuard allowedRoles={["SUPER_ADMIN"]}>

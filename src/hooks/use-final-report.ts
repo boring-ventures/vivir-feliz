@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { TherapistData } from "@/types/reports";
 
 interface FinalReport {
   id: string;
@@ -11,10 +12,10 @@ interface FinalReport {
   generalObjective: string | null;
   generalBackground: string | null;
   generalConclusions: string | null;
-  otherObjectives: any | null;
-  therapistBackgrounds: any | null;
-  therapistProgress: any | null;
-  therapistConclusions: any | null;
+  otherObjectives: TherapistData[] | null;
+  therapistBackgrounds: TherapistData[] | null;
+  therapistProgress: TherapistData[] | null;
+  therapistConclusions: TherapistData[] | null;
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;

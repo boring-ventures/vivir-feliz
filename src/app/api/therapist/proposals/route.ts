@@ -177,6 +177,10 @@ export async function POST(request: NextRequest) {
       title,
       description,
       totalAmount,
+      totalSessions,
+      sessionDuration,
+      frequency,
+      sessionPrice,
     } = body;
 
     const proposal = await prisma.treatmentProposal.create({
@@ -188,6 +192,10 @@ export async function POST(request: NextRequest) {
         description,
         status: "NEW_PROPOSAL",
         totalAmount,
+        totalSessions,
+        sessionDuration,
+        frequency,
+        sessionPrice,
       },
       include: {
         patient: {

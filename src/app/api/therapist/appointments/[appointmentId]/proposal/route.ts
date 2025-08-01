@@ -392,17 +392,6 @@ export async function POST(
       ];
     };
 
-    const arrayToObject = (
-      array: Array<{ day: string; morning: boolean; afternoon: boolean }>
-    ) => {
-      const result: Record<string, { morning: boolean; afternoon: boolean }> =
-        {};
-      array.forEach(({ day, morning, afternoon }) => {
-        result[day] = { morning, afternoon };
-      });
-      return result;
-    };
-
     // Create the treatment proposal
     const proposal = await prisma.treatmentProposal.create({
       data: {

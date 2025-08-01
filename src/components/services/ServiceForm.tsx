@@ -48,6 +48,7 @@ const serviceSchema = z.object({
 });
 
 type ServiceFormData = z.infer<typeof serviceSchema>;
+type SpecialtyType = ServiceFormData["specialty"];
 
 interface ServiceFormProps {
   service?: Service;
@@ -219,7 +220,9 @@ export function ServiceForm({
               <Label htmlFor="specialty">Especialidad *</Label>
               <Select
                 value={watchedSpecialty}
-                onValueChange={(value) => setValue("specialty", value as any)}
+                onValueChange={(value) =>
+                  setValue("specialty", value as SpecialtyType)
+                }
               >
                 <SelectTrigger
                   className={errors.specialty ? "border-red-500" : ""}

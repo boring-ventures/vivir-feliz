@@ -50,8 +50,7 @@ export default function TerapeutaPropuestaServicioPage() {
   const { data: allServices = [], isLoading: servicesLoading } = useServices();
 
   // Fetch existing proposal data
-  const { data: existingProposalData, isLoading: existingProposalLoading } =
-    useExistingProposal(appointmentId);
+  const { data: existingProposalData } = useExistingProposal(appointmentId);
 
   const [quienTomaConsulta, setQuienTomaConsulta] = useState("");
   const [derivacion, setDerivacion] = useState("");
@@ -122,43 +121,6 @@ export default function TerapeutaPropuestaServicioPage() {
   const serviciosTratamientoData = allServices.filter(
     (service) => service.type === "TREATMENT" && service.status
   );
-
-  // Mapping between service codes and required specialties
-  const serviceSpecialtyMapping: Record<string, string> = {
-    "EV-PSI": "NEUROPSYCHOLOGIST",
-    "EV-PSP": "PSYCHOPEDAGOGUE",
-    "EV-NRP": "NEUROPSYCHOLOGIST",
-    "EV-PDG": "PSYCHOPEDAGOGUE",
-    "EV-FON": "SPEECH_THERAPIST",
-    "EV-PSM": "PSYCHOMOTRICIAN",
-    "EV-FIS": "OCCUPATIONAL_THERAPIST",
-    "EV-TO": "OCCUPATIONAL_THERAPIST",
-    "EV-TGD": "ASD_THERAPIST",
-    "EV-KIN": "PEDIATRIC_KINESIOLOGIST",
-    "EV-PSI-C": "PSYCHOLOGIST",
-    "EV-TC": "BEHAVIORAL_THERAPIST",
-    "TRAT-PSP": "PSYCHOPEDAGOGUE",
-    "TRAT-PSI": "NEUROPSYCHOLOGIST",
-    "TRAT-NRP": "NEUROPSYCHOLOGIST",
-    "TRAT-FON": "SPEECH_THERAPIST",
-    "TRAT-PSM": "PSYCHOMOTRICIAN",
-    "TRAT-TO": "OCCUPATIONAL_THERAPIST",
-    "TRAT-FIS": "OCCUPATIONAL_THERAPIST",
-    "TRAT-PSI-P": "NEUROPSYCHOLOGIST",
-    "TRAT-KIN": "PEDIATRIC_KINESIOLOGIST",
-    "TRAT-PSI-C": "PSYCHOLOGIST",
-    "TRAT-TC": "BEHAVIORAL_THERAPIST",
-    "TLL-PSP": "PSYCHOPEDAGOGUE",
-    "TLL-PSI": "NEUROPSYCHOLOGIST",
-    "TLL-NRP": "NEUROPSYCHOLOGIST",
-    "TLL-FON": "SPEECH_THERAPIST",
-    "TLL-PSM": "PSYCHOMOTRICIAN",
-    "TLL-TO": "OCCUPATIONAL_THERAPIST",
-    "TLL-FIS": "OCCUPATIONAL_THERAPIST",
-    "TLL-KIN": "PEDIATRIC_KINESIOLOGIST",
-    "TLL-PSI-C": "PSYCHOLOGIST",
-    "TLL-TC": "BEHAVIORAL_THERAPIST",
-  };
 
   // Load all therapists (we'll filter by specialty in the component)
   const { data: allTherapists = [], isLoading: therapistsLoading } =
@@ -354,43 +316,6 @@ export default function TerapeutaPropuestaServicioPage() {
       result[day] = { morning, afternoon };
     });
     return result;
-  };
-
-  // Function to convert object format to array format for storage
-  const objectToArray = (
-    obj: Record<string, { morning: boolean; afternoon: boolean }>
-  ) => {
-    return [
-      {
-        day: "monday",
-        ...(obj.monday || { morning: false, afternoon: false }),
-      },
-      {
-        day: "tuesday",
-        ...(obj.tuesday || { morning: false, afternoon: false }),
-      },
-      {
-        day: "wednesday",
-        ...(obj.wednesday || { morning: false, afternoon: false }),
-      },
-      {
-        day: "thursday",
-        ...(obj.thursday || { morning: false, afternoon: false }),
-      },
-      {
-        day: "friday",
-        ...(obj.friday || { morning: false, afternoon: false }),
-      },
-    ];
-  };
-
-  // Function to ensure time availability is saved in correct order (Monday to Friday)
-  const getOrderedTimeAvailability = (
-    availability: Record<string, { morning: boolean; afternoon: boolean }>
-  ) => {
-    // Use an array-based structure to maintain order
-    // This ensures the order is preserved even after JSON serialization
-    return objectToArray(availability);
   };
 
   const handleTimeAvailabilityChange = (
