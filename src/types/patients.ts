@@ -216,7 +216,9 @@ export interface ProposalDisplayData {
   appointmentsScheduled: boolean;
   canConfirmPayment: boolean;
   canScheduleAppointments: boolean;
-  timeAvailability?: Record<string, { morning: boolean; afternoon: boolean }>;
+  timeAvailability?:
+    | Record<string, { morning: boolean; afternoon: boolean }>
+    | Array<{ day: string; morning: boolean; afternoon: boolean }>;
   selectedProposal?: string;
 }
 
