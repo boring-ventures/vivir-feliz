@@ -164,11 +164,9 @@ export default function AdminProposalPreviewPage() {
   // Payment calculations for both proposals
   const singlePaymentA = totalProposalA * 0.95; // 5% discount
   const monthlyPaymentA = totalProposalA / 6;
-  const bimonthlyPaymentA = totalProposalA / 3;
 
   const singlePaymentB = totalProposalB * 0.95; // 5% discount
   const monthlyPaymentB = totalProposalB / 6;
-  const bimonthlyPaymentB = totalProposalB / 3;
 
   // Show loading state while data is being fetched
   if (proposalsLoading || servicesLoading || !proposalData) {
@@ -204,12 +202,10 @@ export default function AdminProposalPreviewPage() {
         A: {
           single: singlePaymentA,
           monthly: monthlyPaymentA,
-          bimonthly: bimonthlyPaymentA,
         },
         B: {
           single: singlePaymentB,
           monthly: monthlyPaymentB,
-          bimonthly: bimonthlyPaymentB,
         },
       };
 
@@ -238,7 +234,7 @@ export default function AdminProposalPreviewPage() {
       });
 
       // Redirect back to proposals page
-      router.push("/admin/proposals");
+      router.push("/therapist/proposals");
     } catch (error) {
       console.error("Error sending proposal to commercial:", error);
       toast({
@@ -277,7 +273,7 @@ export default function AdminProposalPreviewPage() {
       });
 
       // Redirect back to proposals page
-      router.push("/admin/proposals");
+      router.push("/therapist/proposals");
     } catch (error) {
       console.error("Error canceling proposal:", error);
       toast({
@@ -660,7 +656,7 @@ export default function AdminProposalPreviewPage() {
 `;
 
   return (
-    <RoleGuard allowedRoles={["ADMIN"]}>
+    <RoleGuard allowedRoles={["THERAPIST"]}>
       <style jsx global>
         {printStyles}
       </style>
@@ -668,7 +664,7 @@ export default function AdminProposalPreviewPage() {
         {/* Header - Hidden on print */}
         <div className="flex justify-between items-center print:hidden">
           <div className="flex items-center space-x-4">
-            <Link href={`/admin/proposals/${params.id}`}>
+            <Link href={`/therapist/proposals/${params.id}`}>
               <Button variant="outline" size="sm">
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Volver
@@ -1012,20 +1008,10 @@ export default function AdminProposalPreviewPage() {
                       </span>
                     </li>
                     <li>
-                      Pago mensual (4 pagos):{" "}
+                      Pago mensual (6 pagos):{" "}
                       <span className="font-bold">
                         $
                         {monthlyPaymentA.toLocaleString("es-MX", {
-                          style: "currency",
-                          currency: "MXN",
-                        })}
-                      </span>
-                    </li>
-                    <li>
-                      Pago bimestral (2 pagos):{" "}
-                      <span className="font-bold">
-                        $
-                        {bimonthlyPaymentA.toLocaleString("es-MX", {
                           style: "currency",
                           currency: "MXN",
                         })}
@@ -1048,20 +1034,10 @@ export default function AdminProposalPreviewPage() {
                       </span>
                     </li>
                     <li>
-                      Pago mensual (4 pagos):{" "}
+                      Pago mensual (6 pagos):{" "}
                       <span className="font-bold">
                         $
                         {monthlyPaymentB.toLocaleString("es-MX", {
-                          style: "currency",
-                          currency: "MXN",
-                        })}
-                      </span>
-                    </li>
-                    <li>
-                      Pago bimestral (2 pagos):{" "}
-                      <span className="font-bold">
-                        $
-                        {bimonthlyPaymentB.toLocaleString("es-MX", {
                           style: "currency",
                           currency: "MXN",
                         })}
@@ -1138,7 +1114,7 @@ export default function AdminProposalPreviewPage() {
               {/* NEW_PROPOSAL Status Buttons */}
               {currentProposal?.status === "NEW_PROPOSAL" && (
                 <div className="flex justify-between items-center">
-                  <Link href={`/admin/proposals/${params.id}`}>
+                  <Link href={`/therapist/proposals/${params.id}`}>
                     <Button variant="outline">
                       <Edit className="h-4 w-4 mr-2" />
                       Editar
@@ -1187,7 +1163,7 @@ export default function AdminProposalPreviewPage() {
                         </>
                       )}
                     </Button>
-                    <Link href={`/admin/proposals/${params.id}`}>
+                    <Link href={`/therapist/proposals/${params.id}`}>
                       <Button variant="outline">
                         <Edit className="h-4 w-4 mr-2" />
                         Editar

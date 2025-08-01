@@ -164,11 +164,9 @@ export default function AdminProposalPreviewPage() {
   // Payment calculations for both proposals
   const singlePaymentA = totalProposalA * 0.95; // 5% discount
   const monthlyPaymentA = totalProposalA / 6;
-  const bimonthlyPaymentA = totalProposalA / 3;
 
   const singlePaymentB = totalProposalB * 0.95; // 5% discount
   const monthlyPaymentB = totalProposalB / 6;
-  const bimonthlyPaymentB = totalProposalB / 3;
 
   // Show loading state while data is being fetched
   if (proposalsLoading || servicesLoading || !proposalData) {
@@ -204,12 +202,10 @@ export default function AdminProposalPreviewPage() {
         A: {
           single: singlePaymentA,
           monthly: monthlyPaymentA,
-          bimonthly: bimonthlyPaymentA,
         },
         B: {
           single: singlePaymentB,
           monthly: monthlyPaymentB,
-          bimonthly: bimonthlyPaymentB,
         },
       };
 
@@ -1012,20 +1008,10 @@ export default function AdminProposalPreviewPage() {
                       </span>
                     </li>
                     <li>
-                      Pago mensual (4 pagos):{" "}
+                      Pago mensual (6 pagos):{" "}
                       <span className="font-bold">
                         $
                         {monthlyPaymentA.toLocaleString("es-MX", {
-                          style: "currency",
-                          currency: "MXN",
-                        })}
-                      </span>
-                    </li>
-                    <li>
-                      Pago bimestral (2 pagos):{" "}
-                      <span className="font-bold">
-                        $
-                        {bimonthlyPaymentA.toLocaleString("es-MX", {
                           style: "currency",
                           currency: "MXN",
                         })}
@@ -1048,20 +1034,10 @@ export default function AdminProposalPreviewPage() {
                       </span>
                     </li>
                     <li>
-                      Pago mensual (4 pagos):{" "}
+                      Pago mensual (6 pagos):{" "}
                       <span className="font-bold">
                         $
                         {monthlyPaymentB.toLocaleString("es-MX", {
-                          style: "currency",
-                          currency: "MXN",
-                        })}
-                      </span>
-                    </li>
-                    <li>
-                      Pago bimestral (2 pagos):{" "}
-                      <span className="font-bold">
-                        $
-                        {bimonthlyPaymentB.toLocaleString("es-MX", {
                           style: "currency",
                           currency: "MXN",
                         })}
