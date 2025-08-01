@@ -53,6 +53,7 @@ import {
 import { Eye, Trash2 } from "lucide-react";
 import { TherapeuticPlanModal } from "@/components/therapist/therapeutic-plan-modal";
 import { ProgressReportModal } from "@/components/therapist/progress-report-modal";
+import { TherapistReportContributionModal } from "@/components/therapist/therapist-report-contribution-modal";
 
 // Type definitions for appointment and objective data
 interface SessionNote {
@@ -132,6 +133,10 @@ export default function PatientHistoryPage() {
 
   // Progress report modal state
   const [showProgressReportModal, setShowProgressReportModal] = useState(false);
+
+  // Therapist report contribution modal state
+  const [showReportContributionModal, setShowReportContributionModal] =
+    useState(false);
 
   const { data: patientData, isLoading, error } = usePatientHistory(patientId);
   const { data: objectivesData, isLoading: objectivesLoading } =
@@ -416,6 +421,13 @@ export default function PatientHistoryPage() {
           >
             <Plus className="h-4 w-4 mr-2" />
             Informe de Avances
+          </Button>
+          <Button
+            onClick={() => setShowReportContributionModal(true)}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Contribuir al Informe Final
           </Button>
         </div>
       </div>
@@ -1059,6 +1071,14 @@ export default function PatientHistoryPage() {
       <ProgressReportModal
         isOpen={showProgressReportModal}
         onClose={() => setShowProgressReportModal(false)}
+        patientId={patientId}
+        patientData={patient}
+      />
+
+      {/* Therapist Report Contribution Modal */}
+      <TherapistReportContributionModal
+        isOpen={showReportContributionModal}
+        onClose={() => setShowReportContributionModal(false)}
         patientId={patientId}
         patientData={patient}
       />

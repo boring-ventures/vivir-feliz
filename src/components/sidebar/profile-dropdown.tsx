@@ -48,6 +48,8 @@ export function ProfileDropdown() {
   // Get role display name
   const getRoleDisplay = (role: UserRole) => {
     switch (role) {
+      case UserRole.SUPER_ADMIN:
+        return "Super Administrador";
       case UserRole.ADMIN:
         return "Administrador";
       case UserRole.PARENT:

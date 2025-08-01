@@ -57,61 +57,61 @@ export async function GET(request: NextRequest) {
       }
 
       // Define specialty groups according to requirements
-      const speechTherapyReasons = ["dificultadesLenguaje"]; // Option 1
+      const speechTherapyReasons = ["dificultadesLenguaje"]; // Opción 1
       const occupationalTherapyReasons = [
-        "retrasoMotor", // Option 2
-        "problemasCoordinacion", // Option 3
-        "dificultadesAlimentacion", // Option 9
-        "sensibilidadEstimulos", // Option 11
-        "dificultadesControl", // Option 13
-        "dificultadesSueno", // Option 10
-        "dificultadesAutonomia", // Option 14
+        "retrasoMotor", // Opción 2
+        "problemasCoordinacion", // Opción 3
+        "dificultadesAlimentacion", // Opción 9
+        "sensibilidadEstimulos", // Opción 11
+        "dificultadesControl", // Opción 13
+        "dificultadesSueno", // Opción 10
+        "dificultadesAutonomia", // Opción 14
       ];
       const psychopedagogyReasons = [
-        "dificultadesAprendizaje", // Option 4
-        "problemasAtencion", // Option 5
+        "dificultadesAprendizaje", // Opción 4
+        "problemasAtencion", // Opción 5
       ];
       const psychologyReasons = [
-        "dificultadesInteraccion", // Option 6
-        "problemasComportamiento", // Option 8
-        "bajaAutoestima", // Option 12
+        "dificultadesInteraccion", // Opción 6
+        "problemasComportamiento", // Opción 8
+        "bajaAutoestima", // Opción 12
       ];
-      const asdTherapyReasons = ["indicadoresComportamiento"]; // Option 7
+      const asdTherapyReasons = ["indicadoresComportamiento"]; // Opción 7
       const coordinatorReasons = [
-        "necesitaOrientacion", // Option 17
-        "noSeguroDificultad", // Option 18
-        "quiereValoracion", // Option 19
-        "derivacionColegio", // Option 20
-        "evaluacionReciente", // Option 21
-        "evaluacionMedica", // Option 22
+        "necesitaOrientacion", // Opción 17
+        "noSeguroDificultad", // Opción 18
+        "quiereValoracion", // Opción 19
+        "derivacionColegio", // Opción 20
+        "evaluacionReciente", // Opción 21
+        "evaluacionMedica", // Opción 22
       ];
 
       // Check for special cases first
 
-      // Option 15: Assign to coordinator (no cost interview)
+      // Opción 15: Assign to coordinator (no cost interview)
       if (
         selectedReasons.includes("diagnosticoPrevio") &&
         selectedReasons.length === 1
       ) {
-        return ["COORDINATOR"];
+        return ["COORDINATOR", "COORDINATION_ASSISTANT"];
       }
 
-      // Option 16: If only "otro" is selected, assign to psychopedagogue or neuropsychologist
+      // Opción 16: If only "otro" is selected, assign to psychopedagogue or neuropsychologist
       if (selectedReasons.includes("otro") && selectedReasons.length === 1) {
         return ["PSYCHOPEDAGOGUE", "NEUROPSYCHOLOGIST"];
       }
 
-      // Options 17-22: If any coordinator reasons are selected, assign to coordinator
+      // Opciones 17,18,19,20,21,22: If any coordinator reasons are selected, assign to coordinator
       const hasCoordinatorReasons = selectedReasons.some((reason) =>
         coordinatorReasons.includes(reason)
       );
       if (hasCoordinatorReasons) {
-        return ["COORDINATOR"];
+        return ["COORDINATOR", "COORDINATION_ASSISTANT"];
       }
 
-      // Count how many different specialty areas are selected (options 1-15)
+      // Count how many different specialty areas are selected (opciones 1-15)
       const clinicalReasons = selectedReasons.filter(
-        (reason) => !coordinatorReasons.includes(reason)
+        (reason) => !coordinatorReasons.includes(reason) && reason !== "otro"
       );
 
       const hasMultipleAreas = [
@@ -125,15 +125,66 @@ export async function GET(request: NextRequest) {
         clinicalReasons.some((reason) => psychologyReasons.includes(reason)),
         clinicalReasons.some((reason) => asdTherapyReasons.includes(reason)),
         clinicalReasons.includes("diagnosticoPrevio"),
-        clinicalReasons.includes("otro"),
       ].filter(Boolean).length;
 
-      // If 3 or more different areas are selected (options 1-15), assign integral consultation
+      // If 3 or more different areas are selected (opciones 1-15), assign integral consultation
       if (hasMultipleAreas >= 3) {
         return ["PSYCHOPEDAGOGUE", "NEUROPSYCHOLOGIST"];
       }
 
-      // Single area assignments
+      // Single area assignments according to requirements
+
+      // Opción 1: If only speech therapy is selected
+      if (
+        selectedReasons.some((reason) =>
+          speechTherapyReasons.includes(reason)
+        ) &&
+        selectedReasons.length === 1
+      ) {
+        return ["SPEECH_THERAPIST"];
+      }
+
+      // Opciones 2,3,9,11,13,10,14: If only occupational therapy reasons are selected
+      if (
+        selectedReasons.some((reason) =>
+          occupationalTherapyReasons.includes(reason)
+        ) &&
+        selectedReasons.every((reason) =>
+          occupationalTherapyReasons.includes(reason)
+        )
+      ) {
+        return ["OCCUPATIONAL_THERAPIST"];
+      }
+
+      // Opciones 4,5: If only psychopedagogy reasons are selected
+      if (
+        selectedReasons.some((reason) =>
+          psychopedagogyReasons.includes(reason)
+        ) &&
+        selectedReasons.every((reason) =>
+          psychopedagogyReasons.includes(reason)
+        )
+      ) {
+        return ["PSYCHOPEDAGOGUE"];
+      }
+
+      // Opciones 6,8,12: If only psychology reasons are selected
+      if (
+        selectedReasons.some((reason) => psychologyReasons.includes(reason)) &&
+        selectedReasons.every((reason) => psychologyReasons.includes(reason))
+      ) {
+        return ["PSYCHOLOGIST"];
+      }
+
+      // Opción 7: If only ASD therapy is selected
+      if (
+        selectedReasons.some((reason) => asdTherapyReasons.includes(reason)) &&
+        selectedReasons.length === 1
+      ) {
+        return ["ASD_THERAPIST"];
+      }
+
+      // Mixed cases - assign to most appropriate specialty based on primary reason
       if (
         selectedReasons.some((reason) => speechTherapyReasons.includes(reason))
       ) {
@@ -157,25 +208,13 @@ export async function GET(request: NextRequest) {
       if (
         selectedReasons.some((reason) => psychologyReasons.includes(reason))
       ) {
-        // For now, return any specialty for psychology (as requested)
-        return [
-          "SPEECH_THERAPIST",
-          "OCCUPATIONAL_THERAPIST",
-          "PSYCHOPEDAGOGUE",
-          "ASD_THERAPIST",
-          "NEUROPSYCHOLOGIST",
-        ];
+        return ["PSYCHOLOGIST"];
       }
 
       if (
         selectedReasons.some((reason) => asdTherapyReasons.includes(reason))
       ) {
         return ["ASD_THERAPIST"];
-      }
-
-      // Option 15: diagnosticoPrevio with other options - assign to coordinator
-      if (selectedReasons.includes("diagnosticoPrevio")) {
-        return ["COORDINATOR"];
       }
 
       // Default fallback
@@ -198,6 +237,11 @@ export async function GET(request: NextRequest) {
               | "PSYCHOPEDAGOGUE"
               | "NEUROPSYCHOLOGIST"
               | "COORDINATOR"
+              | "PSYCHOMOTRICIAN"
+              | "PEDIATRIC_KINESIOLOGIST"
+              | "PSYCHOLOGIST"
+              | "COORDINATION_ASSISTANT"
+              | "BEHAVIORAL_THERAPIST"
             )[],
           },
         }),

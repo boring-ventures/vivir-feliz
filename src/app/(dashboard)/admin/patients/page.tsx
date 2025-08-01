@@ -195,18 +195,26 @@ export default function PatientsPage() {
             A?: number;
             B?: number;
           };
-          let amount = 0;
 
           if (latestProposal.selectedProposal === "A") {
-            amount = totalAmountObj.A || 0;
+            return `Bs. ${(totalAmountObj.A || 0).toLocaleString()}`;
           } else if (latestProposal.selectedProposal === "B") {
-            amount = totalAmountObj.B || 0;
+            return `Bs. ${(totalAmountObj.B || 0).toLocaleString()}`;
           } else {
-            // If no proposal selected, use the higher value
-            amount = Math.max(totalAmountObj.A || 0, totalAmountObj.B || 0);
-          }
+            // If no proposal selected, show both amounts
+            const amountA = totalAmountObj.A || 0;
+            const amountB = totalAmountObj.B || 0;
 
-          return `Bs. ${amount.toLocaleString()}`;
+            if (amountA > 0 && amountB > 0) {
+              return `A: Bs. ${amountA.toLocaleString()} | B: Bs. ${amountB.toLocaleString()}`;
+            } else if (amountA > 0) {
+              return `Bs. ${amountA.toLocaleString()}`;
+            } else if (amountB > 0) {
+              return `Bs. ${amountB.toLocaleString()}`;
+            } else {
+              return "Bs. 0";
+            }
+          }
         }
 
         // Handle legacy number format

@@ -30,6 +30,9 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
 import { useMedicalFormAnalysis } from "@/hooks/use-medical-form-analysis";
 import { useTherapists, getTherapistDisplayName } from "@/hooks/useTherapists";
+import { useServices } from "@/hooks/useServices";
+import { useExistingProposal } from "@/hooks/use-existing-proposal";
+import { useEffect } from "react";
 
 export default function TerapeutaPropuestaServicioPage() {
   const params = useParams();
@@ -42,6 +45,12 @@ export default function TerapeutaPropuestaServicioPage() {
     isLoading: loading,
     error,
   } = useMedicalFormAnalysis(appointmentId);
+
+  // Fetch services from database
+  const { data: allServices = [], isLoading: servicesLoading } = useServices();
+
+  // Fetch existing proposal data
+  const { data: existingProposalData } = useExistingProposal(appointmentId);
 
   const [quienTomaConsulta, setQuienTomaConsulta] = useState("");
   const [derivacion, setDerivacion] = useState("");
@@ -95,244 +104,120 @@ export default function TerapeutaPropuestaServicioPage() {
     friday: { morning: false, afternoon: false },
   });
 
+  // Debug: Log time availability state changes
+  useEffect(() => {
+    console.log("Time availability state changed:", timeAvailability);
+  }, [timeAvailability]);
+
   // Collapsible states
   const [evaluacionOpen, setEvaluacionOpen] = useState(false);
   const [tratamientoOpen, setTratamientoOpen] = useState(false);
   const [disponibilidadOpen, setDisponibilidadOpen] = useState(false);
 
-  // Mapping between service codes and required specialties
-  const serviceSpecialtyMapping: Record<string, string> = {
-    "EV-PSI": "NEUROPSYCHOLOGIST",
-    "EV-PSP": "PSYCHOPEDAGOGUE",
-    "EV-NRP": "NEUROPSYCHOLOGIST",
-    "EV-PDG": "PSYCHOPEDAGOGUE",
-    "EV-FON": "SPEECH_THERAPIST",
-    "EV-PSM": "OCCUPATIONAL_THERAPIST",
-    "EV-FIS": "OCCUPATIONAL_THERAPIST",
-    "EV-TO": "OCCUPATIONAL_THERAPIST",
-    "EV-TGD": "ASD_THERAPIST",
-    "TRAT-PSP": "PSYCHOPEDAGOGUE",
-    "TRAT-PSI": "NEUROPSYCHOLOGIST",
-    "TRAT-NRP": "NEUROPSYCHOLOGIST",
-    "TRAT-FON": "SPEECH_THERAPIST",
-    "TRAT-PSM": "OCCUPATIONAL_THERAPIST",
-    "TRAT-TO": "OCCUPATIONAL_THERAPIST",
-    "TRAT-FIS": "OCCUPATIONAL_THERAPIST",
-    "TRAT-PSI-P": "NEUROPSYCHOLOGIST",
-    "TLL-PSP": "PSYCHOPEDAGOGUE",
-    "TLL-PSI": "NEUROPSYCHOLOGIST",
-    "TLL-NRP": "NEUROPSYCHOLOGIST",
-    "TLL-FON": "SPEECH_THERAPIST",
-    "TLL-PSM": "OCCUPATIONAL_THERAPIST",
-    "TLL-TO": "OCCUPATIONAL_THERAPIST",
-    "TLL-FIS": "OCCUPATIONAL_THERAPIST",
-  };
+  // Filter services by type
+  const serviciosEvaluacionData = allServices.filter(
+    (service) => service.type === "EVALUATION" && service.status
+  );
+  const serviciosTratamientoData = allServices.filter(
+    (service) => service.type === "TREATMENT" && service.status
+  );
 
   // Load all therapists (we'll filter by specialty in the component)
   const { data: allTherapists = [], isLoading: therapistsLoading } =
     useTherapists();
 
+  // Load existing proposal data when available
+  useEffect(() => {
+    if (existingProposalData) {
+      console.log("Loading existing proposal data:", existingProposalData);
+      setQuienTomaConsulta(existingProposalData.quienTomaConsulta);
+      setDerivacion(existingProposalData.derivacion);
+      console.log(
+        "Setting time availability:",
+        existingProposalData.timeAvailability
+      );
+      // Convert array format to object format if needed
+      const timeAvailabilityData = Array.isArray(
+        existingProposalData.timeAvailability
+      )
+        ? arrayToObject(existingProposalData.timeAvailability)
+        : existingProposalData.timeAvailability;
+      setTimeAvailability(timeAvailabilityData);
+      console.log(
+        "Time availability state after setting:",
+        timeAvailabilityData
+      );
+
+      // Load evaluation services for Proposal A
+      const evaluacionA: Record<string, boolean> = {};
+      const terapeutasEvaluacionA: Record<string, string> = {};
+      const sesionesEvaluacionA: Record<string, number> = {};
+
+      existingProposalData.serviciosEvaluacionA.forEach((service) => {
+        evaluacionA[service.codigo] = true;
+        terapeutasEvaluacionA[service.codigo] = service.terapeutaId;
+        sesionesEvaluacionA[service.codigo] = service.sesiones;
+      });
+
+      setServiciosEvaluacionSeleccionados(evaluacionA);
+      setTerapeutasEvaluacionA(terapeutasEvaluacionA);
+      setSesionesEvaluacionA(sesionesEvaluacionA);
+
+      // Load treatment services for Proposal A
+      const tratamientoA: Record<string, boolean> = {};
+      const terapeutasTratamientoA: Record<string, string> = {};
+      const sesionesTratamientoA: Record<string, number> = {};
+
+      existingProposalData.serviciosTratamientoA.forEach((service) => {
+        tratamientoA[service.codigo] = true;
+        terapeutasTratamientoA[service.codigo] = service.terapeutaId;
+        sesionesTratamientoA[service.codigo] = service.sesiones;
+      });
+
+      setServiciosTratamientoSeleccionados(tratamientoA);
+      setTerapeutasTratamientoA(terapeutasTratamientoA);
+      setSesionesTratamientoA(sesionesTratamientoA);
+
+      // Load evaluation services for Proposal B
+      const evaluacionB: Record<string, boolean> = {};
+      const sesionesEvaluacionB: Record<string, number> = {};
+
+      existingProposalData.serviciosEvaluacionB.forEach((service) => {
+        evaluacionB[service.codigo] = true;
+        sesionesEvaluacionB[service.codigo] = service.sesiones;
+      });
+
+      setSesionesEvaluacionB(sesionesEvaluacionB);
+
+      // Load treatment services for Proposal B
+      const tratamientoB: Record<string, boolean> = {};
+      const sesionesTratamientoB: Record<string, number> = {};
+
+      existingProposalData.serviciosTratamientoB.forEach((service) => {
+        tratamientoB[service.codigo] = true;
+        sesionesTratamientoB[service.codigo] = service.sesiones;
+      });
+
+      setSesionesTratamientoB(sesionesTratamientoB);
+    }
+  }, [existingProposalData]);
+
   // Helper function to get therapists by specialty for a specific service
   const getTherapistsByService = (codigo: string) => {
-    const requiredSpecialty = serviceSpecialtyMapping[codigo];
-    if (!requiredSpecialty) {
-      return allTherapists; // If no specific specialty required, show all therapists
+    // Find the service in both evaluation and treatment arrays
+    const service = [
+      ...serviciosEvaluacionData,
+      ...serviciosTratamientoData,
+    ].find((s) => s.code === codigo);
+
+    if (!service) {
+      return allTherapists; // If service not found, show all therapists
     }
+
     return allTherapists.filter(
-      (therapist) => therapist.specialty === requiredSpecialty
+      (therapist) => therapist.specialty === service.specialty
     );
   };
-
-  const serviciosEvaluacionData = [
-    {
-      codigo: "EV-INT",
-      servicio: "Evaluación Integral",
-      descripcion: "",
-      sesiones: 4,
-    },
-    {
-      codigo: "",
-      servicio: "Evaluación Específica",
-      descripcion: "",
-      sesiones: 4,
-    },
-    {
-      codigo: "EV-INT D",
-      servicio: "Evaluación Integral Screening",
-      descripcion: "",
-      sesiones: 4,
-    },
-    {
-      codigo: "EV-PSI",
-      servicio: "Evaluación Psicológica",
-      descripcion: "",
-      sesiones: 3,
-    },
-    {
-      codigo: "EV-PSP",
-      servicio: "Evaluación Psicopedagógica",
-      descripcion: "",
-      sesiones: 3,
-    },
-    {
-      codigo: "EV-NRP",
-      servicio: "Evaluación Neuropsicológica",
-      descripcion: "",
-      sesiones: 4,
-    },
-    {
-      codigo: "EV-PDG",
-      servicio: "Evaluación Pedagógica",
-      descripcion: "",
-      sesiones: 2,
-    },
-    {
-      codigo: "EV-FON",
-      servicio: "Evaluación Fonoaudiológica",
-      descripcion: "",
-      sesiones: 2,
-    },
-    {
-      codigo: "EV-PSM",
-      servicio: "Evaluación Psicomotriz",
-      descripcion: "",
-      sesiones: 2,
-    },
-    {
-      codigo: "EV-FIS",
-      servicio: "Evaluación en Fisioterapia",
-      descripcion: "",
-      sesiones: 2,
-    },
-    {
-      codigo: "EV-TO",
-      servicio: "Evaluación en Terapia Ocupacional",
-      descripcion: "",
-      sesiones: 2,
-    },
-    {
-      codigo: "EV-TGD",
-      servicio: "Evaluación especializada en TGD",
-      descripcion: "",
-      sesiones: 3,
-    },
-    {
-      codigo: "EV-ENT-COL",
-      servicio: "Entrevista colegio",
-      descripcion: "",
-      sesiones: 1,
-    },
-    {
-      codigo: "EV-ENT-PAD",
-      servicio: "Entrevista a padres",
-      descripcion: "",
-      sesiones: 1,
-    },
-    {
-      codigo: "EV-INF",
-      servicio: "Entrega de informe",
-      descripcion: "",
-      sesiones: 1,
-    },
-  ];
-
-  const serviciosTratamientoData = [
-    {
-      codigo: "TRAT-PSP",
-      servicio: "Tratamiento Psicopedagógico",
-      sesiones: 16,
-    },
-    { codigo: "TRAT-PSI", servicio: "Tratamiento Psicológico", sesiones: 16 },
-    {
-      codigo: "TRAT-NRP",
-      servicio: "Tratamiento Neuropsicológico",
-      sesiones: 16,
-    },
-    {
-      codigo: "TRAT-FON",
-      servicio: "Tratamiento Fonoaudiológico",
-      sesiones: 16,
-    },
-    { codigo: "TRAT-PSM", servicio: "Tratamiento Psicomotor", sesiones: 16 },
-    {
-      codigo: "TRAT-TO",
-      servicio: "Tratamiento de Terapia Ocupacional",
-      sesiones: 16,
-    },
-    {
-      codigo: "TRAT-FIS",
-      servicio: "Tratamiento en Fisioterapia y Kinesiología",
-      sesiones: 16,
-    },
-    {
-      codigo: "TRAT-PSI-P",
-      servicio: "Tratamiento de Entrenamiento Parental",
-      sesiones: 8,
-    },
-    {
-      codigo: "TLL-PSP",
-      servicio: "Taller grupal Psicopedagógico",
-      sesiones: 8,
-    },
-    { codigo: "TLL-PSI", servicio: "Taller grupal Psicológico", sesiones: 8 },
-    {
-      codigo: "TLL-NRP",
-      servicio: "Taller grupal Neuropsicológico",
-      sesiones: 8,
-    },
-    {
-      codigo: "TLL-FON",
-      servicio: "Taller grupal Fonoaudiológico",
-      sesiones: 8,
-    },
-    { codigo: "TLL-PSM", servicio: "Taller grupal Psicomotor", sesiones: 8 },
-    {
-      codigo: "TLL-TO",
-      servicio: "Taller grupal de Terapia Ocupacional",
-      sesiones: 8,
-    },
-    {
-      codigo: "TLL-FIS",
-      servicio: "Taller grupal en Fisioterapia y kinesiología",
-      sesiones: 8,
-    },
-    {
-      codigo: "INT-ESC",
-      servicio: "Visitas del Terapeuta al Colegio",
-      sesiones: 4,
-    },
-    {
-      codigo: "SEG-EQU",
-      servicio: "Entrega de informe cuatrimestral",
-      sesiones: 1,
-    },
-    { codigo: "TLL-TALLERES", servicio: "Talleres:", sesiones: 0 },
-    {
-      codigo: "PROG-INCL",
-      servicio: "Programa de especialistas de inclusión",
-      sesiones: 0,
-    },
-    {
-      codigo: "PROG-APOYO",
-      servicio: "Programa de apoyo escolar",
-      sesiones: 0,
-    },
-    {
-      codigo: "PROG-TEMP-IND",
-      servicio: "Programa de atención temprana individual",
-      sesiones: 0,
-    },
-    {
-      codigo: "PROG-TEMP-GRP",
-      servicio: "Programa de atención temprana grupal",
-      sesiones: 0,
-    },
-    {
-      codigo: "PROG-NEURO",
-      servicio: "Programa de neurorehabilitación infantil",
-      sesiones: 0,
-    },
-  ];
 
   const handleTerapeutaEvaluacionChangeA = (
     codigo: string,
@@ -422,23 +307,15 @@ export default function TerapeutaPropuestaServicioPage() {
     setSesionesTratamientoB((prev) => ({ ...prev, [codigo]: sesiones }));
   };
 
-  // Function to ensure time availability is saved in correct order (Monday to Friday)
-  const getOrderedTimeAvailability = (
-    availability: Record<string, { morning: boolean; afternoon: boolean }>
+  // Function to convert array format to object format for UI
+  const arrayToObject = (
+    array: Array<{ day: string; morning: boolean; afternoon: boolean }>
   ) => {
-    const dayOrder = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-    const orderedAvailability: Record<
-      string,
-      { morning: boolean; afternoon: boolean }
-    > = {};
-
-    dayOrder.forEach((day) => {
-      if (availability[day]) {
-        orderedAvailability[day] = availability[day];
-      }
+    const result: Record<string, { morning: boolean; afternoon: boolean }> = {};
+    array.forEach(({ day, morning, afternoon }) => {
+      result[day] = { morning, afternoon };
     });
-
-    return orderedAvailability;
+    return result;
   };
 
   const handleTimeAvailabilityChange = (
@@ -446,6 +323,7 @@ export default function TerapeutaPropuestaServicioPage() {
     period: "morning" | "afternoon",
     checked: boolean
   ) => {
+    console.log(`Changing ${day} ${period} to ${checked}`);
     setTimeAvailability((prev) => {
       const updated = {
         ...prev,
@@ -456,7 +334,8 @@ export default function TerapeutaPropuestaServicioPage() {
       };
 
       // Return the updated availability in the correct order
-      return getOrderedTimeAvailability(updated);
+      console.log("Time availability updated:", updated);
+      return updated;
     });
   };
 
@@ -494,7 +373,7 @@ export default function TerapeutaPropuestaServicioPage() {
     ).some(([codigo, selected]) => {
       const sessionCountA =
         sesionesEvaluacionA[codigo] ||
-        serviciosEvaluacionData.find((s) => s.codigo === codigo)?.sesiones ||
+        serviciosEvaluacionData.find((s) => s.code === codigo)?.sessions ||
         0;
       return selected && sessionCountA > 0;
     });
@@ -503,7 +382,7 @@ export default function TerapeutaPropuestaServicioPage() {
     ).some(([codigo, selected]) => {
       const sessionCountA =
         sesionesTratamientoA[codigo] ||
-        serviciosTratamientoData.find((s) => s.codigo === codigo)?.sesiones ||
+        serviciosTratamientoData.find((s) => s.code === codigo)?.sessions ||
         0;
       return selected && sessionCountA > 0;
     });
@@ -512,7 +391,7 @@ export default function TerapeutaPropuestaServicioPage() {
     ).some(([codigo, selected]) => {
       const sessionCountB =
         sesionesEvaluacionB[codigo] ||
-        serviciosEvaluacionData.find((s) => s.codigo === codigo)?.sesiones ||
+        serviciosEvaluacionData.find((s) => s.code === codigo)?.sessions ||
         0;
       return selected && sessionCountB > 0;
     });
@@ -521,7 +400,7 @@ export default function TerapeutaPropuestaServicioPage() {
     ).some(([codigo, selected]) => {
       const sessionCountB =
         sesionesTratamientoB[codigo] ||
-        serviciosTratamientoData.find((s) => s.codigo === codigo)?.sesiones ||
+        serviciosTratamientoData.find((s) => s.code === codigo)?.sessions ||
         0;
       return selected && sessionCountB > 0;
     });
@@ -590,18 +469,21 @@ export default function TerapeutaPropuestaServicioPage() {
     }
 
     try {
+      console.log("Sending time availability to API:", timeAvailability);
+      console.log("JSON.stringify result:", JSON.stringify(timeAvailability));
+
       const proposalData = {
         appointmentId,
         quienTomaConsulta,
         derivacion,
-        timeAvailability: getOrderedTimeAvailability(timeAvailability),
+        timeAvailability: timeAvailability,
         // Proposal A services - only include services with sessions > 0 for A
         serviciosEvaluacionA: Object.entries(serviciosEvaluacionSeleccionados)
           .filter(([codigo, selected]) => {
             const sessionCountA =
               sesionesEvaluacionA[codigo] ||
-              serviciosEvaluacionData.find((s) => s.codigo === codigo)
-                ?.sesiones ||
+              serviciosEvaluacionData.find((s) => s.code === codigo)
+                ?.sessions ||
               0;
             return selected && sessionCountA > 0;
           })
@@ -615,12 +497,12 @@ export default function TerapeutaPropuestaServicioPage() {
                 ? getTherapistDisplayName(therapist)
                 : "",
               terapeutaEspecialidad: therapist?.specialty || "",
-              servicio: serviciosEvaluacionData.find((s) => s.codigo === codigo)
-                ?.servicio,
+              servicio: serviciosEvaluacionData.find((s) => s.code === codigo)
+                ?.serviceName,
               sesiones:
                 sesionesEvaluacionA[codigo] ||
-                serviciosEvaluacionData.find((s) => s.codigo === codigo)
-                  ?.sesiones ||
+                serviciosEvaluacionData.find((s) => s.code === codigo)
+                  ?.sessions ||
                 0,
               proposalType: "A",
             };
@@ -629,8 +511,8 @@ export default function TerapeutaPropuestaServicioPage() {
           .filter(([codigo, selected]) => {
             const sessionCountA =
               sesionesTratamientoA[codigo] ||
-              serviciosTratamientoData.find((s) => s.codigo === codigo)
-                ?.sesiones ||
+              serviciosTratamientoData.find((s) => s.code === codigo)
+                ?.sessions ||
               0;
             return selected && sessionCountA > 0;
           })
@@ -644,13 +526,12 @@ export default function TerapeutaPropuestaServicioPage() {
                 ? getTherapistDisplayName(therapist)
                 : "",
               terapeutaEspecialidad: therapist?.specialty || "",
-              servicio: serviciosTratamientoData.find(
-                (s) => s.codigo === codigo
-              )?.servicio,
+              servicio: serviciosTratamientoData.find((s) => s.code === codigo)
+                ?.serviceName,
               sesiones:
                 sesionesTratamientoA[codigo] ||
-                serviciosTratamientoData.find((s) => s.codigo === codigo)
-                  ?.sesiones ||
+                serviciosTratamientoData.find((s) => s.code === codigo)
+                  ?.sessions ||
                 0,
               proposalType: "A",
             };
@@ -660,8 +541,8 @@ export default function TerapeutaPropuestaServicioPage() {
           .filter(([codigo, selected]) => {
             const sessionCountB =
               sesionesEvaluacionB[codigo] ||
-              serviciosEvaluacionData.find((s) => s.codigo === codigo)
-                ?.sesiones ||
+              serviciosEvaluacionData.find((s) => s.code === codigo)
+                ?.sessions ||
               0;
             return selected && sessionCountB > 0;
           })
@@ -675,12 +556,12 @@ export default function TerapeutaPropuestaServicioPage() {
                 ? getTherapistDisplayName(therapist)
                 : "",
               terapeutaEspecialidad: therapist?.specialty || "",
-              servicio: serviciosEvaluacionData.find((s) => s.codigo === codigo)
-                ?.servicio,
+              servicio: serviciosEvaluacionData.find((s) => s.code === codigo)
+                ?.serviceName,
               sesiones:
                 sesionesEvaluacionB[codigo] ||
-                serviciosEvaluacionData.find((s) => s.codigo === codigo)
-                  ?.sesiones ||
+                serviciosEvaluacionData.find((s) => s.code === codigo)
+                  ?.sessions ||
                 0,
               proposalType: "B",
             };
@@ -689,8 +570,8 @@ export default function TerapeutaPropuestaServicioPage() {
           .filter(([codigo, selected]) => {
             const sessionCountB =
               sesionesTratamientoB[codigo] ||
-              serviciosTratamientoData.find((s) => s.codigo === codigo)
-                ?.sesiones ||
+              serviciosTratamientoData.find((s) => s.code === codigo)
+                ?.sessions ||
               0;
             return selected && sessionCountB > 0;
           })
@@ -704,13 +585,12 @@ export default function TerapeutaPropuestaServicioPage() {
                 ? getTherapistDisplayName(therapist)
                 : "",
               terapeutaEspecialidad: therapist?.specialty || "",
-              servicio: serviciosTratamientoData.find(
-                (s) => s.codigo === codigo
-              )?.servicio,
+              servicio: serviciosTratamientoData.find((s) => s.code === codigo)
+                ?.serviceName,
               sesiones:
                 sesionesTratamientoB[codigo] ||
-                serviciosTratamientoData.find((s) => s.codigo === codigo)
-                  ?.sesiones ||
+                serviciosTratamientoData.find((s) => s.code === codigo)
+                  ?.sessions ||
                 0,
               proposalType: "B",
             };
@@ -759,16 +639,16 @@ export default function TerapeutaPropuestaServicioPage() {
     return new Date(dateString).toLocaleDateString("es-ES");
   };
 
-  if (loading) {
+  if (loading || servicesLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Cargando información del paciente...
+            Cargando información...
           </h3>
           <p className="text-gray-500">
-            Por favor espera mientras cargamos los datos de la consulta
+            Por favor espera mientras cargamos los datos necesarios
           </p>
         </div>
       </div>
@@ -947,8 +827,8 @@ export default function TerapeutaPropuestaServicioPage() {
                                 total +
                                 (sesionesEvaluacionA[codigo] ||
                                   serviciosEvaluacionData.find(
-                                    (s) => s.codigo === codigo
-                                  )?.sesiones ||
+                                    (s) => s.code === codigo
+                                  )?.sessions ||
                                   0)
                               );
                             }, 0)}
@@ -975,8 +855,8 @@ export default function TerapeutaPropuestaServicioPage() {
                                 total +
                                 (sesionesEvaluacionB[codigo] ||
                                   serviciosEvaluacionData.find(
-                                    (s) => s.codigo === codigo
-                                  )?.sesiones ||
+                                    (s) => s.code === codigo
+                                  )?.sessions ||
                                   0)
                               );
                             }, 0)}
@@ -1012,33 +892,33 @@ export default function TerapeutaPropuestaServicioPage() {
                       <tbody>
                         {serviciosEvaluacionData.map((servicio, index) => (
                           <tr
-                            key={`${servicio.codigo}-${index}`}
+                            key={`${servicio.code}-${index}`}
                             className="hover:bg-gray-50"
                           >
                             <td className="border border-gray-300 p-3 font-mono text-sm">
-                              {servicio.codigo}
+                              {servicio.code}
                             </td>
                             <td className="border border-gray-300 p-3">
-                              {servicio.servicio}
+                              {servicio.serviceName}
                             </td>
                             <td className="border border-gray-300 p-3 text-center bg-blue-50">
                               <Input
                                 type="number"
                                 min="1"
                                 value={
-                                  sesionesEvaluacionA[servicio.codigo] ||
-                                  servicio.sesiones
+                                  sesionesEvaluacionA[servicio.code] ||
+                                  servicio.sessions
                                 }
                                 onChange={(e) =>
                                   handleSesionesEvaluacionChangeA(
-                                    servicio.codigo,
+                                    servicio.code,
                                     parseInt(e.target.value) || 0
                                   )
                                 }
                                 className="w-16 text-center text-sm"
                                 disabled={
                                   !serviciosEvaluacionSeleccionados[
-                                    servicio.codigo
+                                    servicio.code
                                   ]
                                 }
                               />
@@ -1048,19 +928,19 @@ export default function TerapeutaPropuestaServicioPage() {
                                 type="number"
                                 min="1"
                                 value={
-                                  sesionesEvaluacionB[servicio.codigo] ||
-                                  servicio.sesiones
+                                  sesionesEvaluacionB[servicio.code] ||
+                                  servicio.sessions
                                 }
                                 onChange={(e) =>
                                   handleSesionesEvaluacionChangeB(
-                                    servicio.codigo,
+                                    servicio.code,
                                     parseInt(e.target.value) || 0
                                   )
                                 }
                                 className="w-16 text-center text-sm"
                                 disabled={
                                   !serviciosEvaluacionSeleccionados[
-                                    servicio.codigo
+                                    servicio.code
                                   ]
                                 }
                               />
@@ -1068,17 +948,17 @@ export default function TerapeutaPropuestaServicioPage() {
                             <td className="border border-gray-300 p-3">
                               <Select
                                 value={
-                                  terapeutasEvaluacionA[servicio.codigo] || ""
+                                  terapeutasEvaluacionA[servicio.code] || ""
                                 }
                                 onValueChange={(value) =>
                                   handleTerapeutaEvaluacionChangeA(
-                                    servicio.codigo,
+                                    servicio.code,
                                     value
                                   )
                                 }
                                 disabled={
                                   !serviciosEvaluacionSeleccionados[
-                                    servicio.codigo
+                                    servicio.code
                                   ] || therapistsLoading
                                 }
                               >
@@ -1086,9 +966,9 @@ export default function TerapeutaPropuestaServicioPage() {
                                   <SelectValue placeholder="Seleccionar terapeuta" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {getTherapistsByService(servicio.codigo)
+                                  {getTherapistsByService(servicio.code)
                                     .length > 0 ? (
-                                    getTherapistsByService(servicio.codigo).map(
+                                    getTherapistsByService(servicio.code).map(
                                       (therapist) => (
                                         <SelectItem
                                           key={therapist.id}
@@ -1112,12 +992,12 @@ export default function TerapeutaPropuestaServicioPage() {
                               <Checkbox
                                 checked={
                                   serviciosEvaluacionSeleccionados[
-                                    servicio.codigo
+                                    servicio.code
                                   ] || false
                                 }
                                 onCheckedChange={(checked) =>
                                   handleEvaluacionSelectChange(
-                                    servicio.codigo,
+                                    servicio.code,
                                     checked as boolean
                                   )
                                 }
@@ -1173,8 +1053,8 @@ export default function TerapeutaPropuestaServicioPage() {
                                 total +
                                 (sesionesTratamientoA[codigo] ||
                                   serviciosTratamientoData.find(
-                                    (s) => s.codigo === codigo
-                                  )?.sesiones ||
+                                    (s) => s.code === codigo
+                                  )?.sessions ||
                                   0)
                               );
                             }, 0)}
@@ -1201,8 +1081,8 @@ export default function TerapeutaPropuestaServicioPage() {
                                 total +
                                 (sesionesTratamientoB[codigo] ||
                                   serviciosTratamientoData.find(
-                                    (s) => s.codigo === codigo
-                                  )?.sesiones ||
+                                    (s) => s.code === codigo
+                                  )?.sessions ||
                                   0)
                               );
                             }, 0)}
@@ -1238,33 +1118,33 @@ export default function TerapeutaPropuestaServicioPage() {
                       <tbody>
                         {serviciosTratamientoData.map((servicio, index) => (
                           <tr
-                            key={`${servicio.codigo}-${index}`}
+                            key={`${servicio.code}-${index}`}
                             className="hover:bg-gray-50"
                           >
                             <td className="border border-gray-300 p-3 font-mono text-sm">
-                              {servicio.codigo}
+                              {servicio.code}
                             </td>
                             <td className="border border-gray-300 p-3">
-                              {servicio.servicio}
+                              {servicio.serviceName}
                             </td>
                             <td className="border border-gray-300 p-3 text-center bg-blue-50">
                               <Input
                                 type="number"
                                 min="1"
                                 value={
-                                  sesionesTratamientoA[servicio.codigo] ||
-                                  servicio.sesiones
+                                  sesionesTratamientoA[servicio.code] ||
+                                  servicio.sessions
                                 }
                                 onChange={(e) =>
                                   handleSesionesTratamientoChangeA(
-                                    servicio.codigo,
+                                    servicio.code,
                                     parseInt(e.target.value) || 0
                                   )
                                 }
                                 className="w-16 text-center text-sm"
                                 disabled={
                                   !serviciosTratamientoSeleccionados[
-                                    servicio.codigo
+                                    servicio.code
                                   ]
                                 }
                               />
@@ -1274,19 +1154,19 @@ export default function TerapeutaPropuestaServicioPage() {
                                 type="number"
                                 min="1"
                                 value={
-                                  sesionesTratamientoB[servicio.codigo] ||
-                                  servicio.sesiones
+                                  sesionesTratamientoB[servicio.code] ||
+                                  servicio.sessions
                                 }
                                 onChange={(e) =>
                                   handleSesionesTratamientoChangeB(
-                                    servicio.codigo,
+                                    servicio.code,
                                     parseInt(e.target.value) || 0
                                   )
                                 }
                                 className="w-16 text-center text-sm"
                                 disabled={
                                   !serviciosTratamientoSeleccionados[
-                                    servicio.codigo
+                                    servicio.code
                                   ]
                                 }
                               />
@@ -1294,17 +1174,17 @@ export default function TerapeutaPropuestaServicioPage() {
                             <td className="border border-gray-300 p-3">
                               <Select
                                 value={
-                                  terapeutasTratamientoA[servicio.codigo] || ""
+                                  terapeutasTratamientoA[servicio.code] || ""
                                 }
                                 onValueChange={(value) =>
                                   handleTerapeutaTratamientoChangeA(
-                                    servicio.codigo,
+                                    servicio.code,
                                     value
                                   )
                                 }
                                 disabled={
                                   !serviciosTratamientoSeleccionados[
-                                    servicio.codigo
+                                    servicio.code
                                   ] || therapistsLoading
                                 }
                               >
@@ -1312,9 +1192,9 @@ export default function TerapeutaPropuestaServicioPage() {
                                   <SelectValue placeholder="Seleccionar terapeuta" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {getTherapistsByService(servicio.codigo)
+                                  {getTherapistsByService(servicio.code)
                                     .length > 0 ? (
-                                    getTherapistsByService(servicio.codigo).map(
+                                    getTherapistsByService(servicio.code).map(
                                       (therapist) => (
                                         <SelectItem
                                           key={therapist.id}
@@ -1338,12 +1218,12 @@ export default function TerapeutaPropuestaServicioPage() {
                               <Checkbox
                                 checked={
                                   serviciosTratamientoSeleccionados[
-                                    servicio.codigo
+                                    servicio.code
                                   ] || false
                                 }
                                 onCheckedChange={(checked) =>
                                   handleTratamientoSelectChange(
-                                    servicio.codigo,
+                                    servicio.code,
                                     checked as boolean
                                   )
                                 }
@@ -1426,13 +1306,16 @@ export default function TerapeutaPropuestaServicioPage() {
                                 checked={
                                   timeAvailability[day.key]?.morning || false
                                 }
-                                onCheckedChange={(checked) =>
+                                onCheckedChange={(checked) => {
+                                  console.log(
+                                    `Checkbox ${day.key} morning changed to ${checked}`
+                                  );
                                   handleTimeAvailabilityChange(
                                     day.key,
                                     "morning",
                                     checked as boolean
-                                  )
-                                }
+                                  );
+                                }}
                               />
                             </td>
                             <td className="border border-gray-300 p-3 text-center">
@@ -1440,13 +1323,16 @@ export default function TerapeutaPropuestaServicioPage() {
                                 checked={
                                   timeAvailability[day.key]?.afternoon || false
                                 }
-                                onCheckedChange={(checked) =>
+                                onCheckedChange={(checked) => {
+                                  console.log(
+                                    `Checkbox ${day.key} afternoon changed to ${checked}`
+                                  );
                                   handleTimeAvailabilityChange(
                                     day.key,
                                     "afternoon",
                                     checked as boolean
-                                  )
-                                }
+                                  );
+                                }}
                               />
                             </td>
                           </tr>
@@ -1545,8 +1431,8 @@ export default function TerapeutaPropuestaServicioPage() {
                                 sum +
                                 (sesionesEvaluacionA[codigo] ||
                                   serviciosEvaluacionData.find(
-                                    (s) => s.codigo === codigo
-                                  )?.sesiones ||
+                                    (s) => s.code === codigo
+                                  )?.sessions ||
                                   0)
                               );
                             }, 0);
@@ -1559,8 +1445,8 @@ export default function TerapeutaPropuestaServicioPage() {
                                 sum +
                                 (sesionesTratamientoA[codigo] ||
                                   serviciosTratamientoData.find(
-                                    (s) => s.codigo === codigo
-                                  )?.sesiones ||
+                                    (s) => s.code === codigo
+                                  )?.sessions ||
                                   0)
                               );
                             }, 0);

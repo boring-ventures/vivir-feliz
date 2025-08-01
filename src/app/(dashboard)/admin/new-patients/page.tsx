@@ -248,40 +248,24 @@ export default function AdminNuevosPacientesPage() {
   const getSelectedProposalFromDatabase = () => {
     if (!response || !modalCitas?.id) return null;
 
-    console.log("🔍 Looking for proposal ID:", modalCitas.id);
-    console.log("🔍 Response type:", typeof response);
-    console.log("🔍 Response has data property:", "data" in response);
-    console.log("🔍 Response is array:", Array.isArray(response));
-
     // If response has 'data' property, it's the transformed format
     if ("data" in response && Array.isArray(response.data)) {
-      console.log(
-        "🔍 Searching in transformed data, total proposals:",
-        response.data.length
-      );
       const proposal = response.data.find(
         (p: TreatmentProposalWithRelations) => p.id === modalCitas.id
       );
-      console.log("🔍 Found proposal in transformed data:", proposal);
-      console.log("🔍 Proposal selectedProposal:", proposal?.selectedProposal);
+
       return proposal?.selectedProposal || null;
     }
 
     // If response is an array, it's the raw format
     if (Array.isArray(response)) {
-      console.log(
-        "🔍 Searching in raw data, total proposals:",
-        response.length
-      );
       const proposal = response.find(
         (p: TreatmentProposalWithRelations) => p.id === modalCitas.id
       );
-      console.log("🔍 Found proposal in raw data:", proposal);
-      console.log("🔍 Proposal selectedProposal:", proposal?.selectedProposal);
+
       return proposal?.selectedProposal || null;
     }
 
-    console.log("🔍 No matching response format found");
     return null;
   };
 
@@ -293,19 +277,9 @@ export default function AdminNuevosPacientesPage() {
       (service) => service.proposalType === databaseSelectedProposal
     ) || [];
 
-  // Debug logging
-  console.log("🔍 Database selected proposal:", databaseSelectedProposal);
-  console.log("🔍 Modal citas ID:", modalCitas?.id);
-  console.log("🔍 Response data:", response);
-  console.log(
-    "🔍 Response data keys:",
-    response ? Object.keys(response) : "No response"
-  );
   if (response && "data" in response) {
     console.log("🔍 First proposal in data:", response.data[0]);
   }
-  console.log("🔍 All proposal services:", allProposalServices);
-  console.log("🔍 Filtered proposal services:", proposalServices);
 
   // Add therapist appointments fetching
   const currentService = proposalServices?.[currentServiceIndex];
@@ -415,25 +389,6 @@ export default function AdminNuevosPacientesPage() {
       return;
     }
 
-    // Add debugging to see what's being sent
-    console.log("📤 Sending appointment data:", {
-      proposalId: pacienteId,
-      serviceAppointments: citasSeleccionadasPorServicio,
-    });
-
-    // Log each service's appointments
-    Object.entries(citasSeleccionadasPorServicio).forEach(
-      ([serviceId, appointments]) => {
-        console.log(`Service ${serviceId}:`, appointments);
-        appointments.forEach((appointment, index) => {
-          const [dateStr, timeStr] = appointment.split("-");
-          console.log(
-            `  Appointment ${index + 1}: date="${dateStr}", time="${timeStr}"`
-          );
-        });
-      }
-    );
-
     try {
       await scheduleAppointments.mutateAsync({
         proposalId: pacienteId,
@@ -524,15 +479,6 @@ export default function AdminNuevosPacientesPage() {
     if (!currentService) return;
 
     const fechaHora = `${formatearFecha(fecha)}-${hora}`;
-
-    // Add debugging
-    console.log("🔄 Toggle cita:", {
-      fecha: fecha.toISOString(),
-      hora,
-      fechaHora,
-      serviceId: currentService.id,
-      serviceName: currentService.service,
-    });
 
     setCitasSeleccionadasPorServicio((prev) => {
       const serviceAppointments = prev[currentService.id] || [];
@@ -715,10 +661,6 @@ export default function AdminNuevosPacientesPage() {
         (p: TreatmentProposalWithRelations) => p.id === proposalId
       );
     }
-
-    console.log("🔍 Looking for proposal:", proposalId);
-    console.log("🔍 Raw proposal found:", rawProposal);
-    console.log("🔍 Payment plan data:", rawProposal?.paymentPlan);
 
     if (!rawProposal?.paymentPlan) {
       console.log("❌ No payment plan found for proposal:", proposalId);
@@ -1114,29 +1056,6 @@ export default function AdminNuevosPacientesPage() {
                               6 cuotas mensuales
                             </div>
                           </button>
-
-                          <button
-                            onClick={() => {
-                              setSelectedProposal("A");
-                              setSelectedPaymentPlan("bimonthly");
-                            }}
-                            className={`w-full text-left p-3 rounded-md border transition-colors ${
-                              selectedProposal === "A" &&
-                              selectedPaymentPlan === "bimonthly"
-                                ? "bg-blue-100 border-blue-300"
-                                : "bg-white border-gray-200 hover:bg-blue-50"
-                            }`}
-                          >
-                            <div className="font-medium">Pago Bimestral</div>
-                            <div className="text-lg font-bold text-blue-900">
-                              {formatPaymentAmount(
-                                paymentPlans.A?.bimonthly || 0
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              3 cuotas bimestrales
-                            </div>
-                          </button>
                         </div>
                       </div>
 
@@ -1187,29 +1106,6 @@ export default function AdminNuevosPacientesPage() {
                             </div>
                             <div className="text-xs text-gray-600">
                               6 cuotas mensuales
-                            </div>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setSelectedProposal("B");
-                              setSelectedPaymentPlan("bimonthly");
-                            }}
-                            className={`w-full text-left p-3 rounded-md border transition-colors ${
-                              selectedProposal === "B" &&
-                              selectedPaymentPlan === "bimonthly"
-                                ? "bg-green-100 border-green-300"
-                                : "bg-white border-gray-200 hover:bg-green-50"
-                            }`}
-                          >
-                            <div className="font-medium">Pago Bimestral</div>
-                            <div className="text-lg font-bold text-green-900">
-                              {formatPaymentAmount(
-                                paymentPlans.B?.bimonthly || 0
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              3 cuotas bimestrales
                             </div>
                           </button>
                         </div>
@@ -1338,44 +1234,79 @@ export default function AdminNuevosPacientesPage() {
                       Disponibilidad del Paciente
                     </h4>
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      {Object.entries(modalCitas.timeAvailability).map(
-                        ([day, availability]) => (
-                          <div
-                            key={day}
-                            className="flex justify-between items-center"
-                          >
-                            <span className="capitalize font-medium">
-                              {day === "monday" && "Lunes"}
-                              {day === "tuesday" && "Martes"}
-                              {day === "wednesday" && "Miércoles"}
-                              {day === "thursday" && "Jueves"}
-                              {day === "friday" && "Viernes"}
-                              {day === "saturday" && "Sábado"}
-                              {day === "sunday" && "Domingo"}
-                            </span>
-                            <div className="flex gap-1">
-                              <Badge
-                                variant={
-                                  availability.morning ? "default" : "secondary"
-                                }
-                                className="text-xs px-1 py-0.5"
-                              >
-                                Mañana
-                              </Badge>
-                              <Badge
-                                variant={
-                                  availability.afternoon
-                                    ? "default"
-                                    : "secondary"
-                                }
-                                className="text-xs px-1 py-0.5"
-                              >
-                                Tarde
-                              </Badge>
+                      {(() => {
+                        // Handle both array format (new) and object format (old)
+                        let timeAvailabilityData = modalCitas.timeAvailability;
+
+                        // If it's an array, convert to object format for display
+                        if (Array.isArray(timeAvailabilityData)) {
+                          const objectFormat: Record<
+                            string,
+                            { morning: boolean; afternoon: boolean }
+                          > = {};
+                          timeAvailabilityData.forEach(
+                            ({ day, morning, afternoon }) => {
+                              objectFormat[day] = { morning, afternoon };
+                            }
+                          );
+                          timeAvailabilityData = objectFormat;
+                        }
+
+                        // Define the correct order for days
+                        const dayOrder = [
+                          "monday",
+                          "tuesday",
+                          "wednesday",
+                          "thursday",
+                          "friday",
+                        ];
+
+                        return dayOrder.map((day) => {
+                          const availability = timeAvailabilityData[day];
+                          if (!availability) return null;
+
+                          const dayLabels = {
+                            monday: "Lunes",
+                            tuesday: "Martes",
+                            wednesday: "Miércoles",
+                            thursday: "Jueves",
+                            friday: "Viernes",
+                          };
+
+                          return (
+                            <div
+                              key={day}
+                              className="flex justify-between items-center"
+                            >
+                              <span className="capitalize font-medium">
+                                {dayLabels[day as keyof typeof dayLabels]}
+                              </span>
+                              <div className="flex gap-1">
+                                <Badge
+                                  variant={
+                                    availability.morning
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                  className="text-xs px-1 py-0.5"
+                                >
+                                  Mañana
+                                </Badge>
+                                <Badge
+                                  variant={
+                                    availability.afternoon
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                  className="text-xs px-1 py-0.5"
+                                >
+                                  Tarde
+                                </Badge>
+                              </div>
                             </div>
-                          </div>
-                        )
-                      )}
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 )}

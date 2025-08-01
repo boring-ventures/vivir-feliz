@@ -333,7 +333,44 @@ export function useProposalsDisplayData(
         const year = date.getFullYear();
         return `${day}/${month}/${year}`;
       })(),
-      totalAmount: `Bs. ${Number(proposal.totalAmount).toLocaleString()}`,
+      totalAmount: (() => {
+        if (!proposal.totalAmount) return "Bs. 0";
+
+        // Handle JSON structure for dual proposals
+        if (
+          typeof proposal.totalAmount === "object" &&
+          proposal.totalAmount !== null
+        ) {
+          const totalAmountObj = proposal.totalAmount as {
+            A?: number;
+            B?: number;
+          };
+
+          if (proposal.selectedProposal === "A") {
+            return `Bs. ${(totalAmountObj.A || 0).toLocaleString()}`;
+          } else if (proposal.selectedProposal === "B") {
+            return `Bs. ${(totalAmountObj.B || 0).toLocaleString()}`;
+          } else {
+            // If no proposal selected, show both amounts
+            const amountA = totalAmountObj.A || 0;
+            const amountB = totalAmountObj.B || 0;
+
+            if (amountA > 0 && amountB > 0) {
+              return `A: Bs. ${amountA.toLocaleString()} | B: Bs. ${amountB.toLocaleString()}`;
+            } else if (amountA > 0) {
+              return `Bs. ${amountA.toLocaleString()}`;
+            } else if (amountB > 0) {
+              return `Bs. ${amountB.toLocaleString()}`;
+            } else {
+              return "Bs. 0";
+            }
+          }
+        }
+
+        // Handle legacy number format
+        const amount = Number(proposal.totalAmount) || 0;
+        return `Bs. ${amount.toLocaleString()}`;
+      })(),
       status: proposal.status,
       statusDisplay: PROPOSAL_STATUS_LABELS[proposal.status],
       statusColor: PROPOSAL_STATUS_COLORS[proposal.status],

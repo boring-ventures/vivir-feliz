@@ -65,7 +65,9 @@ interface Appointment {
   sessionNotes?: string;
   originalDate?: string; // For rescheduled appointments
   isRescheduled?: boolean; // Flag to indicate if appointment was rescheduled
+  patientId?: string; // Patient ID for fetching patient appointments
   patient?: {
+    id: string;
     firstName: string;
     lastName: string;
     dateOfBirth?: string;

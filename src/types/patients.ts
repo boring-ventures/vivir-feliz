@@ -216,7 +216,9 @@ export interface ProposalDisplayData {
   appointmentsScheduled: boolean;
   canConfirmPayment: boolean;
   canScheduleAppointments: boolean;
-  timeAvailability?: Record<string, { morning: boolean; afternoon: boolean }>;
+  timeAvailability?:
+    | Record<string, { morning: boolean; afternoon: boolean }>
+    | Array<{ day: string; morning: boolean; afternoon: boolean }>;
   selectedProposal?: string;
 }
 
@@ -285,6 +287,11 @@ export const SPECIALTY_LABELS: Record<SpecialtyType, string> = {
   ASD_THERAPIST: "Especialista TEA",
   NEUROPSYCHOLOGIST: "Neuropsicología",
   COORDINATOR: "Coordinación",
+  PSYCHOMOTRICIAN: "Psicomotricista",
+  PEDIATRIC_KINESIOLOGIST: "Kinesiólogo Infantil",
+  PSYCHOLOGIST: "Psicólogo",
+  COORDINATION_ASSISTANT: "Asistente de Coordinación",
+  BEHAVIORAL_THERAPIST: "Terapeuta Conductual",
 };
 
 // Patient types for therapist views

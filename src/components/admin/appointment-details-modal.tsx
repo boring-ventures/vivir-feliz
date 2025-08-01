@@ -68,7 +68,9 @@ interface Appointment {
   };
   proposal?: {
     id: string;
-    timeAvailability?: Record<string, { morning: boolean; afternoon: boolean }>;
+    timeAvailability?:
+      | Record<string, { morning: boolean; afternoon: boolean }>
+      | Array<{ day: string; morning: boolean; afternoon: boolean }>;
     title?: string;
     description?: string;
     status?: string;
@@ -204,6 +206,16 @@ export function AppointmentDetailsModal({
         return "Neuropsicólogo";
       case "COORDINATOR":
         return "Coordinador";
+      case "PSYCHOMOTRICIAN":
+        return "Psicomotricista";
+      case "PEDIATRIC_KINESIOLOGIST":
+        return "Kinesiólogo Infantil";
+      case "PSYCHOLOGIST":
+        return "Psicólogo";
+      case "COORDINATION_ASSISTANT":
+        return "Asistente de Coordinación";
+      case "BEHAVIORAL_THERAPIST":
+        return "Terapeuta Conductual";
       default:
         return specialty;
     }
@@ -306,6 +318,24 @@ export function AppointmentDetailsModal({
                   </div>
                   <div className="text-sm text-blue-700">
                     {(() => {
+                      // Handle both array format (new) and object format (old)
+                      let timeAvailabilityData =
+                        appointment.proposal?.timeAvailability;
+
+                      // If it's an array, convert to object format for processing
+                      if (Array.isArray(timeAvailabilityData)) {
+                        const objectFormat: Record<
+                          string,
+                          { morning: boolean; afternoon: boolean }
+                        > = {};
+                        timeAvailabilityData.forEach(
+                          ({ day, morning, afternoon }) => {
+                            objectFormat[day] = { morning, afternoon };
+                          }
+                        );
+                        timeAvailabilityData = objectFormat;
+                      }
+
                       const dayOrder = [
                         "monday",
                         "tuesday",
@@ -314,10 +344,7 @@ export function AppointmentDetailsModal({
                         "friday",
                       ];
                       const orderedEntries = dayOrder
-                        .map((day) => [
-                          day,
-                          appointment.proposal?.timeAvailability?.[day],
-                        ])
+                        .map((day) => [day, timeAvailabilityData?.[day]])
                         .filter((entry) => {
                           const [, periods] = entry;
                           return (
@@ -534,6 +561,24 @@ export function AppointmentDetailsModal({
                   </div>
                   <div className="text-sm text-purple-700">
                     {(() => {
+                      // Handle both array format (new) and object format (old)
+                      let timeAvailabilityData =
+                        appointment.proposal?.timeAvailability;
+
+                      // If it's an array, convert to object format for processing
+                      if (Array.isArray(timeAvailabilityData)) {
+                        const objectFormat: Record<
+                          string,
+                          { morning: boolean; afternoon: boolean }
+                        > = {};
+                        timeAvailabilityData.forEach(
+                          ({ day, morning, afternoon }) => {
+                            objectFormat[day] = { morning, afternoon };
+                          }
+                        );
+                        timeAvailabilityData = objectFormat;
+                      }
+
                       const dayOrder = [
                         "monday",
                         "tuesday",
@@ -542,10 +587,7 @@ export function AppointmentDetailsModal({
                         "friday",
                       ];
                       const orderedEntries = dayOrder
-                        .map((day) => [
-                          day,
-                          appointment.proposal?.timeAvailability?.[day],
-                        ])
+                        .map((day) => [day, timeAvailabilityData?.[day]])
                         .filter(
                           ([, periods]) =>
                             periods &&
@@ -623,6 +665,24 @@ export function AppointmentDetailsModal({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(() => {
+                  // Handle both array format (new) and object format (old)
+                  let timeAvailabilityData =
+                    appointment.proposal?.timeAvailability;
+
+                  // If it's an array, convert to object format for processing
+                  if (Array.isArray(timeAvailabilityData)) {
+                    const objectFormat: Record<
+                      string,
+                      { morning: boolean; afternoon: boolean }
+                    > = {};
+                    timeAvailabilityData.forEach(
+                      ({ day, morning, afternoon }) => {
+                        objectFormat[day] = { morning, afternoon };
+                      }
+                    );
+                    timeAvailabilityData = objectFormat;
+                  }
+
                   const dayOrder = [
                     "monday",
                     "tuesday",
@@ -631,10 +691,7 @@ export function AppointmentDetailsModal({
                     "friday",
                   ];
                   const orderedEntries = dayOrder
-                    .map((day) => [
-                      day,
-                      appointment.proposal?.timeAvailability?.[day],
-                    ])
+                    .map((day) => [day, timeAvailabilityData?.[day]])
                     .filter((entry) => {
                       const [, periods] = entry;
                       return (

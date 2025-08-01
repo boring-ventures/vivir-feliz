@@ -32,7 +32,7 @@ const createUserSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email"),
   phone: z.string().min(1, "Phone is required"),
-  role: z.enum(["ADMIN", "THERAPIST", "PARENT"]),
+  role: z.enum(["SUPER_ADMIN", "ADMIN", "THERAPIST", "PARENT"]),
   nationalId: z.string().optional(),
   address: z.string().optional(),
   dateOfBirth: z.string().optional(),
@@ -66,12 +66,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Check if user is admin
+    // Check if user is admin or super admin
     const currentUserProfile = await prisma.profile.findUnique({
       where: { userId: session.user.id },
     });
 
-    if (currentUserProfile?.role !== "ADMIN") {
+    if (
+      currentUserProfile?.role !== "ADMIN" &&
+      currentUserProfile?.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -84,7 +87,7 @@ export async function GET(request: NextRequest) {
     // Build where clause - exclude current admin user
     const whereClause: {
       userId: { not: string };
-      role?: "ADMIN" | "THERAPIST" | "PARENT";
+      role?: "SUPER_ADMIN" | "ADMIN" | "THERAPIST" | "PARENT";
       OR?: Array<{
         firstName?: { contains: string; mode: "insensitive" };
         lastName?: { contains: string; mode: "insensitive" };
@@ -178,12 +181,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Check if user is admin
+    // Check if user is admin or super admin
     const currentUserProfile = await prisma.profile.findUnique({
       where: { userId: session.user.id },
     });
 
-    if (currentUserProfile?.role !== "ADMIN") {
+    if (
+      currentUserProfile?.role !== "ADMIN" &&
+      currentUserProfile?.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

@@ -24,7 +24,11 @@ export async function GET(request: NextRequest) {
       where: { userId: session.user.id },
     });
 
-    if (currentUserProfile?.role !== "ADMIN") {
+    if (
+      currentUserProfile?.role !== "ADMIN" &&
+      currentUserProfile?.role !== "SUPER_ADMIN"
+    ) {
+      console.log(currentUserProfile?.role);
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -72,12 +76,14 @@ export async function GET(request: NextRequest) {
       include: {
         patient: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
           },
         },
         therapist: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
           },
@@ -99,11 +105,13 @@ export async function GET(request: NextRequest) {
             ?.toISOString()
             .split("T")[0],
           isRescheduled: true,
+          patientId: appointment.patientId,
         };
       }
       return {
         ...appointment,
         isRescheduled: false,
+        patientId: appointment.patientId,
       };
     });
 

@@ -29,7 +29,11 @@ export async function GET(
       where: { userId: currentUser.id },
     });
 
-    if (userId !== currentUser.id && userProfile?.role !== "ADMIN") {
+    if (
+      userId !== currentUser.id &&
+      userProfile?.role !== "ADMIN" &&
+      userProfile?.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json(
         { error: "Unauthorized to view this profile" },
         { status: 403 }
@@ -80,7 +84,11 @@ export async function PATCH(
       where: { userId: currentUser.id },
     });
 
-    if (userId !== currentUser.id && userProfile?.role !== "ADMIN") {
+    if (
+      userId !== currentUser.id &&
+      userProfile?.role !== "ADMIN" &&
+      userProfile?.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json(
         { error: "Unauthorized to update this profile" },
         { status: 403 }

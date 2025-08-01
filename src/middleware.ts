@@ -5,6 +5,8 @@ import type { NextRequest } from "next/server";
 // Helper function to get correct dashboard path for role
 function getRoleDashboardPath(role: string): string {
   switch (role) {
+    case "SUPER_ADMIN":
+      return "/super-admin/dashboard";
     case "ADMIN":
       return "/admin/dashboard";
     case "THERAPIST":
@@ -27,6 +29,10 @@ function isCorrectRoleForPath(role: string, pathname: string): boolean {
   }
 
   // Check role-specific paths
+  if (role === "SUPER_ADMIN" && pathname.startsWith("/super-admin/")) {
+    return true;
+  }
+
   if (role === "ADMIN" && pathname.startsWith("/admin/")) {
     return true;
   }

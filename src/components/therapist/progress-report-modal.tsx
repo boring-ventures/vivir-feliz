@@ -55,6 +55,26 @@ interface ProgressReportModalProps {
       frequency?: string;
     }[];
   };
+  existingReportData?: {
+    id: string;
+    patientId: string;
+    therapistId: string;
+    patientName: string;
+    patientDateOfBirth: string;
+    patientAge: string;
+    school?: string | null;
+    grade?: string | null;
+    reportDate: string;
+    treatmentArea: string;
+    diagnoses?: unknown;
+    generalObjective?: string | null;
+    specificObjectives?: unknown;
+    indicators?: unknown;
+    progressEntries?: unknown;
+    recommendations?: unknown;
+    createdAt: string;
+    updatedAt: string;
+  };
 }
 
 interface FormData {
@@ -82,6 +102,7 @@ export function ProgressReportModal({
   onClose,
   patientId,
   patientData,
+  existingReportData,
 }: ProgressReportModalProps) {
   const {
     progressReports,
@@ -110,32 +131,69 @@ export function ProgressReportModal({
     recommendations: [],
   });
 
-  // Helper function to map indicators from database format to display format
-  const mapIndicatorsFromDB = useCallback(
-    (
-      indicators: Array<{ indicator: string; status: string }> | undefined
-    ): Array<{
-      indicator: string;
-      status: string;
-      previousStatus?: string;
-    }> => {
-      if (!indicators || !Array.isArray(indicators)) return [];
+  // Helper function to get the initial indicators from therapeutic plan
+  const getInitialIndicators = useCallback(() => {
+    if (existingPlan?.indicators && Array.isArray(existingPlan.indicators)) {
+      return existingPlan.indicators;
+    }
+    return [];
+  }, [existingPlan]);
 
-      return indicators.map((indicator) => {
-        const currentStatus = mapStatusToDisplay(
-          indicator.status || "not_achieved"
-        );
-        return {
-          indicator: indicator.indicator || "",
-          status: currentStatus,
-          // Set previousStatus to the original status from database
-          // This preserves the original value as the "previous" status
-          previousStatus: currentStatus,
-        };
-      });
-    },
-    []
-  );
+  // Helper function to get the current indicators from latest progress report
+  const getCurrentIndicators = useCallback(() => {
+    if (
+      latestProgressReport?.indicators &&
+      Array.isArray(latestProgressReport.indicators)
+    ) {
+      return latestProgressReport.indicators;
+    }
+    // Fallback to existing report data if no latest progress report
+    if (
+      existingReportData?.indicators &&
+      Array.isArray(existingReportData.indicators)
+    ) {
+      return existingReportData.indicators;
+    }
+    return [];
+  }, [latestProgressReport, existingReportData]);
+
+  // Helper function to combine initial and current indicators with proper status mapping
+  const mapCombinedIndicators = useCallback(() => {
+    const initialIndicators = getInitialIndicators();
+    const currentIndicators = getCurrentIndicators();
+
+    // Create a map of indicators by name for easy lookup
+    const initialMap = new Map();
+    initialIndicators.forEach((ind) => {
+      initialMap.set(ind.indicator, ind.status);
+    });
+
+    const currentMap = new Map();
+    currentIndicators.forEach((ind) => {
+      currentMap.set(ind.indicator, ind.status);
+    });
+
+    // Combine all unique indicators
+    const allIndicators = new Set([
+      ...initialIndicators.map((ind) => ind.indicator),
+      ...currentIndicators.map((ind) => ind.indicator),
+    ]);
+
+    return Array.from(allIndicators).map((indicatorName) => {
+      const initialStatus = initialMap.get(indicatorName);
+      const currentStatus = currentMap.get(indicatorName);
+
+      return {
+        indicator: indicatorName,
+        status: mapStatusToDisplay(
+          currentStatus || initialStatus || "not_achieved"
+        ),
+        previousStatus: initialStatus
+          ? mapStatusToDisplay(initialStatus)
+          : undefined,
+      };
+    });
+  }, [getInitialIndicators, getCurrentIndicators]);
 
   // Pre-populate form with patient data and load existing therapeutic plan
   useEffect(() => {
@@ -170,7 +228,7 @@ export function ProgressReportModal({
         "";
 
       // If there's an existing progress report, load it
-      if (latestProgressReport) {
+      if (existingReportData) {
         // Format dates for HTML date inputs
         const formatDateForInput = (dateString: string) => {
           if (!dateString) return "";
@@ -179,21 +237,31 @@ export function ProgressReportModal({
         };
 
         setFormData({
-          patientName: latestProgressReport.patientName,
+          patientName: existingReportData.patientName,
           patientDateOfBirth: formatDateForInput(
-            latestProgressReport.patientDateOfBirth
+            existingReportData.patientDateOfBirth
           ),
-          patientAge: latestProgressReport.patientAge,
-          school: latestProgressReport.school || "",
-          grade: latestProgressReport.grade || "",
-          reportDate: formatDateForInput(latestProgressReport.reportDate),
-          treatmentArea: latestProgressReport.treatmentArea,
-          diagnoses: latestProgressReport.diagnoses || [],
-          generalObjective: latestProgressReport.generalObjective || "",
-          specificObjectives: latestProgressReport.specificObjectives || [],
-          indicators: mapIndicatorsFromDB(latestProgressReport.indicators),
-          progressEntries: latestProgressReport.progressEntries || [],
-          recommendations: latestProgressReport.recommendations || [],
+          patientAge: existingReportData.patientAge,
+          school: existingReportData.school || "",
+          grade: existingReportData.grade || "",
+          reportDate: formatDateForInput(existingReportData.reportDate),
+          treatmentArea: existingReportData.treatmentArea,
+          diagnoses: Array.isArray(existingReportData.diagnoses)
+            ? (existingReportData.diagnoses as string[])
+            : [],
+          generalObjective: existingReportData.generalObjective || "",
+          specificObjectives: Array.isArray(
+            existingReportData.specificObjectives
+          )
+            ? (existingReportData.specificObjectives as string[])
+            : [],
+          indicators: mapCombinedIndicators(),
+          progressEntries: Array.isArray(existingReportData.progressEntries)
+            ? (existingReportData.progressEntries as string[])
+            : [],
+          recommendations: Array.isArray(existingReportData.recommendations)
+            ? (existingReportData.recommendations as string[])
+            : [],
         });
       } else if (existingPlan) {
         // Load data from existing therapeutic plan
@@ -216,12 +284,7 @@ export function ProgressReportModal({
           specificObjectives: Array.isArray(existingPlan.specificObjectives)
             ? existingPlan.specificObjectives
             : [],
-          indicators: mapIndicatorsFromDB(
-            existingPlan.indicators as Array<{
-              indicator: string;
-              status: string;
-            }>
-          ),
+          indicators: mapCombinedIndicators(),
           progressEntries: [],
           recommendations: [],
         });
@@ -251,11 +314,12 @@ export function ProgressReportModal({
   }, [
     patientData,
     existingPlan,
-    latestProgressReport,
+    existingReportData,
     progressReports,
+    latestProgressReport,
     isLoading,
     isOpen,
-    mapIndicatorsFromDB,
+    mapCombinedIndicators,
   ]);
 
   // Helper function to map database status values to Spanish display values
@@ -290,58 +354,19 @@ export function ProgressReportModal({
     }
   };
 
-  // Helper functions for managing arrays (commented out as they're not currently used)
-  // const addDiagnosis = () => {
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     diagnoses: [...prev.diagnoses, ""],
-  //   }));
-  // };
-
-  // const updateDiagnosis = (index: number, value: string) => {
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     diagnoses: prev.diagnoses.map((item, i) => (i === index ? value : item)),
-  //   }));
-  // };
-
-  // const removeDiagnosis = (index: number) => {
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     diagnoses: prev.diagnoses.filter((_, i) => i !== index),
-  //   }));
-  // };
-
-  // const addSpecificObjective = () => {
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     specificObjectives: [...prev.specificObjectives, ""],
-  //   }));
-  // };
-
-  // const updateSpecificObjective = (index: number, value: string) => {
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     specificObjectives: prev.specificObjectives.map((item, i) =>
-  //       i === index ? value : item
-  //     ),
-  //   }));
-  // };
-
-  // const removeSpecificObjective = (index: number) => {
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     specificObjectives: prev.specificObjectives.filter((_, i) => i !== index),
-  //   }));
-  // };
-
-  const addIndicator = () => {
+  const updateDiagnosis = (index: number, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      indicators: [
-        ...prev.indicators,
-        { indicator: "", status: "No logra", previousStatus: undefined },
-      ],
+      diagnoses: prev.diagnoses.map((item, i) => (i === index ? value : item)),
+    }));
+  };
+
+  const updateSpecificObjective = (index: number, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      specificObjectives: prev.specificObjectives.map((item, i) =>
+        i === index ? value : item
+      ),
     }));
   };
 
@@ -362,13 +387,6 @@ export function ProgressReportModal({
             }
           : item
       ),
-    }));
-  };
-
-  const removeIndicator = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      indicators: prev.indicators.filter((_, i) => i !== index),
     }));
   };
 
@@ -433,10 +451,10 @@ export function ProgressReportModal({
         indicators: mappedIndicators,
       };
 
-      if (latestProgressReport) {
+      if (existingReportData) {
         // Update existing progress report
         updateProgressReport({
-          id: latestProgressReport.id,
+          id: existingReportData.id,
           patientId,
           ...dataToSubmit,
         });
@@ -599,17 +617,16 @@ export function ProgressReportModal({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Diagnósticos/Dificultades Iniciales</Label>
-                <span className="text-sm text-gray-500 italic">
-                  (Solo lectura)
-                </span>
               </div>
               {formData.diagnoses.map((diagnosis, index) => (
                 <div key={index} className="flex gap-2">
                   <Textarea
                     value={diagnosis}
-                    disabled
+                    onChange={(e) => updateDiagnosis(index, e.target.value)}
                     placeholder="Descripción del diagnóstico..."
-                    className="flex-1 bg-gray-50 cursor-not-allowed"
+                    className="flex-1"
+                    rows={2}
+                    disabled
                   />
                 </div>
               ))}
@@ -626,10 +643,15 @@ export function ProgressReportModal({
               <Textarea
                 id="generalObjective"
                 value={formData.generalObjective}
-                disabled
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    generalObjective: e.target.value,
+                  }))
+                }
                 placeholder="Objetivo general del tratamiento..."
                 rows={3}
-                className="bg-gray-50 cursor-not-allowed"
+                disabled
               />
             </div>
 
@@ -637,17 +659,18 @@ export function ProgressReportModal({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Objetivos Específicos</Label>
-                <span className="text-sm text-gray-500 italic">
-                  (Solo lectura)
-                </span>
               </div>
               {formData.specificObjectives.map((objective, index) => (
                 <div key={index} className="flex gap-2">
                   <Textarea
                     value={objective}
-                    disabled
+                    onChange={(e) =>
+                      updateSpecificObjective(index, e.target.value)
+                    }
                     placeholder="Objetivo específico..."
-                    className="flex-1 bg-gray-50 cursor-not-allowed"
+                    className="flex-1"
+                    rows={2}
+                    disabled
                   />
                 </div>
               ))}
@@ -665,15 +688,6 @@ export function ProgressReportModal({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Indicadores de Progreso</Label>
-                <Button
-                  type="button"
-                  onClick={addIndicator}
-                  size="sm"
-                  variant="outline"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar Indicador
-                </Button>
               </div>
               {formData.indicators.map((indicator, index) => (
                 <div key={index} className="space-y-2 p-4 border rounded-lg">
@@ -685,16 +699,8 @@ export function ProgressReportModal({
                       }
                       placeholder="Descripción del indicador..."
                       className="flex-1"
+                      disabled
                     />
-                    <Button
-                      type="button"
-                      onClick={() => removeIndicator(index)}
-                      size="sm"
-                      variant="outline"
-                      className="shrink-0"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
                   </div>
                   <div className="space-y-3">
                     <Label>Estado de Progreso</Label>
@@ -750,7 +756,7 @@ export function ProgressReportModal({
 
                               {isPrevious && (
                                 <div className="text-xs mt-1 text-gray-500">
-                                  Registro previo
+                                  (Estado inicial)
                                 </div>
                               )}
                             </button>
