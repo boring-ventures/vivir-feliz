@@ -1150,12 +1150,12 @@ export default function TherapistAnalysisDetailPage() {
                       }
 
                       const developmentAreas = [
-                        "comunicacionYLenguaje",
-                        "habilidadesGruesas",
-                        "habilidadesFinas",
-                        "atencionYAprendizaje",
-                        "relacionConOtros",
-                        "autonomiaYAdaptacion",
+                        "communicationAndLanguage",
+                        "grossMotorSkills",
+                        "fineMotorSkills",
+                        "attentionAndLearning",
+                        "socialRelations",
+                        "autonomyAndAdaptation",
                       ];
 
                       const evaluatedAreas = developmentAreas.filter(

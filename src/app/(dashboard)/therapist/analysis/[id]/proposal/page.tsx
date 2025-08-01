@@ -31,6 +31,8 @@ import { toast } from "@/components/ui/use-toast";
 import { useMedicalFormAnalysis } from "@/hooks/use-medical-form-analysis";
 import { useTherapists, getTherapistDisplayName } from "@/hooks/useTherapists";
 import { useServices } from "@/hooks/useServices";
+import { useExistingProposal } from "@/hooks/use-existing-proposal";
+import { useEffect } from "react";
 
 export default function TerapeutaPropuestaServicioPage() {
   const params = useParams();
@@ -46,6 +48,10 @@ export default function TerapeutaPropuestaServicioPage() {
 
   // Fetch services from database
   const { data: allServices = [], isLoading: servicesLoading } = useServices();
+
+  // Fetch existing proposal data
+  const { data: existingProposalData, isLoading: existingProposalLoading } =
+    useExistingProposal(appointmentId);
 
   const [quienTomaConsulta, setQuienTomaConsulta] = useState("");
   const [derivacion, setDerivacion] = useState("");
@@ -98,6 +104,11 @@ export default function TerapeutaPropuestaServicioPage() {
     thursday: { morning: false, afternoon: false },
     friday: { morning: false, afternoon: false },
   });
+
+  // Debug: Log time availability state changes
+  useEffect(() => {
+    console.log("Time availability state changed:", timeAvailability);
+  }, [timeAvailability]);
 
   // Collapsible states
   const [evaluacionOpen, setEvaluacionOpen] = useState(false);
@@ -152,6 +163,82 @@ export default function TerapeutaPropuestaServicioPage() {
   // Load all therapists (we'll filter by specialty in the component)
   const { data: allTherapists = [], isLoading: therapistsLoading } =
     useTherapists();
+
+  // Load existing proposal data when available
+  useEffect(() => {
+    if (existingProposalData) {
+      console.log("Loading existing proposal data:", existingProposalData);
+      setQuienTomaConsulta(existingProposalData.quienTomaConsulta);
+      setDerivacion(existingProposalData.derivacion);
+      console.log(
+        "Setting time availability:",
+        existingProposalData.timeAvailability
+      );
+      // Convert array format to object format if needed
+      const timeAvailabilityData = Array.isArray(
+        existingProposalData.timeAvailability
+      )
+        ? arrayToObject(existingProposalData.timeAvailability)
+        : existingProposalData.timeAvailability;
+      setTimeAvailability(timeAvailabilityData);
+      console.log(
+        "Time availability state after setting:",
+        timeAvailabilityData
+      );
+
+      // Load evaluation services for Proposal A
+      const evaluacionA: Record<string, boolean> = {};
+      const terapeutasEvaluacionA: Record<string, string> = {};
+      const sesionesEvaluacionA: Record<string, number> = {};
+
+      existingProposalData.serviciosEvaluacionA.forEach((service) => {
+        evaluacionA[service.codigo] = true;
+        terapeutasEvaluacionA[service.codigo] = service.terapeutaId;
+        sesionesEvaluacionA[service.codigo] = service.sesiones;
+      });
+
+      setServiciosEvaluacionSeleccionados(evaluacionA);
+      setTerapeutasEvaluacionA(terapeutasEvaluacionA);
+      setSesionesEvaluacionA(sesionesEvaluacionA);
+
+      // Load treatment services for Proposal A
+      const tratamientoA: Record<string, boolean> = {};
+      const terapeutasTratamientoA: Record<string, string> = {};
+      const sesionesTratamientoA: Record<string, number> = {};
+
+      existingProposalData.serviciosTratamientoA.forEach((service) => {
+        tratamientoA[service.codigo] = true;
+        terapeutasTratamientoA[service.codigo] = service.terapeutaId;
+        sesionesTratamientoA[service.codigo] = service.sesiones;
+      });
+
+      setServiciosTratamientoSeleccionados(tratamientoA);
+      setTerapeutasTratamientoA(terapeutasTratamientoA);
+      setSesionesTratamientoA(sesionesTratamientoA);
+
+      // Load evaluation services for Proposal B
+      const evaluacionB: Record<string, boolean> = {};
+      const sesionesEvaluacionB: Record<string, number> = {};
+
+      existingProposalData.serviciosEvaluacionB.forEach((service) => {
+        evaluacionB[service.codigo] = true;
+        sesionesEvaluacionB[service.codigo] = service.sesiones;
+      });
+
+      setSesionesEvaluacionB(sesionesEvaluacionB);
+
+      // Load treatment services for Proposal B
+      const tratamientoB: Record<string, boolean> = {};
+      const sesionesTratamientoB: Record<string, number> = {};
+
+      existingProposalData.serviciosTratamientoB.forEach((service) => {
+        tratamientoB[service.codigo] = true;
+        sesionesTratamientoB[service.codigo] = service.sesiones;
+      });
+
+      setSesionesTratamientoB(sesionesTratamientoB);
+    }
+  }, [existingProposalData]);
 
   // Helper function to get therapists by specialty for a specific service
   const getTherapistsByService = (codigo: string) => {
@@ -258,23 +345,52 @@ export default function TerapeutaPropuestaServicioPage() {
     setSesionesTratamientoB((prev) => ({ ...prev, [codigo]: sesiones }));
   };
 
+  // Function to convert array format to object format for UI
+  const arrayToObject = (
+    array: Array<{ day: string; morning: boolean; afternoon: boolean }>
+  ) => {
+    const result: Record<string, { morning: boolean; afternoon: boolean }> = {};
+    array.forEach(({ day, morning, afternoon }) => {
+      result[day] = { morning, afternoon };
+    });
+    return result;
+  };
+
+  // Function to convert object format to array format for storage
+  const objectToArray = (
+    obj: Record<string, { morning: boolean; afternoon: boolean }>
+  ) => {
+    return [
+      {
+        day: "monday",
+        ...(obj.monday || { morning: false, afternoon: false }),
+      },
+      {
+        day: "tuesday",
+        ...(obj.tuesday || { morning: false, afternoon: false }),
+      },
+      {
+        day: "wednesday",
+        ...(obj.wednesday || { morning: false, afternoon: false }),
+      },
+      {
+        day: "thursday",
+        ...(obj.thursday || { morning: false, afternoon: false }),
+      },
+      {
+        day: "friday",
+        ...(obj.friday || { morning: false, afternoon: false }),
+      },
+    ];
+  };
+
   // Function to ensure time availability is saved in correct order (Monday to Friday)
   const getOrderedTimeAvailability = (
     availability: Record<string, { morning: boolean; afternoon: boolean }>
   ) => {
-    const dayOrder = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-    const orderedAvailability: Record<
-      string,
-      { morning: boolean; afternoon: boolean }
-    > = {};
-
-    dayOrder.forEach((day) => {
-      if (availability[day]) {
-        orderedAvailability[day] = availability[day];
-      }
-    });
-
-    return orderedAvailability;
+    // Use an array-based structure to maintain order
+    // This ensures the order is preserved even after JSON serialization
+    return objectToArray(availability);
   };
 
   const handleTimeAvailabilityChange = (
@@ -282,6 +398,7 @@ export default function TerapeutaPropuestaServicioPage() {
     period: "morning" | "afternoon",
     checked: boolean
   ) => {
+    console.log(`Changing ${day} ${period} to ${checked}`);
     setTimeAvailability((prev) => {
       const updated = {
         ...prev,
@@ -292,7 +409,8 @@ export default function TerapeutaPropuestaServicioPage() {
       };
 
       // Return the updated availability in the correct order
-      return getOrderedTimeAvailability(updated);
+      console.log("Time availability updated:", updated);
+      return updated;
     });
   };
 
@@ -426,11 +544,14 @@ export default function TerapeutaPropuestaServicioPage() {
     }
 
     try {
+      console.log("Sending time availability to API:", timeAvailability);
+      console.log("JSON.stringify result:", JSON.stringify(timeAvailability));
+
       const proposalData = {
         appointmentId,
         quienTomaConsulta,
         derivacion,
-        timeAvailability: getOrderedTimeAvailability(timeAvailability),
+        timeAvailability: timeAvailability,
         // Proposal A services - only include services with sessions > 0 for A
         serviciosEvaluacionA: Object.entries(serviciosEvaluacionSeleccionados)
           .filter(([codigo, selected]) => {
@@ -1260,13 +1381,16 @@ export default function TerapeutaPropuestaServicioPage() {
                                 checked={
                                   timeAvailability[day.key]?.morning || false
                                 }
-                                onCheckedChange={(checked) =>
+                                onCheckedChange={(checked) => {
+                                  console.log(
+                                    `Checkbox ${day.key} morning changed to ${checked}`
+                                  );
                                   handleTimeAvailabilityChange(
                                     day.key,
                                     "morning",
                                     checked as boolean
-                                  )
-                                }
+                                  );
+                                }}
                               />
                             </td>
                             <td className="border border-gray-300 p-3 text-center">
@@ -1274,13 +1398,16 @@ export default function TerapeutaPropuestaServicioPage() {
                                 checked={
                                   timeAvailability[day.key]?.afternoon || false
                                 }
-                                onCheckedChange={(checked) =>
+                                onCheckedChange={(checked) => {
+                                  console.log(
+                                    `Checkbox ${day.key} afternoon changed to ${checked}`
+                                  );
                                   handleTimeAvailabilityChange(
                                     day.key,
                                     "afternoon",
                                     checked as boolean
-                                  )
-                                }
+                                  );
+                                }}
                               />
                             </td>
                           </tr>
