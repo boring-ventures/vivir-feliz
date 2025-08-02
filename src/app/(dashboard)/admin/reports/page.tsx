@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,8 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Search,
   FileText,
@@ -34,28 +34,44 @@ import {
   ChevronRight,
   Download,
   Printer,
+  User,
+  BookOpen,
+  TrendingUp,
+  MessageSquare,
 } from "lucide-react";
 import { RoleGuard } from "@/components/auth/role-guard";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useAdminReports } from "@/hooks/use-admin-reports";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { ReportPDFTemplate } from "@/components/admin/report-pdf-template";
 import { createRoot } from "react-dom/client";
-import { FinalReport, TherapistData, Indicator } from "@/types/reports";
+import {
+  FinalReport,
+  ProgressReport,
+  TherapeuticPlan,
+  TherapistReportContribution,
+} from "@/types/reports";
 
 export default function AdminReportsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [openReports, setOpenReports] = useState<Set<string>>(new Set());
+  const [reportTypeFilter, setReportTypeFilter] = useState("all");
+  const [openPatients, setOpenPatients] = useState<Set<string>>(new Set());
   const [showReportModal, setShowReportModal] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<FinalReport | null>(
-    null
-  );
-  const [reports, setReports] = useState<FinalReport[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedReport, setSelectedReport] = useState<
+    | FinalReport
+    | ProgressReport
+    | TherapeuticPlan
+    | TherapistReportContribution
+    | null
+  >(null);
+  const [selectedReportType, setSelectedReportType] = useState<string>("");
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const { profile } = useCurrentUser();
+  const { data, isLoading, error } = useAdminReports();
 
   // Helper function to translate specialties to Spanish
   const translateSpecialty = (specialty: string): string => {
@@ -75,35 +91,143 @@ export default function AdminReportsPage() {
     return translations[specialty] || specialty;
   };
 
-  // Fetch all final reports
-  useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const response = await fetch("/api/admin/final-reports");
-        if (response.ok) {
-          const data = await response.json();
-          setReports(data.finalReports || []);
-        } else {
-          toast({
-            title: "Error",
-            description: "No se pudieron cargar los informes",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching reports:", error);
-        toast({
-          title: "Error",
-          description: "Error de conexión",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Helper function to get status badge variant
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "DRAFT":
+        return "secondary";
+      case "IN_REVIEW":
+        return "outline";
+      case "APPROVED":
+        return "default";
+      case "PUBLISHED":
+        return "default";
+      case "ARCHIVED":
+        return "destructive";
+      default:
+        return "secondary";
+    }
+  };
 
-    fetchReports();
-  }, []);
+  // Helper function to translate status to Spanish
+  const translateStatus = (status: string): string => {
+    const translations: { [key: string]: string } = {
+      DRAFT: "Borrador",
+      IN_REVIEW: "En Revisión",
+      APPROVED: "Aprobado",
+      PUBLISHED: "Publicado",
+      ARCHIVED: "Archivado",
+    };
+    return translations[status] || status;
+  };
+
+  // Helper function to get report properties safely
+  const getReportProperty = (
+    report:
+      | FinalReport
+      | ProgressReport
+      | TherapeuticPlan
+      | TherapistReportContribution,
+    property: string,
+    type: string
+  ): string => {
+    try {
+      switch (type) {
+        case "final":
+          const finalReport = report as FinalReport;
+          const finalValue = finalReport[property as keyof FinalReport];
+          return typeof finalValue === "string" ? finalValue : "N/A";
+        case "progress":
+          const progressReport = report as ProgressReport;
+          const progressValue =
+            progressReport[property as keyof ProgressReport];
+          return typeof progressValue === "string" ? progressValue : "N/A";
+        case "therapeutic":
+          const therapeuticPlan = report as TherapeuticPlan;
+          const therapeuticValue =
+            therapeuticPlan[property as keyof TherapeuticPlan];
+          return typeof therapeuticValue === "string"
+            ? therapeuticValue
+            : "N/A";
+        case "contribution":
+          // For contributions, some properties might not exist
+          if (property === "patientName" || property === "patientAge") {
+            return "N/A"; // These properties don't exist on TherapistReportContribution
+          }
+          const contribution = report as TherapistReportContribution;
+          const contributionValue =
+            contribution[property as keyof TherapistReportContribution];
+          return typeof contributionValue === "string"
+            ? contributionValue
+            : "N/A";
+        default:
+          return "N/A";
+      }
+    } catch {
+      return "N/A";
+    }
+  };
+
+  // Helper function to get therapist/coordinator name
+  const getReportAuthor = (
+    report:
+      | FinalReport
+      | ProgressReport
+      | TherapeuticPlan
+      | TherapistReportContribution,
+    type: string
+  ): string => {
+    switch (type) {
+      case "final":
+        const finalReport = report as FinalReport;
+        return finalReport.coordinator
+          ? `${finalReport.coordinator.firstName} ${finalReport.coordinator.lastName}`
+          : "N/A";
+      case "progress":
+        const progressReport = report as ProgressReport;
+        return progressReport.therapist
+          ? `${progressReport.therapist.firstName} ${progressReport.therapist.lastName}`
+          : "N/A";
+      case "therapeutic":
+        const therapeuticPlan = report as TherapeuticPlan;
+        return therapeuticPlan.therapist
+          ? `${therapeuticPlan.therapist.firstName} ${therapeuticPlan.therapist.lastName}`
+          : "N/A";
+      case "contribution":
+        const contribution = report as TherapistReportContribution;
+        return contribution.therapist
+          ? `${contribution.therapist.firstName} ${contribution.therapist.lastName}`
+          : "N/A";
+      default:
+        return "N/A";
+    }
+  };
+
+  // Helper function to get status
+  const getReportStatus = (
+    report:
+      | FinalReport
+      | ProgressReport
+      | TherapeuticPlan
+      | TherapistReportContribution,
+    type: string
+  ): string => {
+    switch (type) {
+      case "final":
+        const finalReport = report as FinalReport;
+        return finalReport.isPublished ? "Publicado" : "Borrador";
+      case "progress":
+        const progressReport = report as ProgressReport;
+        return translateStatus(progressReport.status);
+      case "therapeutic":
+        const therapeuticPlan = report as TherapeuticPlan;
+        return translateStatus(therapeuticPlan.status);
+      case "contribution":
+        return "Contribución";
+      default:
+        return "N/A";
+    }
+  };
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
@@ -113,31 +237,49 @@ export default function AdminReportsPage() {
     setStatusFilter(value);
   };
 
-  const toggleReport = (reportId: string) => {
-    setOpenReports((prev) => {
+  const handleReportTypeFilterChange = (value: string) => {
+    setReportTypeFilter(value);
+  };
+
+  const togglePatient = (patientId: string) => {
+    setOpenPatients((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(reportId)) {
-        newSet.delete(reportId);
+      if (newSet.has(patientId)) {
+        newSet.delete(patientId);
       } else {
-        newSet.add(reportId);
+        newSet.add(patientId);
       }
       return newSet;
     });
   };
 
-  const handleOpenReportModal = (report: FinalReport) => {
+  const handleOpenReportModal = (
+    report:
+      | FinalReport
+      | ProgressReport
+      | TherapeuticPlan
+      | TherapistReportContribution,
+    type: string
+  ) => {
     setSelectedReport(report);
+    setSelectedReportType(type);
     setShowReportModal(true);
   };
 
   const handleCloseReportModal = () => {
     setShowReportModal(false);
     setSelectedReport(null);
+    setSelectedReportType("");
   };
 
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-
-  const generateReportPDF = async (report: FinalReport) => {
+  const generateReportPDF = async (
+    report:
+      | FinalReport
+      | ProgressReport
+      | TherapeuticPlan
+      | TherapistReportContribution,
+    type: string
+  ) => {
     try {
       setIsGeneratingPDF(true);
 
@@ -156,7 +298,7 @@ export default function AdminReportsPage() {
 
       // Create a React root and render the template
       const root = createRoot(tempContainer);
-      root.render(<ReportPDFTemplate report={report} />);
+      root.render(<ReportPDFTemplate report={report} type={type} />);
 
       // Add to DOM temporarily
       document.body.appendChild(tempContainer);
@@ -208,13 +350,43 @@ export default function AdminReportsPage() {
         pdf.setFontSize(12);
         pdf.setFont("helvetica", "normal");
         pdf.setTextColor(107, 114, 128); // Gray-500
-        pdf.text("Informe Final", 10, 18);
+        const reportTypeText =
+          type === "final"
+            ? "Informe Final"
+            : type === "progress"
+              ? "Informe de Progreso"
+              : "Contribución de Terapeuta";
+        pdf.text(reportTypeText, 10, 18);
 
         // Patient name and date (right aligned)
         pdf.setFontSize(10);
         pdf.setTextColor(107, 114, 128); // Gray-500
-        const patientText = `Paciente: ${report.patientName}`;
-        const dateText = `Fecha: ${format(new Date(report.createdAt), "dd/MM/yyyy")}`;
+
+        // Get patient name and date based on report type
+        let patientName = "N/A";
+        let reportDate = new Date();
+
+        if (type === "final") {
+          const finalReport = report as FinalReport;
+          patientName = finalReport.patientName || "N/A";
+          reportDate = new Date(finalReport.createdAt);
+        } else if (type === "progress") {
+          const progressReport = report as ProgressReport;
+          patientName = progressReport.patientName || "N/A";
+          reportDate = new Date(progressReport.createdAt);
+        } else if (type === "therapeutic") {
+          const therapeuticPlan = report as TherapeuticPlan;
+          patientName = therapeuticPlan.patientName || "N/A";
+          reportDate = new Date(therapeuticPlan.createdAt);
+        } else if (type === "contribution") {
+          const contribution = report as TherapistReportContribution;
+          // For contributions, we might need to get patient name from a different property
+          patientName = "Paciente"; // Default for contributions
+          reportDate = new Date(contribution.createdAt);
+        }
+
+        const patientText = `Paciente: ${patientName}`;
+        const dateText = `Fecha: ${format(reportDate, "dd/MM/yyyy")}`;
 
         pdf.text(
           patientText,
@@ -322,13 +494,46 @@ export default function AdminReportsPage() {
     }
   };
 
-  const handleDownloadReport = async (report: FinalReport) => {
+  const handleDownloadReport = async (
+    report:
+      | FinalReport
+      | ProgressReport
+      | TherapeuticPlan
+      | TherapistReportContribution,
+    type: string
+  ) => {
     try {
       // Small delay to ensure modal is fully rendered
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const pdf = await generateReportPDF(report);
-      const fileName = `Informe_Final_${report.patientName.replace(/\s+/g, "_")}_${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      const pdf = await generateReportPDF(report, type);
+      const reportTypeText =
+        type === "final"
+          ? "Informe_Final"
+          : type === "progress"
+            ? "Informe_Progreso"
+            : "Contribucion_Terapeuta";
+
+      // Get patient name based on report type
+      let patientName = "Paciente";
+      if (type === "final") {
+        const finalReport = report as FinalReport;
+        patientName =
+          finalReport.patientName?.replace(/\s+/g, "_") || "Paciente";
+      } else if (type === "progress") {
+        const progressReport = report as ProgressReport;
+        patientName =
+          progressReport.patientName?.replace(/\s+/g, "_") || "Paciente";
+      } else if (type === "therapeutic") {
+        const therapeuticPlan = report as TherapeuticPlan;
+        patientName =
+          therapeuticPlan.patientName?.replace(/\s+/g, "_") || "Paciente";
+      } else if (type === "contribution") {
+        // For contributions, use a default name
+        patientName = "Paciente";
+      }
+
+      const fileName = `${reportTypeText}_${patientName}_${format(new Date(), "yyyy-MM-dd")}.pdf`;
       pdf.save(fileName);
 
       toast({
@@ -345,12 +550,19 @@ export default function AdminReportsPage() {
     }
   };
 
-  const handlePrintReport = async (report: FinalReport) => {
+  const handlePrintReport = async (
+    report:
+      | FinalReport
+      | ProgressReport
+      | TherapeuticPlan
+      | TherapistReportContribution,
+    type: string
+  ) => {
     try {
       // Small delay to ensure modal is fully rendered
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const pdf = await generateReportPDF(report);
+      const pdf = await generateReportPDF(report, type);
       const pdfBlob = pdf.output("blob");
       const pdfUrl = URL.createObjectURL(pdfBlob);
 
@@ -375,17 +587,32 @@ export default function AdminReportsPage() {
     }
   };
 
-  // Filter reports based on search and status
-  const filteredReports = reports.filter((report) => {
-    const matchesSearch = report.patientName
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "published" && report.isPublished) ||
-      (statusFilter === "draft" && !report.isPublished);
-    return matchesSearch && matchesStatus;
-  });
+  // Filter patients based on search and filters
+  const filteredPatients =
+    data?.patients?.filter((patient) => {
+      const matchesSearch = patient.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "published" &&
+          patient.finalReports.some((r) => r.isPublished)) ||
+        (statusFilter === "draft" &&
+          patient.finalReports.some((r) => !r.isPublished));
+
+      const matchesReportType =
+        reportTypeFilter === "all" ||
+        (reportTypeFilter === "final" && patient.finalReports.length > 0) ||
+        (reportTypeFilter === "progress" &&
+          patient.progressReports.length > 0) ||
+        (reportTypeFilter === "therapeutic" &&
+          patient.therapeuticPlans.length > 0) ||
+        (reportTypeFilter === "contributions" &&
+          patient.therapistContributions.length > 0);
+
+      return matchesSearch && matchesStatus && matchesReportType;
+    }) || [];
 
   // Check if user is ADMIN
   if (profile?.role !== "ADMIN") {
@@ -417,15 +644,31 @@ export default function AdminReportsPage() {
     );
   }
 
+  // Show error state
+  if (error) {
+    return (
+      <RoleGuard allowedRoles={["ADMIN"]}>
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600">Error al cargar los informes</p>
+            <p className="text-sm text-gray-500">
+              {error instanceof Error ? error.message : "Error desconocido"}
+            </p>
+          </div>
+        </div>
+      </RoleGuard>
+    );
+  }
+
   return (
     <RoleGuard allowedRoles={["ADMIN"]}>
       <div className="container mx-auto p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Informes Finales
+            Informes de Pacientes
           </h1>
           <p className="text-gray-600">
-            Gestiona y visualiza todos los informes finales del centro
+            Gestiona y visualiza todos los informes organizados por paciente
           </p>
         </div>
 
@@ -451,36 +694,55 @@ export default function AdminReportsPage() {
                 <SelectValue placeholder="Filtrar por estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los informes</SelectItem>
+                <SelectItem value="all">Todos los estados</SelectItem>
                 <SelectItem value="published">Publicados</SelectItem>
                 <SelectItem value="draft">Borradores</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          <div className="w-full sm:w-48">
+            <Select
+              value={reportTypeFilter}
+              onValueChange={handleReportTypeFilterChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los tipos</SelectItem>
+                <SelectItem value="final">Informes Finales</SelectItem>
+                <SelectItem value="progress">Informes de Progreso</SelectItem>
+                <SelectItem value="therapeutic">Planes Terapéuticos</SelectItem>
+                <SelectItem value="contributions">Contribuciones</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Reports List */}
+        {/* Patients List */}
         <div className="space-y-4">
-          {filteredReports.length === 0 ? (
+          {filteredPatients.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No se encontraron informes
+                  No se encontraron pacientes
                 </h3>
                 <p className="text-gray-600">
-                  {searchTerm || statusFilter !== "all"
+                  {searchTerm ||
+                  statusFilter !== "all" ||
+                  reportTypeFilter !== "all"
                     ? "Intenta ajustar los filtros de búsqueda"
-                    : "Aún no hay informes finales registrados"}
+                    : "Aún no hay pacientes con informes registrados"}
                 </p>
               </CardContent>
             </Card>
           ) : (
-            filteredReports.map((report) => (
+            filteredPatients.map((patient) => (
               <Collapsible
-                key={report.id}
-                open={openReports.has(report.id)}
-                onOpenChange={() => toggleReport(report.id)}
+                key={patient.id}
+                open={openPatients.has(patient.id)}
+                onOpenChange={() => togglePatient(patient.id)}
               >
                 <Card className="hover:shadow-md transition-shadow">
                   <CollapsibleTrigger asChild>
@@ -488,100 +750,367 @@ export default function AdminReportsPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center space-x-2">
-                            <FileText className="h-5 w-5 text-blue-600" />
+                            <User className="h-5 w-5 text-blue-600" />
                             <div>
                               <CardTitle className="text-lg">
-                                {report.patientName}
+                                {patient.name}
                               </CardTitle>
                               <p className="text-sm text-gray-600">
-                                Coordinador: {report.coordinator.firstName}{" "}
-                                {report.coordinator.lastName}
+                                Edad: {patient.age} • {patient.totalReports}{" "}
+                                informes
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                report.isPublished
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {report.isPublished ? "Publicado" : "Borrador"}
-                            </span>
-                            {openReports.has(report.id) ? (
+                            <Badge variant="outline" className="text-xs">
+                              {patient.finalReports.length} Finales
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {patient.progressReports.length} Progreso
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {patient.therapeuticPlans.length} Planes
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {patient.therapistContributions.length}{" "}
+                              Contribuciones
+                            </Badge>
+                            {openPatients.has(patient.id) ? (
                               <ChevronDown className="h-4 w-4 text-gray-500" />
                             ) : (
                               <ChevronRight className="h-4 w-4 text-gray-500" />
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenReportModal(report);
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Ver
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownloadReport(report);
-                            }}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Descargar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePrintReport(report);
-                            }}
-                          >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Imprimir
-                          </Button>
-                        </div>
                       </div>
                     </CardHeader>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <CardContent className="pt-0">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-gray-900">
-                            Edad:
-                          </span>
-                          <p className="text-gray-600">{report.patientAge}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-900">
-                            Fecha del informe:
-                          </span>
-                          <p className="text-gray-600">
-                            {format(new Date(report.reportDate), "dd/MM/yyyy")}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-900">
-                            Última actualización:
-                          </span>
-                          <p className="text-gray-600">
-                            {format(
-                              new Date(report.updatedAt),
-                              "dd/MM/yyyy HH:mm"
-                            )}
-                          </p>
-                        </div>
+                      <div className="space-y-6">
+                        {/* Final Reports Section */}
+                        {patient.finalReports.length > 0 && (
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                              <FileText className="h-5 w-5 mr-2 text-blue-600" />
+                              Informes Finales
+                            </h3>
+                            <div className="grid gap-4">
+                              {patient.finalReports.map((report) => (
+                                <Card
+                                  key={report.id}
+                                  className="border-l-4 border-l-blue-500"
+                                >
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                          <span className="text-sm font-medium text-gray-900">
+                                            Informe Final
+                                          </span>
+                                          <Badge
+                                            variant={
+                                              report.isPublished
+                                                ? "default"
+                                                : "secondary"
+                                            }
+                                            className="text-xs"
+                                          >
+                                            {report.isPublished
+                                              ? "Publicado"
+                                              : "Borrador"}
+                                          </Badge>
+                                        </div>
+                                        <div className="text-sm text-gray-600 space-y-1">
+                                          <p>
+                                            Coordinador:{" "}
+                                            {report.coordinator.firstName}{" "}
+                                            {report.coordinator.lastName}
+                                          </p>
+                                          <p>
+                                            Fecha:{" "}
+                                            {format(
+                                              new Date(report.reportDate),
+                                              "dd/MM/yyyy"
+                                            )}
+                                          </p>
+                                          <p>
+                                            Actualizado:{" "}
+                                            {format(
+                                              new Date(report.updatedAt),
+                                              "dd/MM/yyyy HH:mm"
+                                            )}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() =>
+                                            handleOpenReportModal(
+                                              report,
+                                              "final"
+                                            )
+                                          }
+                                        >
+                                          <Eye className="h-4 w-4 mr-2" />
+                                          Ver
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Progress Reports Section */}
+                        {patient.progressReports.length > 0 && (
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                              <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
+                              Informes de Progreso
+                            </h3>
+                            <div className="grid gap-4">
+                              {patient.progressReports.map((report) => (
+                                <Card
+                                  key={report.id}
+                                  className="border-l-4 border-l-green-500"
+                                >
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                          <span className="text-sm font-medium text-gray-900">
+                                            Informe de Progreso
+                                          </span>
+                                          <Badge
+                                            variant={getStatusBadgeVariant(
+                                              report.status
+                                            )}
+                                            className="text-xs"
+                                          >
+                                            {translateStatus(report.status)}
+                                          </Badge>
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            {translateSpecialty(
+                                              report.therapist.specialty
+                                            )}
+                                          </Badge>
+                                        </div>
+                                        <div className="text-sm text-gray-600 space-y-1">
+                                          <p>
+                                            Terapeuta:{" "}
+                                            {report.therapist.firstName}{" "}
+                                            {report.therapist.lastName}
+                                          </p>
+                                          <p>Área: {report.treatmentArea}</p>
+                                          <p>
+                                            Fecha:{" "}
+                                            {format(
+                                              new Date(report.reportDate),
+                                              "dd/MM/yyyy"
+                                            )}
+                                          </p>
+                                          <p>
+                                            Actualizado:{" "}
+                                            {format(
+                                              new Date(report.updatedAt),
+                                              "dd/MM/yyyy HH:mm"
+                                            )}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() =>
+                                            handleOpenReportModal(
+                                              report,
+                                              "progress"
+                                            )
+                                          }
+                                        >
+                                          <Eye className="h-4 w-4 mr-2" />
+                                          Ver
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Therapeutic Plans Section */}
+                        {patient.therapeuticPlans.length > 0 && (
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                              <BookOpen className="h-5 w-5 mr-2 text-purple-600" />
+                              Planes Terapéuticos
+                            </h3>
+                            <div className="grid gap-4">
+                              {patient.therapeuticPlans.map((plan) => (
+                                <Card
+                                  key={plan.id}
+                                  className="border-l-4 border-l-purple-500"
+                                >
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                          <span className="text-sm font-medium text-gray-900">
+                                            Plan Terapéutico
+                                          </span>
+                                          <Badge
+                                            variant={getStatusBadgeVariant(
+                                              plan.status
+                                            )}
+                                            className="text-xs"
+                                          >
+                                            {translateStatus(plan.status)}
+                                          </Badge>
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            {translateSpecialty(
+                                              plan.therapist.specialty
+                                            )}
+                                          </Badge>
+                                        </div>
+                                        <div className="text-sm text-gray-600 space-y-1">
+                                          <p>
+                                            Terapeuta:{" "}
+                                            {plan.therapist.firstName}{" "}
+                                            {plan.therapist.lastName}
+                                          </p>
+                                          <p>Área: {plan.treatmentArea}</p>
+                                          <p>
+                                            Fecha:{" "}
+                                            {format(
+                                              new Date(plan.createdAt),
+                                              "dd/MM/yyyy"
+                                            )}
+                                          </p>
+                                          <p>
+                                            Actualizado:{" "}
+                                            {format(
+                                              new Date(plan.updatedAt),
+                                              "dd/MM/yyyy HH:mm"
+                                            )}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() =>
+                                            handleOpenReportModal(
+                                              plan,
+                                              "therapeutic"
+                                            )
+                                          }
+                                        >
+                                          <Eye className="h-4 w-4 mr-2" />
+                                          Ver
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Therapist Contributions Section */}
+                        {patient.therapistContributions.length > 0 && (
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                              <MessageSquare className="h-5 w-5 mr-2 text-orange-600" />
+                              Contribuciones de Terapeutas
+                            </h3>
+                            <div className="grid gap-4">
+                              {patient.therapistContributions.map(
+                                (contribution) => (
+                                  <Card
+                                    key={contribution.id}
+                                    className="border-l-4 border-l-orange-500"
+                                  >
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center space-x-2 mb-2">
+                                            <span className="text-sm font-medium text-gray-900">
+                                              Contribución
+                                            </span>
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs"
+                                            >
+                                              {translateSpecialty(
+                                                contribution.therapist.specialty
+                                              )}
+                                            </Badge>
+                                          </div>
+                                          <div className="text-sm text-gray-600 space-y-1">
+                                            <p>
+                                              Terapeuta:{" "}
+                                              {contribution.therapist.firstName}{" "}
+                                              {contribution.therapist.lastName}
+                                            </p>
+                                            <p>
+                                              Creado:{" "}
+                                              {format(
+                                                new Date(
+                                                  contribution.createdAt
+                                                ),
+                                                "dd/MM/yyyy"
+                                              )}
+                                            </p>
+                                            <p>
+                                              Actualizado:{" "}
+                                              {format(
+                                                new Date(
+                                                  contribution.updatedAt
+                                                ),
+                                                "dd/MM/yyyy HH:mm"
+                                              )}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                              handleOpenReportModal(
+                                                contribution,
+                                                "contribution"
+                                              )
+                                            }
+                                          >
+                                            <Eye className="h-4 w-4 mr-2" />
+                                            Ver
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </CollapsibleContent>
@@ -596,10 +1125,18 @@ export default function AdminReportsPage() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto report-modal-content">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
-                <span>Informe Final - {selectedReport?.patientName}</span>
+                <span>
+                  {selectedReportType === "final" && "Informe Final"}
+                  {selectedReportType === "progress" && "Informe de Progreso"}
+                  {selectedReportType === "therapeutic" && "Plan Terapéutico"}
+                  {selectedReportType === "contribution" &&
+                    "Contribución de Terapeuta"}
+                  {selectedReport &&
+                    ` - ${getReportProperty(selectedReport, "patientName", selectedReportType)}`}
+                </span>
               </DialogTitle>
               <DialogDescription>
-                Vista detallada del informe final del paciente
+                Vista detallada del informe del paciente
               </DialogDescription>
             </DialogHeader>
 
@@ -619,7 +1156,11 @@ export default function AdminReportsPage() {
                           Nombre del Paciente
                         </Label>
                         <p className="text-sm text-gray-900 mt-1">
-                          {selectedReport.patientName}
+                          {getReportProperty(
+                            selectedReport,
+                            "patientName",
+                            selectedReportType
+                          )}
                         </p>
                       </div>
                       <div>
@@ -627,342 +1168,60 @@ export default function AdminReportsPage() {
                           Edad
                         </Label>
                         <p className="text-sm text-gray-900 mt-1">
-                          {selectedReport.patientAge}
+                          {getReportProperty(
+                            selectedReport,
+                            "patientAge",
+                            selectedReportType
+                          )}
                         </p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-700">
-                          Coordinador
+                          {selectedReportType === "final"
+                            ? "Coordinador"
+                            : "Terapeuta"}
                         </Label>
                         <p className="text-sm text-gray-900 mt-1">
-                          {selectedReport.coordinator.firstName}{" "}
-                          {selectedReport.coordinator.lastName}
+                          {getReportAuthor(selectedReport, selectedReportType)}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">
+                          Estado
+                        </Label>
+                        <p className="text-sm text-gray-900 mt-1">
+                          {getReportStatus(selectedReport, selectedReportType)}
                         </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Combined Objectives */}
-                {(selectedReport.generalObjective ||
-                  selectedReport.otherObjectives) && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Objetivos</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        {/* General Objective */}
-                        {selectedReport.generalObjective && (
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-2">
-                              Objetivo General
-                            </h4>
-                            <p className="text-gray-700 whitespace-pre-wrap">
-                              {selectedReport.generalObjective}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Therapist Objectives */}
-                        {selectedReport.otherObjectives &&
-                          selectedReport.otherObjectives.map(
-                            (therapistData: TherapistData, index: number) => (
-                              <div
-                                key={index}
-                                className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500"
-                              >
-                                <h4 className="font-medium text-gray-900 mb-2">
-                                  Objetivo de{" "}
-                                  {translateSpecialty(therapistData.specialty)}
-                                </h4>
-                                {therapistData.objectives && (
-                                  <div className="space-y-2">
-                                    {therapistData.objectives.map(
-                                      (objective: string, objIndex: number) => (
-                                        <div
-                                          key={objIndex}
-                                          className="text-sm text-gray-700"
-                                        >
-                                          <span className="font-medium">•</span>{" "}
-                                          {objective}
-                                        </div>
-                                      )
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Combined Backgrounds */}
-                {(selectedReport.generalBackground ||
-                  selectedReport.therapistBackgrounds) && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Antecedentes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        {/* General Background */}
-                        {selectedReport.generalBackground && (
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-2">
-                              Antecedentes Generales
-                            </h4>
-                            <p className="text-gray-700 whitespace-pre-wrap">
-                              {selectedReport.generalBackground}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Therapist Backgrounds */}
-                        {selectedReport.therapistBackgrounds &&
-                          selectedReport.therapistBackgrounds.map(
-                            (therapistData: TherapistData, index: number) => (
-                              <div
-                                key={index}
-                                className="p-4 bg-gray-50 rounded-lg border-l-4 border-green-500"
-                              >
-                                <h4 className="font-medium text-gray-900 mb-2">
-                                  Antecedentes de{" "}
-                                  {translateSpecialty(therapistData.specialty)}
-                                </h4>
-                                <div className="text-sm text-gray-700">
-                                  {therapistData.background}
-                                </div>
-                              </div>
-                            )
-                          )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Therapist Progress */}
-                {selectedReport.therapistProgress && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">
-                        Indicadores y Avances
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {selectedReport.therapistProgress.length > 0 ? (
-                          <div className="space-y-4">
-                            {selectedReport.therapistProgress.map(
-                              (therapistData: TherapistData, index: number) => (
-                                <div
-                                  key={index}
-                                  className="p-4 bg-gray-50 rounded-lg border-l-4 border-orange-500"
-                                >
-                                  <h4 className="font-medium text-gray-900 mb-2">
-                                    Avances en el área de{" "}
-                                    {translateSpecialty(
-                                      therapistData.specialty
-                                    )}
-                                  </h4>
-                                  {therapistData.indicators &&
-                                  Array.isArray(therapistData.indicators) &&
-                                  therapistData.indicators.length > 0 ? (
-                                    <div className="space-y-4">
-                                      {therapistData.indicators.map(
-                                        (
-                                          indicator: Indicator,
-                                          indIndex: number
-                                        ) => (
-                                          <div
-                                            key={indIndex}
-                                            className="space-y-2 p-4 border rounded-lg"
-                                          >
-                                            <div className="flex gap-2">
-                                              <Input
-                                                value={indicator.name}
-                                                placeholder="Descripción del indicador..."
-                                                className="flex-1"
-                                                disabled
-                                              />
-                                            </div>
-
-                                            <div className="space-y-3">
-                                              <Label>Estado de Progreso</Label>
-                                              <div className="flex gap-2">
-                                                {[
-                                                  {
-                                                    value: "not_achieved",
-                                                    label: "No logra",
-                                                  },
-                                                  {
-                                                    value: "with_help",
-                                                    label: "Con ayuda",
-                                                  },
-                                                  {
-                                                    value: "in_progress",
-                                                    label: "En progreso",
-                                                  },
-                                                  {
-                                                    value: "achieved",
-                                                    label: "Logrado",
-                                                  },
-                                                ].map((status) => {
-                                                  const isSelected =
-                                                    indicator.newStatus ===
-                                                    status.value;
-                                                  const isPrevious =
-                                                    indicator.initialStatus ===
-                                                    status.value;
-
-                                                  const getStatusColor = (
-                                                    statusValue: string
-                                                  ) => {
-                                                    switch (statusValue) {
-                                                      case "not_achieved":
-                                                        return isSelected
-                                                          ? "border-red-500 bg-red-50 text-red-700"
-                                                          : isPrevious
-                                                            ? "border-red-300 bg-red-25 text-red-500"
-                                                            : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
-                                                      case "with_help":
-                                                        return isSelected
-                                                          ? "border-yellow-500 bg-yellow-50 text-yellow-700"
-                                                          : isPrevious
-                                                            ? "border-yellow-300 bg-yellow-25 text-yellow-500"
-                                                            : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
-                                                      case "in_progress":
-                                                        return isSelected
-                                                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                                                          : isPrevious
-                                                            ? "border-blue-300 bg-blue-25 text-blue-500"
-                                                            : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
-                                                      case "achieved":
-                                                        return isSelected
-                                                          ? "border-green-500 bg-green-50 text-green-700"
-                                                          : isPrevious
-                                                            ? "border-green-300 bg-green-25 text-green-500"
-                                                            : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
-                                                      default:
-                                                        return "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
-                                                    }
-                                                  };
-
-                                                  return (
-                                                    <div
-                                                      key={status.value}
-                                                      className={`p-3 rounded-lg border-2 transition-all flex-1 ${getStatusColor(status.value)}`}
-                                                    >
-                                                      <div className="text-sm font-medium">
-                                                        {status.label}
-                                                      </div>
-
-                                                      {isPrevious && (
-                                                        <div className="text-xs mt-1 text-gray-500">
-                                                          (Estado inicial)
-                                                        </div>
-                                                      )}
-                                                      {isSelected && (
-                                                        <div className="text-xs mt-1 text-gray-500">
-                                                          (Estado actual)
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        )
-                                      )}
-
-                                      {/* Indicators Comment */}
-                                      {therapistData.indicatorsComment && (
-                                        <div className="mt-4">
-                                          <Label className="text-sm font-medium">
-                                            Comentarios sobre los Indicadores
-                                          </Label>
-                                          <Textarea
-                                            placeholder="Agrega comentarios generales sobre los indicadores evaluados..."
-                                            value={
-                                              therapistData.indicatorsComment
-                                            }
-                                            rows={3}
-                                            disabled
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <p className="text-sm text-gray-500 italic">
-                                      No hay indicadores registrados para este
-                                      terapeuta.
-                                    </p>
-                                  )}
-                                </div>
-                              )
-                            )}
-                          </div>
-                        ) : (
-                          <div className="p-4 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-500 italic">
-                              No hay contribuciones de terapeutas disponibles
-                              para mostrar.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Combined Conclusions */}
-                {(selectedReport.generalConclusions ||
-                  selectedReport.therapistConclusions) && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">
-                        Conclusiones y Recomendaciones
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        {/* General Conclusions */}
-                        {selectedReport.generalConclusions && (
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-2">
-                              Conclusiones Generales
-                            </h4>
-                            <p className="text-gray-700 whitespace-pre-wrap">
-                              {selectedReport.generalConclusions}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Therapist Conclusions */}
-                        {selectedReport.therapistConclusions &&
-                          selectedReport.therapistConclusions.map(
-                            (therapistData: TherapistData, index: number) => (
-                              <div
-                                key={index}
-                                className="p-4 bg-gray-50 rounded-lg border-l-4 border-orange-500"
-                              >
-                                <h4 className="font-medium text-gray-900 mb-2">
-                                  Desde{" "}
-                                  {translateSpecialty(therapistData.specialty)}
-                                </h4>
-                                <div className="text-sm text-gray-700">
-                                  {therapistData.conclusions}
-                                </div>
-                              </div>
-                            )
-                          )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                {/* Report Content - This would need to be customized based on report type */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Contenido del Informe
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-gray-600">
+                      <p>
+                        El contenido detallado del informe se mostraría aquí.
+                      </p>
+                      <p className="mt-2">
+                        Tipo:{" "}
+                        {selectedReportType === "final"
+                          ? "Informe Final"
+                          : selectedReportType === "progress"
+                            ? "Informe de Progreso"
+                            : selectedReportType === "therapeutic"
+                              ? "Plan Terapéutico"
+                              : "Contribución de Terapeuta"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
 
@@ -974,7 +1233,9 @@ export default function AdminReportsPage() {
                 <>
                   <Button
                     variant="outline"
-                    onClick={() => handleDownloadReport(selectedReport)}
+                    onClick={() =>
+                      handleDownloadReport(selectedReport, selectedReportType)
+                    }
                     disabled={isGeneratingPDF}
                   >
                     {isGeneratingPDF ? (
@@ -986,7 +1247,9 @@ export default function AdminReportsPage() {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => handlePrintReport(selectedReport)}
+                    onClick={() =>
+                      handlePrintReport(selectedReport, selectedReportType)
+                    }
                     disabled={isGeneratingPDF}
                   >
                     {isGeneratingPDF ? (

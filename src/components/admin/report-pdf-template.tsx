@@ -1,10 +1,22 @@
 "use client";
 
-import { FinalReport, TherapistData, Indicator } from "@/types/reports";
+import {
+  FinalReport,
+  ProgressReport,
+  TherapeuticPlan,
+  TherapistReportContribution,
+  TherapistData,
+  Indicator,
+} from "@/types/reports";
 import { format } from "date-fns";
 
 interface ReportPDFTemplateProps {
-  report: FinalReport;
+  report:
+    | FinalReport
+    | ProgressReport
+    | TherapeuticPlan
+    | TherapistReportContribution;
+  type: string;
 }
 
 // Helper function to translate specialties to Spanish
@@ -25,7 +37,116 @@ const translateSpecialty = (specialty: string): string => {
   return translations[specialty] || specialty;
 };
 
-export function ReportPDFTemplate({ report }: ReportPDFTemplateProps) {
+// Helper function to get report properties safely
+const getReportProperty = (
+  report:
+    | FinalReport
+    | ProgressReport
+    | TherapeuticPlan
+    | TherapistReportContribution,
+  property: string,
+  type: string
+): string => {
+  try {
+    switch (type) {
+      case "final":
+        const finalReport = report as FinalReport;
+        const finalValue = finalReport[property as keyof FinalReport];
+        return typeof finalValue === "string" ? finalValue : "N/A";
+      case "progress":
+        const progressReport = report as ProgressReport;
+        const progressValue = progressReport[property as keyof ProgressReport];
+        return typeof progressValue === "string" ? progressValue : "N/A";
+      case "therapeutic":
+        const therapeuticPlan = report as TherapeuticPlan;
+        const therapeuticValue =
+          therapeuticPlan[property as keyof TherapeuticPlan];
+        return typeof therapeuticValue === "string" ? therapeuticValue : "N/A";
+      case "contribution":
+        // For contributions, some properties might not exist
+        if (property === "patientName" || property === "patientAge") {
+          return "N/A"; // These properties don't exist on TherapistReportContribution
+        }
+        const contribution = report as TherapistReportContribution;
+        const contributionValue =
+          contribution[property as keyof TherapistReportContribution];
+        return typeof contributionValue === "string"
+          ? contributionValue
+          : "N/A";
+      default:
+        return "N/A";
+    }
+  } catch {
+    return "N/A";
+  }
+};
+
+// Helper function to get report date
+const getReportDate = (
+  report:
+    | FinalReport
+    | ProgressReport
+    | TherapeuticPlan
+    | TherapistReportContribution,
+  type: string
+): Date => {
+  try {
+    switch (type) {
+      case "final":
+        return new Date((report as FinalReport).createdAt);
+      case "progress":
+        return new Date((report as ProgressReport).createdAt);
+      case "therapeutic":
+        return new Date((report as TherapeuticPlan).createdAt);
+      case "contribution":
+        return new Date((report as TherapistReportContribution).createdAt);
+      default:
+        return new Date();
+    }
+  } catch {
+    return new Date();
+  }
+};
+
+export function ReportPDFTemplate({ report, type }: ReportPDFTemplateProps) {
+  const getReportTitle = () => {
+    switch (type) {
+      case "final":
+        return "Informe Final";
+      case "progress":
+        return "Informe de Progreso";
+      case "therapeutic":
+        return "Plan Terapéutico";
+      case "contribution":
+        return "Contribución de Terapeuta";
+      default:
+        return "Informe";
+    }
+  };
+
+  const getResponsiblePerson = () => {
+    if (type === "final") {
+      const finalReport = report as FinalReport;
+      return {
+        title: "Coordinador",
+        name: `${finalReport.coordinator.firstName} ${finalReport.coordinator.lastName}`,
+        specialty: translateSpecialty(finalReport.coordinator.specialty),
+      };
+    } else {
+      const otherReport = report as
+        | ProgressReport
+        | TherapeuticPlan
+        | TherapistReportContribution;
+      return {
+        title: "Terapeuta",
+        name: `${otherReport.therapist.firstName} ${otherReport.therapist.lastName}`,
+        specialty: translateSpecialty(otherReport.therapist.specialty),
+      };
+    }
+  };
+
+  const responsiblePerson = getResponsiblePerson();
+
   return (
     <div
       className="print-content bg-white p-8 max-w-none"
@@ -40,7 +161,7 @@ export function ReportPDFTemplate({ report }: ReportPDFTemplateProps) {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
           Centro Vivir Feliz - Terapias Especializadas
         </h1>
-        <p className="text-lg text-gray-700 mb-1">Informe Final</p>
+        <p className="text-lg text-gray-700 mb-1">{getReportTitle()}</p>
         <p className="text-sm text-gray-600">
           Teléfono: +591-4-123-4567 | Email: info@vivirfeliz.bo
         </p>
@@ -59,29 +180,81 @@ export function ReportPDFTemplate({ report }: ReportPDFTemplateProps) {
             <span className="font-medium text-gray-700">
               Nombre del Paciente:
             </span>
-            <span className="ml-2 text-gray-900">{report.patientName}</span>
+            <span className="ml-2 text-gray-900">
+              {getReportProperty(report, "patientName", type)}
+            </span>
           </div>
           <div>
             <span className="font-medium text-gray-700">Edad:</span>
-            <span className="ml-2 text-gray-900">{report.patientAge}</span>
+            <span className="ml-2 text-gray-900">
+              {getReportProperty(report, "patientAge", type)}
+            </span>
           </div>
           <div>
-            <span className="font-medium text-gray-700">Coordinador:</span>
-            <span className="ml-2 text-gray-900">
-              {report.coordinator.firstName} {report.coordinator.lastName}
+            <span className="font-medium text-gray-700">
+              {responsiblePerson.title}:
             </span>
+            <span className="ml-2 text-gray-900">{responsiblePerson.name}</span>
           </div>
           <div className="col-span-1 md:col-span-3">
             <span className="font-medium text-gray-700">
               Fecha del Informe:
             </span>
             <span className="ml-2 text-gray-900">
-              {format(new Date(report.createdAt), "dd/MM/yyyy")}
+              {format(getReportDate(report, type), "dd/MM/yyyy")}
             </span>
           </div>
+          {type === "progress" && (
+            <div className="col-span-1 md:col-span-3">
+              <span className="font-medium text-gray-700">
+                Área de Tratamiento:
+              </span>
+              <span className="ml-2 text-gray-900">
+                {(report as ProgressReport).treatmentArea}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Content based on report type */}
+      {type === "final" && (
+        <FinalReportContent report={report as FinalReport} />
+      )}
+
+      {type === "progress" && (
+        <ProgressReportContent report={report as ProgressReport} />
+      )}
+
+      {type === "therapeutic" && (
+        <TherapeuticPlanContent report={report as TherapeuticPlan} />
+      )}
+
+      {type === "contribution" && (
+        <ContributionReportContent
+          report={report as TherapistReportContribution}
+        />
+      )}
+
+      {/* Footer */}
+      <div className="mt-8 pt-4 border-t-2 border-gray-300 text-center text-sm text-gray-600">
+        <p className="font-medium">
+          Centro Vivir Feliz - Terapias Especializadas
+        </p>
+        <p>Teléfono: +591-4-123-4567 | Email: info@vivirfeliz.bo</p>
+        <p>Dirección: Av. Principal 123, Cochabamba, Bolivia</p>
+        <p className="mt-2">
+          Documento generado el {format(new Date(), "dd/MM/yyyy 'a las' HH:mm")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Final Report Content Component
+function FinalReportContent({ report }: { report: FinalReport }) {
+  return (
+    <>
       {/* Combined Objectives */}
       {(report.generalObjective || report.otherObjectives) && (
         <div className="mb-6 p-4 border border-gray-200 rounded-lg">
@@ -366,18 +539,276 @@ export function ReportPDFTemplate({ report }: ReportPDFTemplateProps) {
           </div>
         </div>
       )}
+    </>
+  );
+}
 
-      {/* Footer */}
-      <div className="mt-8 pt-4 border-t-2 border-gray-300 text-center text-sm text-gray-600">
-        <p className="font-medium">
-          Centro Vivir Feliz - Terapias Especializadas
-        </p>
-        <p>Teléfono: +591-4-123-4567 | Email: info@vivirfeliz.bo</p>
-        <p>Dirección: Av. Principal 123, Cochabamba, Bolivia</p>
-        <p className="mt-2">
-          Documento generado el {format(new Date(), "dd/MM/yyyy 'a las' HH:mm")}
-        </p>
-      </div>
-    </div>
+// Progress Report Content Component
+function ProgressReportContent({ report }: { report: ProgressReport }) {
+  return (
+    <>
+      {/* General Objective */}
+      {report.generalObjective && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Objetivo General
+          </h2>
+          <p className="text-gray-700 whitespace-pre-wrap">
+            {report.generalObjective}
+          </p>
+        </div>
+      )}
+
+      {/* Specific Objectives */}
+      {report.specificObjectives &&
+        Array.isArray(report.specificObjectives) && (
+          <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Objetivos Específicos
+            </h2>
+            <div className="space-y-2">
+              {report.specificObjectives.map(
+                (objective: string, index: number) => (
+                  <div key={index} className="text-sm text-gray-700">
+                    <span className="font-medium">•</span> {objective}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        )}
+
+      {/* Progress Entries */}
+      {report.progressEntries && Array.isArray(report.progressEntries) && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Entradas de Progreso
+          </h2>
+          <div className="space-y-4">
+            {report.progressEntries.map((entry: string, index: number) => (
+              <div
+                key={index}
+                className="p-3 bg-gray-50 border-l-4 border-green-500 rounded"
+              >
+                <div className="text-sm text-gray-700">{entry}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recommendations */}
+      {report.recommendations && Array.isArray(report.recommendations) && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Recomendaciones
+          </h2>
+          <div className="space-y-2">
+            {report.recommendations.map(
+              (recommendation: string, index: number) => (
+                <div key={index} className="text-sm text-gray-700">
+                  <span className="font-medium">•</span> {recommendation}
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Therapeutic Plan Content Component
+function TherapeuticPlanContent({ report }: { report: TherapeuticPlan }) {
+  return (
+    <>
+      {/* Background */}
+      {report.background && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Antecedentes
+          </h2>
+          <p className="text-gray-700 whitespace-pre-wrap">
+            {report.background}
+          </p>
+        </div>
+      )}
+
+      {/* Diagnoses */}
+      {report.diagnoses && Array.isArray(report.diagnoses) && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Diagnósticos
+          </h2>
+          <div className="space-y-2">
+            {report.diagnoses.map((diagnosis: string, index: number) => (
+              <div key={index} className="text-sm text-gray-700">
+                <span className="font-medium">•</span> {diagnosis}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* General Objective */}
+      {report.generalObjective && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Objetivo General
+          </h2>
+          <p className="text-gray-700 whitespace-pre-wrap">
+            {report.generalObjective}
+          </p>
+        </div>
+      )}
+
+      {/* Specific Objectives */}
+      {report.specificObjectives &&
+        Array.isArray(report.specificObjectives) && (
+          <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Objetivos Específicos
+            </h2>
+            <div className="space-y-2">
+              {report.specificObjectives.map(
+                (objective: string, index: number) => (
+                  <div key={index} className="text-sm text-gray-700">
+                    <span className="font-medium">•</span> {objective}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        )}
+
+      {/* Indicators */}
+      {report.indicators && Array.isArray(report.indicators) && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Indicadores
+          </h2>
+          <div className="space-y-4">
+            {report.indicators.map((indicator: string, index: number) => (
+              <div
+                key={index}
+                className="p-3 bg-gray-50 border-l-4 border-blue-500 rounded"
+              >
+                <div className="text-sm text-gray-700">{indicator}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Methodologies */}
+      {report.methodologies && Array.isArray(report.methodologies) && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Metodologías y Estrategias
+          </h2>
+          <div className="space-y-2">
+            {report.methodologies.map((methodology: string, index: number) => (
+              <div key={index} className="text-sm text-gray-700">
+                <span className="font-medium">•</span> {methodology}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Observations */}
+      {report.observations && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Observaciones
+          </h2>
+          <p className="text-gray-700 whitespace-pre-wrap">
+            {report.observations}
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Contribution Report Content Component
+function ContributionReportContent({
+  report,
+}: {
+  report: TherapistReportContribution;
+}) {
+  return (
+    <>
+      {/* Objectives */}
+      {report.objectives && Array.isArray(report.objectives) && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Objetivos
+          </h2>
+          <div className="space-y-2">
+            {report.objectives.map((objective: string, index: number) => (
+              <div key={index} className="text-sm text-gray-700">
+                <span className="font-medium">•</span> {objective}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Background */}
+      {report.background && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Antecedentes
+          </h2>
+          <p className="text-gray-700 whitespace-pre-wrap">
+            {report.background}
+          </p>
+        </div>
+      )}
+
+      {/* Indicators */}
+      {report.indicators && Array.isArray(report.indicators) && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Indicadores
+          </h2>
+          <div className="space-y-4">
+            {report.indicators.map((indicator: string, index: number) => (
+              <div
+                key={index}
+                className="p-3 bg-gray-50 border-l-4 border-blue-500 rounded"
+              >
+                <div className="text-sm text-gray-700">{indicator}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Indicators Comment */}
+      {report.indicatorsComment && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Comentarios sobre Indicadores
+          </h2>
+          <p className="text-gray-700 whitespace-pre-wrap">
+            {report.indicatorsComment}
+          </p>
+        </div>
+      )}
+
+      {/* Conclusions */}
+      {report.conclusions && (
+        <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Conclusiones
+          </h2>
+          <p className="text-gray-700 whitespace-pre-wrap">
+            {report.conclusions}
+          </p>
+        </div>
+      )}
+    </>
   );
 }
