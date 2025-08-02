@@ -757,6 +757,9 @@ model TherapeuticPlan {
   // Observations
   observations          String?
   
+  // Status
+  status                ReportStatus @default(DRAFT) @map("status")
+  
   // System fields
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
@@ -793,6 +796,9 @@ model ProgressReport {
   // New Progress Report Content
   progressEntries       Json?    @map("progress_entries") // Array of progress items
   recommendations       Json?    @map("recommendations") // Array of recommendations
+  
+  // Status
+  status                ReportStatus @default(DRAFT) @map("status")
   
   // System fields
   createdAt             DateTime @default(now()) @map("created_at")
@@ -1012,4 +1018,12 @@ enum DocumentType {
   PROGRESS_REPORT
   PRESCRIPTION
   OTHER
+}
+
+enum ReportStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
 }
