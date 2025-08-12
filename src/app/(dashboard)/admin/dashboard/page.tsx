@@ -8,7 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users,
   Calendar,
-  DollarSign,
   TrendingUp,
   TrendingDown,
   FileText,
@@ -20,15 +19,6 @@ import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
 
 export default function AdminDashboardPage() {
   const { data: dashboardData, isLoading, error } = useAdminDashboard();
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-BO", {
-      style: "currency",
-      currency: "BOB",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const formatPercentage = (value: number) => {
     const sign = value >= 0 ? "+" : "";
@@ -159,24 +149,20 @@ export default function AdminDashboardPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">
-                    Ingresos Mensuales
-                  </p>
+                  <p className="text-sm text-muted-foreground">Retención</p>
                   <p className="text-2xl font-bold">
-                    {formatCurrency(dashboardData?.kpis.monthlyRevenue || 0)}
+                    {Math.round(
+                      dashboardData?.metrics.retention.retentionRate || 0
+                    )}
+                    %
                   </p>
-                  <p
-                    className={`text-sm flex items-center ${getGrowthColor(dashboardData?.kpis.revenueGrowth || 0)}`}
-                  >
-                    {getGrowthIcon(dashboardData?.kpis.revenueGrowth || 0)}
-                    {formatPercentage(
-                      dashboardData?.kpis.revenueGrowth || 0
-                    )}{" "}
-                    vs mes anterior
+                  <p className="text-xs text-muted-foreground">
+                    Rotación:{" "}
+                    {Math.round(
+                      dashboardData?.metrics.retention.churnRate || 0
+                    )}
+                    %
                   </p>
-                </div>
-                <div className="bg-amber-100 p-3 rounded-full">
-                  <DollarSign className="h-6 w-6 text-amber-600" />
                 </div>
               </div>
             </CardContent>
@@ -299,50 +285,35 @@ export default function AdminDashboardPage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Terapeutas Activos</CardTitle>
+              <CardTitle className="text-base">
+                Consultas y Evaluaciones
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="text-2xl font-bold">
-                  {dashboardData?.staff.activeTherapists || 0}
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Consultas (mes)</span>
+                  <Badge className="bg-green-100 text-green-800">
+                    {dashboardData?.metrics.consultas.monthly || 0}
+                  </Badge>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  De {dashboardData?.staff.totalTherapists || 0} terapeutas
-                  totales
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Consultas (YTD)</span>
+                  <Badge className="bg-green-100 text-green-800">
+                    {dashboardData?.metrics.consultas.ytd || 0}
+                  </Badge>
                 </div>
-                <div className="text-sm text-green-600">
-                  {dashboardData?.staff.activeTherapists ===
-                  dashboardData?.staff.totalTherapists
-                    ? "Todos disponibles"
-                    : `${dashboardData?.staff.activeTherapists || 0} disponibles`}
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Evaluaciones (mes)</span>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {dashboardData?.metrics.evaluaciones.monthly.total || 0}
+                  </Badge>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Resumen Financiero</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm">Pagado</span>
-                  <span className="text-sm font-medium">
-                    {formatCurrency(dashboardData?.financial.totalPaid || 0)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Pendiente</span>
-                  <span className="text-sm font-medium">
-                    {formatCurrency(dashboardData?.financial.pending || 0)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Tasa de Cobro</span>
-                  <span className="text-sm font-medium text-green-600">
-                    {dashboardData?.financial.collectionRate.toFixed(0) || 0}%
-                  </span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Evaluaciones (YTD)</span>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {dashboardData?.metrics.evaluaciones.ytd.total || 0}
+                  </Badge>
                 </div>
               </div>
             </CardContent>
@@ -390,18 +361,7 @@ export default function AdminDashboardPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <div className="bg-amber-100 p-2 rounded-full">
-                    <DollarSign className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">
-                      {formatCurrency(dashboardData?.financial.pending || 0)}{" "}
-                      pendientes
-                    </p>
-                    <p className="text-xs text-muted-foreground">Por cobrar</p>
-                  </div>
-                </div>
+                {/* Removed financial quick item */}
               </div>
             </CardContent>
           </Card>
@@ -423,8 +383,7 @@ export default function AdminDashboardPage() {
                       0
                     )
                       alerts.push("interview");
-                    if ((dashboardData?.financial.pending || 0) > 0)
-                      alerts.push("payment");
+                    // financial alerts removed
                     return `${alerts.length} nuevas`;
                   })()}
                 </Badge>
@@ -483,29 +442,7 @@ export default function AdminDashboardPage() {
                   </div>
                 )}
 
-                {(dashboardData?.financial.pending || 0) > 0 && (
-                  <div className="flex items-start space-x-3">
-                    <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-amber-700">
-                        Pagos pendientes por cobrar
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatCurrency(dashboardData?.financial.pending || 0)}{" "}
-                        en total
-                      </p>
-                      <Link href="/admin/payments">
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="h-auto p-0 text-xs"
-                        >
-                          Ver pagos pendientes
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                )}
+                {/* Removed financial alert block */}
 
                 {(dashboardData?.patients.inEvaluation || 0) > 0 && (
                   <div className="flex items-start space-x-3">
@@ -533,7 +470,7 @@ export default function AdminDashboardPage() {
 
                 {!(dashboardData?.requests.consultationRequests.pending || 0) &&
                   !(dashboardData?.requests.interviewRequests.pending || 0) &&
-                  !(dashboardData?.financial.pending || 0) &&
+                  // financial condition removed
                   !(dashboardData?.patients.inEvaluation || 0) && (
                     <div className="flex items-start space-x-3">
                       <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
