@@ -148,6 +148,7 @@ export default function ScheduleInterviewPage() {
                         handleInputChange("childFirstName", e.target.value)
                       }
                       placeholder="Nombre del niño/a"
+                      className="capitalize"
                       required
                     />
                   </div>
@@ -161,6 +162,7 @@ export default function ScheduleInterviewPage() {
                         handleInputChange("childLastName", e.target.value)
                       }
                       placeholder="Apellido del niño/a"
+                      className="capitalize"
                       required
                     />
                   </div>
@@ -222,6 +224,7 @@ export default function ScheduleInterviewPage() {
                         handleInputChange("parentName", e.target.value)
                       }
                       placeholder="Nombre del padre/madre responsable"
+                      className="capitalize"
                       required
                     />
                   </div>
@@ -270,6 +273,7 @@ export default function ScheduleInterviewPage() {
                         handleInputChange("schoolName", e.target.value)
                       }
                       placeholder="Nombre de la institución educativa"
+                      className="capitalize"
                       required
                     />
                   </div>

@@ -316,10 +316,6 @@ export default function InterviewSuccessPage() {
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Recibirás confirmación por teléfono o email
               </p>
-              <p className="flex items-center">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Nos coordinaremos con la institución educativa
-              </p>
             </div>
           </CardContent>
         </Card>
