@@ -13,10 +13,19 @@ import {
   Shield,
   Activity,
 } from "lucide-react";
-import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
+import { useSuperAdminDashboard } from "@/hooks/use-super-admin-dashboard";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
 
 export default function SuperAdminDashboardPage() {
-  const { data: dashboardData, isLoading, error } = useAdminDashboard();
+  const { data: dashboardData, isLoading, error } = useSuperAdminDashboard();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-BO", {
@@ -114,15 +123,6 @@ export default function SuperAdminDashboardPage() {
                   <p className="text-2xl font-bold">
                     {dashboardData?.kpis.totalPatients || 0}
                   </p>
-                  <p
-                    className={`text-sm flex items-center ${getGrowthColor(dashboardData?.kpis.patientGrowth || 0)}`}
-                  >
-                    {getGrowthIcon(dashboardData?.kpis.patientGrowth || 0)}
-                    {formatPercentage(
-                      dashboardData?.kpis.patientGrowth || 0
-                    )}{" "}
-                    vs mes anterior
-                  </p>
                 </div>
                 <div className="bg-purple-100 p-3 rounded-full">
                   <Users className="h-6 w-6 text-purple-600" />
@@ -163,7 +163,7 @@ export default function SuperAdminDashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Ingresos Totales
+                    Ingresos del Mes
                   </p>
                   <p className="text-2xl font-bold">
                     {formatCurrency(dashboardData?.kpis.monthlyRevenue || 0)}
@@ -181,6 +181,350 @@ export default function SuperAdminDashboardPage() {
                 <div className="bg-green-100 p-3 rounded-full">
                   <DollarSign className="h-6 w-6 text-green-600" />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Financial Overview */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm text-muted-foreground">Pagos Totales</p>
+              <p className="text-2xl font-bold">
+                {formatCurrency(dashboardData?.financial.totalPaid || 0)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Recaudación histórica
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm text-muted-foreground">Pendiente</p>
+              <p className="text-2xl font-bold">
+                {formatCurrency(dashboardData?.financial.pending || 0)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Mora: {formatCurrency(dashboardData?.financial.overdue || 0)}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm text-muted-foreground">Tasa de Cobranza</p>
+              <p
+                className={`text-2xl font-bold ${getGrowthColor((dashboardData?.financial.collectionRate || 0) - 80)}`}
+              >
+                {formatPercentage(dashboardData?.financial.collectionRate || 0)}
+              </p>
+              <p className="text-xs text-muted-foreground">Objetivo: 80%</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Payment Methods and Top Therapists */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm font-medium mb-3">Métodos de Pago (Mes)</p>
+              <div className="space-y-2">
+                {Object.entries(
+                  dashboardData?.financial.byMethod.monthly || {}
+                ).map(([method, amount]) => (
+                  <div
+                    key={method}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="text-sm text-muted-foreground">
+                      {method}
+                    </span>
+                    <span className="text-sm font-medium">
+                      {formatCurrency(amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Total histórico por método
+              </p>
+              <div className="mt-2 space-y-2">
+                {Object.entries(
+                  dashboardData?.financial.byMethod.total || {}
+                ).map(([method, amount]) => (
+                  <div
+                    key={method}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="text-xs text-muted-foreground">
+                      {method}
+                    </span>
+                    <span className="text-xs">{formatCurrency(amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm font-medium mb-3">
+                Top Terapeutas por Ingresos (Mes)
+              </p>
+              <div className="space-y-2">
+                {(dashboardData?.financial.topTherapistsMonthly || []).map(
+                  (t) => (
+                    <div
+                      key={t.therapistId}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-sm text-muted-foreground">
+                        {t.therapistName}
+                      </span>
+                      <span className="text-sm font-medium">
+                        {formatCurrency(t.amount)}
+                      </span>
+                    </div>
+                  )
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Revenue Trend and AR Aging */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm font-medium mb-3">
+                Tendencia de Ingresos (6 meses)
+              </p>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={dashboardData?.financial.revenueTrend || []}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis
+                      tickFormatter={(v) => formatCurrency(Number(v))}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip
+                      formatter={(value) => [
+                        formatCurrency(Number(value)),
+                        "Monto",
+                      ]}
+                      labelFormatter={(label) => `Mes: ${label}`}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="amount"
+                      stroke="#16a34a"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm font-medium mb-3">
+                Antigüedad de Cuentas por Cobrar
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    0-30 días
+                  </span>
+                  <span className="text-sm font-medium">
+                    {formatCurrency(
+                      dashboardData?.financial.arAging.b0_30 || 0
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    31-60 días
+                  </span>
+                  <span className="text-sm font-medium">
+                    {formatCurrency(
+                      dashboardData?.financial.arAging.b31_60 || 0
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    61-90 días
+                  </span>
+                  <span className="text-sm font-medium">
+                    {formatCurrency(
+                      dashboardData?.financial.arAging.b61_90 || 0
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    90+ días
+                  </span>
+                  <span className="text-sm font-medium">
+                    {formatCurrency(
+                      dashboardData?.financial.arAging.b91_plus || 0
+                    )}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Appointment Quality and Averages */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm font-medium mb-3">Calidad de Citas (Mes)</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Completadas
+                  </span>
+                  <span className="text-sm font-medium">
+                    {dashboardData?.financial.appointmentQuality.completed || 0}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Canceladas
+                  </span>
+                  <span className="text-sm font-medium">
+                    {dashboardData?.financial.appointmentQuality.cancelled || 0}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">No Show</span>
+                  <span className="text-sm font-medium">
+                    {dashboardData?.financial.appointmentQuality.noShow || 0}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Tasa No Show
+                  </span>
+                  <span
+                    className={`text-sm font-medium ${getGrowthColor(0 - (dashboardData?.financial.appointmentQuality.noShowRate || 0))}`}
+                  >
+                    {formatPercentage(
+                      dashboardData?.financial.appointmentQuality.noShowRate ||
+                        0
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Tasa Cancelación
+                  </span>
+                  <span
+                    className={`text-sm font-medium ${getGrowthColor(0 - (dashboardData?.financial.appointmentQuality.cancellationRate || 0))}`}
+                  >
+                    {formatPercentage(
+                      dashboardData?.financial.appointmentQuality
+                        .cancellationRate || 0
+                    )}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm font-medium mb-3">Promedios</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Ingreso por Paciente
+                  </span>
+                  <span className="text-sm font-medium">
+                    {formatCurrency(
+                      dashboardData?.financial.averages.revenuePerPatient || 0
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Ingreso por Cita
+                  </span>
+                  <span className="text-sm font-medium">
+                    {formatCurrency(
+                      dashboardData?.financial.averages.revenuePerAppointment ||
+                        0
+                    )}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Outstanding and Performance */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm font-medium mb-3">
+                Cuentas por Cobrar por Terapeuta
+              </p>
+              <div className="space-y-2">
+                {(dashboardData?.financial.outstandingByTherapist || []).map(
+                  (t) => (
+                    <div
+                      key={t.therapistId}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-sm text-muted-foreground">
+                        {t.therapistName}
+                      </span>
+                      <span className="text-sm font-medium">
+                        {formatCurrency(t.amount)}
+                      </span>
+                    </div>
+                  )
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-sm font-medium mb-3">
+                Rendimiento de Terapeutas (Mes)
+              </p>
+              <div className="space-y-2">
+                {(dashboardData?.financial.monthlyTherapistPerformance || [])
+                  .slice(0, 6)
+                  .map((t) => (
+                    <div
+                      key={t.therapistId}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-sm text-muted-foreground">
+                        {t.therapistName}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Prog: {t.scheduled}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Comp: {t.completed}
+                      </span>
+                      <span
+                        className={`text-sm font-medium ${getGrowthColor((t.completionRate || 0) - 70)}`}
+                      >
+                        {formatPercentage(t.completionRate || 0)}
+                      </span>
+                    </div>
+                  ))}
               </div>
             </CardContent>
           </Card>

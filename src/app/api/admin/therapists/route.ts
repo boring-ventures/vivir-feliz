@@ -16,14 +16,19 @@ export async function GET() {
             blockedSlots: true,
           },
         },
+        // Include all appointments; client will filter by week/month
         appointments: {
-          where: {
-            date: {
-              gte: new Date(),
-            },
-          },
           orderBy: {
             date: "asc",
+          },
+        },
+        // Active patients linked to the therapist (for patients count)
+        therapistPatients: {
+          where: {
+            active: true,
+          },
+          select: {
+            id: true,
           },
         },
       },
