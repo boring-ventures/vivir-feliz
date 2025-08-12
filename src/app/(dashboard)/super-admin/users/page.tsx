@@ -124,7 +124,11 @@ export default function SuperAdminUsersPage() {
   const [generatedPassword, setGeneratedPassword] = useState("");
 
   // Fix: Pass proper parameters to useAdminUsers hook
-  const { data: usersResponse, isLoading, refetch } = useAdminUsers(
+  const {
+    data: usersResponse,
+    isLoading,
+    refetch,
+  } = useAdminUsers(
     roleFilter === "all" ? undefined : roleFilter,
     1,
     1000,
@@ -137,11 +141,12 @@ export default function SuperAdminUsersPage() {
     searchTerm,
     usersResponse,
     usersCount: usersResponse?.users?.length || 0,
-    userRoles: usersResponse?.users?.map(u => ({ 
-      id: u.id, 
-      role: u.role, 
-      name: `${u.firstName} ${u.lastName}` 
-    })) || []
+    userRoles:
+      usersResponse?.users?.map((u) => ({
+        id: u.id,
+        role: u.role,
+        name: `${u.firstName} ${u.lastName}`,
+      })) || [],
   });
 
   const createUserMutation = useCreateUser();
@@ -402,6 +407,7 @@ export default function SuperAdminUsersPage() {
                         id="firstName"
                         {...form.register("firstName")}
                         placeholder="Nombre"
+                        className="capitalize"
                       />
                       <FieldError
                         error={form.formState.errors.firstName?.message}
@@ -413,6 +419,7 @@ export default function SuperAdminUsersPage() {
                         id="lastName"
                         {...form.register("lastName")}
                         placeholder="Apellidos"
+                        className="capitalize"
                       />
                       <FieldError
                         error={form.formState.errors.lastName?.message}

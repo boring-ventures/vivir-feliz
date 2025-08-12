@@ -127,11 +127,6 @@ export const getRoleBasedSidebarData = (
                 url: "/admin/reports",
                 icon: FileText,
               },
-              {
-                title: "Citas",
-                url: "/admin/appointments",
-                icon: Calendar,
-              },
             ],
           },
         ],

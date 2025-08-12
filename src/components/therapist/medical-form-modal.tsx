@@ -586,6 +586,7 @@ export default function MedicalFormModal({
             value={formData.nombreNino}
             onChange={(e) => updateFormData("nombreNino", e.target.value)}
             placeholder="Ingrese el nombre completo"
+            className="capitalize"
             required
           />
         </div>
@@ -722,7 +723,7 @@ export default function MedicalFormModal({
                 onChange={(e) =>
                   updateFormData("motivoCesarea", e.target.value)
                 }
-                className="mt-1"
+                className="mt-1 capitalize"
               />
             </div>
           )}
@@ -929,6 +930,7 @@ export default function MedicalFormModal({
                       updateFormData("motivoInternacion", e.target.value)
                     }
                     placeholder="Indique el motivo"
+                    className="capitalize"
                   />
                 </div>
               </div>
@@ -1004,6 +1006,7 @@ export default function MedicalFormModal({
                 onChange={(e) =>
                   updateFormData("otraEnfermedad", e.target.value)
                 }
+                className="capitalize"
               />
             </div>
           )}
@@ -1114,7 +1117,7 @@ export default function MedicalFormModal({
                     updateFormData("detallesCirugias", e.target.value)
                   }
                   placeholder="Describa la cirugía"
-                  className="mt-1"
+                  className="mt-1 capitalize"
                 />
               </div>
               <div>
@@ -1192,7 +1195,7 @@ export default function MedicalFormModal({
                         updateFormData("medicamentos", newMedicamentos);
                       }}
                       placeholder="Nombre del medicamento"
-                      className="mt-1"
+                      className="mt-1 capitalize"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1225,7 +1228,7 @@ export default function MedicalFormModal({
                           updateFormData("medicamentos", newMedicamentos);
                         }}
                         placeholder="Motivo"
-                        className="mt-1"
+                        className="mt-1 capitalize"
                       />
                     </div>
                   </div>
@@ -1430,6 +1433,7 @@ export default function MedicalFormModal({
                   onChange={(e) =>
                     updateFormData("otraAlergia", e.target.value)
                   }
+                  className="capitalize"
                 />
               </div>
             )}
