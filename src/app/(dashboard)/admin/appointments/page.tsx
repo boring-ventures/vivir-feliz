@@ -97,13 +97,63 @@ interface Appointment {
   };
 }
 
-// Fetch appointments for admin
-const fetchAdminAppointments = async (): Promise<Appointment[]> => {
-  const response = await fetch("/api/admin/appointments");
+// Fetch appointments for admin with server-side filters
+const fetchAdminAppointments = async (params: {
+  search?: string;
+  status?: string;
+  date?: string;
+  patientId?: string;
+  therapistId?: string;
+}): Promise<Appointment[]> => {
+  const query = new URLSearchParams();
+  if (params.search) query.set("search", params.search);
+  if (params.status && params.status !== "all")
+    query.set("status", params.status);
+  if (params.date) query.set("date", params.date);
+  if (params.patientId && params.patientId !== "all")
+    query.set("patientId", params.patientId);
+  if (params.therapistId && params.therapistId !== "all")
+    query.set("therapistId", params.therapistId);
+
+  const url = `/api/admin/appointments${query.toString() ? `?${query.toString()}` : ""}`;
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error("Failed to fetch appointments");
   }
   return response.json();
+};
+
+// Fetch minimal therapist options
+const fetchTherapistOptions = async (): Promise<
+  Array<{ id: string; name: string }>
+> => {
+  const res = await fetch("/api/admin/therapists");
+  if (!res.ok) throw new Error("Failed to fetch therapists");
+  type TherapistMinimal = {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  const data: TherapistMinimal[] = await res.json();
+  return (data || []).map((t) => ({
+    id: t.id,
+    name: (`${t.firstName ?? ""} ${t.lastName ?? ""}`.trim() || "Sin nombre"),
+  }));
+};
+
+// Fetch minimal patient options (paginated endpoint, large limit)
+const fetchPatientOptions = async (): Promise<
+  Array<{ id: string; name: string }>
+> => {
+  const res = await fetch("/api/admin/patients?limit=1000&page=1");
+  if (!res.ok) throw new Error("Failed to fetch patients");
+  type PatientMinimal = { id: string; firstName: string; lastName: string };
+  const data: { patients?: PatientMinimal[] } = await res.json();
+  const list: PatientMinimal[] = data?.patients || [];
+  return list.map((p) => ({
+    id: p.id,
+    name: `${p.firstName} ${p.lastName}`,
+  }));
 };
 
 // Get status badge info
@@ -149,6 +199,8 @@ export default function AdminAppointmentsPage() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
+  const [patientFilter, setPatientFilter] = useState("all");
+  const [therapistFilter, setTherapistFilter] = useState("all");
   const [markAbsentModalOpen, setMarkAbsentModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
@@ -175,8 +227,27 @@ export default function AdminAppointmentsPage() {
       debouncedSearchTerm,
       statusFilter,
       dateFilter,
+      patientFilter,
+      therapistFilter,
     ],
-    queryFn: fetchAdminAppointments,
+    queryFn: () =>
+      fetchAdminAppointments({
+        search: debouncedSearchTerm,
+        status: statusFilter,
+        date: dateFilter,
+        patientId: patientFilter,
+        therapistId: therapistFilter,
+      }),
+  });
+
+  // Options for selects
+  const { data: therapistOptions = [] } = useQuery({
+    queryKey: ["admin-therapist-options"],
+    queryFn: fetchTherapistOptions,
+  });
+  const { data: patientOptions = [] } = useQuery({
+    queryKey: ["admin-patient-options"],
+    queryFn: fetchPatientOptions,
   });
 
   // Filter appointments
@@ -203,7 +274,22 @@ export default function AdminAppointmentsPage() {
 
     const matchesDate = !dateFilter || appointment.date.startsWith(dateFilter);
 
-    return matchesSearch && matchesStatus && matchesDate;
+    const matchesPatient =
+      patientFilter === "all" ||
+      appointment.patient?.id === patientFilter ||
+      appointment.patientId === patientFilter;
+
+    const matchesTherapist =
+      therapistFilter === "all" ||
+      appointment.therapist?.id === therapistFilter;
+
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesDate &&
+      matchesPatient &&
+      matchesTherapist
+    );
   });
 
   // Handle mark absent
@@ -379,7 +465,7 @@ export default function AdminAppointmentsPage() {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -412,6 +498,37 @@ export default function AdminAppointmentsPage() {
                 onChange={(e) => setDateFilter(e.target.value)}
                 placeholder="Filtrar por fecha"
               />
+
+              <Select value={patientFilter} onValueChange={setPatientFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por paciente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los pacientes</SelectItem>
+                  {patientOptions.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={therapistFilter}
+                onValueChange={setTherapistFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por terapeuta" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los terapeutas</SelectItem>
+                  {therapistOptions.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
