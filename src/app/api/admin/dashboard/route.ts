@@ -18,6 +18,8 @@ export async function GET() {
       1
     );
     const endOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
 
     // Fetch all the dashboard data in parallel
     const [
@@ -42,6 +44,23 @@ export async function GET() {
       patientsInEvaluation,
       completedPatients,
       recentActivity,
+      // Metrics additions
+      monthlyNewPatients,
+      totalPatientsAllTime,
+      consultasMonthly,
+      consultasYtd,
+      developmentEvalMonthly,
+      developmentEvalYtd,
+      analysesMonthly,
+      analysesYtd,
+      proposalServicesMonthly,
+      proposalServicesAll,
+      therapeuticPlansNeuro,
+      therapeuticPlansTemprana,
+      prevMonthPatientIdsRaw,
+      currMonthPatientIdsRaw,
+      agendaGroupBy,
+      agendaTherapistsProfiles,
     ] = await Promise.all([
       // Total patients
       prisma.patient.count({ where: { isActive: true } }),
@@ -218,6 +237,97 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
         take: 5,
       }),
+
+      // Patients created in current month
+      prisma.patient.count({
+        where: {
+          createdAt: { gte: startOfMonth, lte: endOfMonth },
+        },
+      }),
+      // Total patients all-time
+      prisma.patient.count(),
+
+      // Consultas counts
+      prisma.appointment.count({
+        where: {
+          type: "CONSULTA",
+          date: { gte: startOfMonth, lte: endOfMonth },
+        },
+      }),
+      prisma.appointment.count({
+        where: { type: "CONSULTA", date: { gte: startOfYear, lte: endOfYear } },
+      }),
+
+      // Evaluations (DevelopmentEvaluation)
+      prisma.developmentEvaluation.count({
+        where: {
+          appointment: { date: { gte: startOfMonth, lte: endOfMonth } },
+        },
+      }),
+      prisma.developmentEvaluation.count({
+        where: { appointment: { date: { gte: startOfYear, lte: endOfYear } } },
+      }),
+      // Analyses
+      prisma.analysis.count({
+        where: {
+          appointment: { date: { gte: startOfMonth, lte: endOfMonth } },
+        },
+      }),
+      prisma.analysis.count({
+        where: { appointment: { date: { gte: startOfYear, lte: endOfYear } } },
+      }),
+
+      // Treatments by area (ProposalService with type TREATMENT)
+      prisma.proposalService.findMany({
+        where: {
+          type: "TREATMENT",
+          createdAt: { gte: startOfMonth, lte: endOfMonth },
+        },
+        include: { therapist: { select: { id: true, specialty: true } } },
+      }),
+      prisma.proposalService.findMany({
+        where: { type: "TREATMENT" },
+        include: { therapist: { select: { id: true, specialty: true } } },
+      }),
+
+      // Programs (Neuro / Atención Temprana) via TherapeuticPlan.treatmentArea keyword search
+      prisma.therapeuticPlan.findMany({
+        where: { treatmentArea: { contains: "neuro", mode: "insensitive" } },
+        select: { patientId: true },
+      }),
+      prisma.therapeuticPlan.findMany({
+        where: { treatmentArea: { contains: "temprana", mode: "insensitive" } },
+        select: { patientId: true },
+      }),
+
+      // Retention/Churn via distinct patientIds by month
+      prisma.appointment.findMany({
+        where: {
+          date: { gte: startOfPreviousMonth, lte: endOfPreviousMonth },
+          patientId: { not: null },
+        },
+        select: { patientId: true },
+        distinct: ["patientId"],
+      }),
+      prisma.appointment.findMany({
+        where: {
+          date: { gte: startOfMonth, lte: endOfMonth },
+          patientId: { not: null },
+        },
+        select: { patientId: true },
+        distinct: ["patientId"],
+      }),
+
+      // Agenda consolidated by therapist for current month (group by therapistId and status)
+      prisma.appointment.groupBy({
+        by: ["therapistId", "status"],
+        where: { date: { gte: startOfMonth, lte: endOfMonth } },
+        _count: { _all: true },
+      }),
+      prisma.profile.findMany({
+        where: { role: "THERAPIST" },
+        select: { id: true, firstName: true, lastName: true },
+      }),
     ]);
 
     // Convert Decimal values to numbers for calculations
@@ -256,6 +366,98 @@ export async function GET() {
 
     const satisfactionScore = 4.8; // This would need a rating system to calculate
 
+    // Build metrics payloads
+    const prevMonthPatientIds = new Set(
+      (prevMonthPatientIdsRaw || [])
+        .map((p) => p.patientId)
+        .filter((id): id is string => !!id)
+    );
+    const currMonthPatientIds = new Set(
+      (currMonthPatientIdsRaw || [])
+        .map((p) => p.patientId)
+        .filter((id): id is string => !!id)
+    );
+
+    const retainedCount = Array.from(prevMonthPatientIds).filter((id) =>
+      currMonthPatientIds.has(id)
+    ).length;
+    const lostCount = Array.from(prevMonthPatientIds).filter(
+      (id) => !currMonthPatientIds.has(id)
+    ).length;
+    const newCount = Array.from(currMonthPatientIds).filter(
+      (id) => !prevMonthPatientIds.has(id)
+    ).length;
+    const denom = prevMonthPatientIds.size || 0;
+    const retentionRate = denom > 0 ? (retainedCount / denom) * 100 : 0;
+    const churnRate = denom > 0 ? (lostCount / denom) * 100 : 0;
+
+    const monthlyBySpecialty: Record<string, number> = {};
+    for (const s of proposalServicesMonthly) {
+      const spec = s.therapist?.specialty || "UNKNOWN";
+      monthlyBySpecialty[spec] = (monthlyBySpecialty[spec] || 0) + 1;
+    }
+    const totalBySpecialty: Record<string, number> = {};
+    for (const s of proposalServicesAll) {
+      const spec = s.therapist?.specialty || "UNKNOWN";
+      totalBySpecialty[spec] = (totalBySpecialty[spec] || 0) + 1;
+    }
+
+    const neuroPatients = new Set(
+      therapeuticPlansNeuro.map((p) => p.patientId)
+    );
+    const atencionTempranaPatients = new Set(
+      therapeuticPlansTemprana.map((p) => p.patientId)
+    );
+
+    const therapistIdToName: Record<string, string> = {};
+    for (const t of agendaTherapistsProfiles) {
+      therapistIdToName[t.id] =
+        `${t.firstName ?? ""} ${t.lastName ?? ""}`.trim();
+    }
+    const agendaMap: Record<
+      string,
+      {
+        therapistId: string;
+        therapistName: string;
+        scheduled: number;
+        completed: number;
+        cancelled: number;
+        noShow: number;
+      }
+    > = {};
+    for (const row of agendaGroupBy) {
+      const key = row.therapistId as string;
+      if (!agendaMap[key]) {
+        agendaMap[key] = {
+          therapistId: key,
+          therapistName: therapistIdToName[key] || key,
+          scheduled: 0,
+          completed: 0,
+          cancelled: 0,
+          noShow: 0,
+        };
+      }
+      const count = Number((row._count as { _all: number })._all ?? 0);
+      switch (row.status) {
+        case "SCHEDULED":
+        case "CONFIRMED":
+        case "IN_PROGRESS":
+          agendaMap[key].scheduled += count;
+          break;
+        case "COMPLETED":
+          agendaMap[key].completed += count;
+          break;
+        case "CANCELLED":
+          agendaMap[key].cancelled += count;
+          break;
+        case "NO_SHOW":
+          agendaMap[key].noShow += count;
+          break;
+        default:
+          break;
+      }
+    }
+
     return NextResponse.json({
       kpis: {
         totalPatients,
@@ -267,6 +469,46 @@ export async function GET() {
         patientGrowth,
         appointmentGrowth,
         revenueGrowth,
+      },
+      metrics: {
+        patients: {
+          monthlyNew: monthlyNewPatients,
+          total: totalPatientsAllTime,
+        },
+        retention: {
+          retained: retainedCount,
+          lost: lostCount,
+          new: newCount,
+          retentionRate,
+          churnRate,
+        },
+        consultas: {
+          monthly: consultasMonthly,
+          ytd: consultasYtd,
+        },
+        evaluaciones: {
+          monthly: {
+            development: developmentEvalMonthly,
+            analysis: analysesMonthly,
+            total: developmentEvalMonthly + analysesMonthly,
+          },
+          ytd: {
+            development: developmentEvalYtd,
+            analysis: analysesYtd,
+            total: developmentEvalYtd + analysesYtd,
+          },
+        },
+        tratamientosPorArea: {
+          monthlyBySpecialty,
+          totalBySpecialty,
+          monthlyTotal: proposalServicesMonthly.length,
+          total: proposalServicesAll.length,
+        },
+        programas: {
+          neuro: neuroPatients.size,
+          atencionTemprana: atencionTempranaPatients.size,
+        },
+        agendaPorTerapeuta: Object.values(agendaMap),
       },
       requests: {
         consultationRequests: {
@@ -289,6 +531,7 @@ export async function GET() {
         inEvaluation: patientsInEvaluation,
         completed: completedPatients,
       },
+      // financial removed from UI but kept here if needed elsewhere
       financial: {
         totalPaid: completedPaymentsAmount,
         pending: pendingPaymentsAmount,
