@@ -257,12 +257,17 @@ export async function GET() {
         const t = pay.appointment.therapist;
         therapistName = `${t?.firstName ?? ""} ${t?.lastName ?? ""}`.trim();
       } else {
-        const proposalRel = (pay as unknown as {
-          proposal?: {
-            therapistId?: string | null;
-            therapist?: { firstName: string | null; lastName: string | null } | null;
-          } | null;
-        }).proposal;
+        const proposalRel = (
+          pay as unknown as {
+            proposal?: {
+              therapistId?: string | null;
+              therapist?: {
+                firstName: string | null;
+                lastName: string | null;
+              } | null;
+            } | null;
+          }
+        ).proposal;
         if (proposalRel?.therapistId) {
           therapistId = proposalRel.therapistId;
           const t = proposalRel.therapist;
@@ -385,12 +390,17 @@ export async function GET() {
       { therapistId: string; therapistName: string; amount: number }
     > = {};
     for (const p of pendingOrOverduePaymentsWithRelations) {
-      const proposalRel = (p as unknown as {
-        proposal?: {
-          therapistId?: string | undefined | null;
-          therapist?: { firstName: string | null; lastName: string | null } | null;
-        } | null;
-      }).proposal;
+      const proposalRel = (
+        p as unknown as {
+          proposal?: {
+            therapistId?: string | undefined | null;
+            therapist?: {
+              firstName: string | null;
+              lastName: string | null;
+            } | null;
+          } | null;
+        }
+      ).proposal;
       const tId = (proposalRel?.therapistId ?? undefined) as string | undefined;
       const t = proposalRel?.therapist;
       if (!tId) continue;
@@ -421,7 +431,10 @@ export async function GET() {
         therapistName: string;
         scheduled: number;
         completed: number;
+        cancelled: number;
+        noShow: number;
         completionRate: number;
+        revenue: number;
       }
     > = {};
     for (const row of therapistAppointmentsGroupBy) {
@@ -432,7 +445,10 @@ export async function GET() {
           therapistName: therapistIdToName[key] || key,
           scheduled: 0,
           completed: 0,
+          cancelled: 0,
+          noShow: 0,
           completionRate: 0,
+          revenue: 0,
         };
       }
       const c = Number((row._count as { _all: number })._all ?? 0);
@@ -441,11 +457,16 @@ export async function GET() {
         ["SCHEDULED", "CONFIRMED", "IN_PROGRESS"].includes(row.status as string)
       )
         perfMap[key].scheduled += c;
+      else if (row.status === "CANCELLED") perfMap[key].cancelled += c;
+      else if (row.status === "NO_SHOW") perfMap[key].noShow += c;
     }
     for (const k of Object.keys(perfMap)) {
       const s = perfMap[k];
       const denom = s.scheduled + s.completed;
       s.completionRate = denom > 0 ? (s.completed / denom) * 100 : 0;
+      const revenue =
+        (therapistRevenueMap[k]?.amount as number | undefined) ?? 0;
+      s.revenue = Number(revenue);
     }
     const monthlyTherapistPerformance = Object.values(perfMap).sort(
       (a, b) => b.completed - a.completed

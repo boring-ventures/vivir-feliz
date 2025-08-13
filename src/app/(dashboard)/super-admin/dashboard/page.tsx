@@ -3,6 +3,15 @@
 import { RoleGuard } from "@/components/auth/role-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users,
@@ -225,8 +234,8 @@ export default function SuperAdminDashboardPage() {
           </Card>
         </div>
 
-        {/* Payment Methods and Top Therapists */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Payment Methods */}
+        <div className="grid grid-cols-1 gap-6">
           <Card>
             <CardContent className="p-6">
               <p className="text-sm font-medium mb-3">Métodos de Pago (Mes)</p>
@@ -267,35 +276,10 @@ export default function SuperAdminDashboardPage() {
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm font-medium mb-3">
-                Top Terapeutas por Ingresos (Mes)
-              </p>
-              <div className="space-y-2">
-                {(dashboardData?.financial.topTherapistsMonthly || []).map(
-                  (t) => (
-                    <div
-                      key={t.therapistId}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-sm text-muted-foreground">
-                        {t.therapistName}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {formatCurrency(t.amount)}
-                      </span>
-                    </div>
-                  )
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Revenue Trend and AR Aging */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Revenue Trend */}
+        <div className="grid grid-cols-1 gap-6 mt-8">
           <Card>
             <CardContent className="p-6">
               <p className="text-sm font-medium mb-3">
@@ -329,202 +313,71 @@ export default function SuperAdminDashboardPage() {
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm font-medium mb-3">
-                Antigüedad de Cuentas por Cobrar
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    0-30 días
-                  </span>
-                  <span className="text-sm font-medium">
-                    {formatCurrency(
-                      dashboardData?.financial.arAging.b0_30 || 0
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    31-60 días
-                  </span>
-                  <span className="text-sm font-medium">
-                    {formatCurrency(
-                      dashboardData?.financial.arAging.b31_60 || 0
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    61-90 días
-                  </span>
-                  <span className="text-sm font-medium">
-                    {formatCurrency(
-                      dashboardData?.financial.arAging.b61_90 || 0
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    90+ días
-                  </span>
-                  <span className="text-sm font-medium">
-                    {formatCurrency(
-                      dashboardData?.financial.arAging.b91_plus || 0
-                    )}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Appointment Quality and Averages */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm font-medium mb-3">Calidad de Citas (Mes)</p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Completadas
-                  </span>
-                  <span className="text-sm font-medium">
-                    {dashboardData?.financial.appointmentQuality.completed || 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Canceladas
-                  </span>
-                  <span className="text-sm font-medium">
-                    {dashboardData?.financial.appointmentQuality.cancelled || 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">No Show</span>
-                  <span className="text-sm font-medium">
-                    {dashboardData?.financial.appointmentQuality.noShow || 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Tasa No Show
-                  </span>
-                  <span
-                    className={`text-sm font-medium ${getGrowthColor(0 - (dashboardData?.financial.appointmentQuality.noShowRate || 0))}`}
-                  >
-                    {formatPercentage(
-                      dashboardData?.financial.appointmentQuality.noShowRate ||
-                        0
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Tasa Cancelación
-                  </span>
-                  <span
-                    className={`text-sm font-medium ${getGrowthColor(0 - (dashboardData?.financial.appointmentQuality.cancellationRate || 0))}`}
-                  >
-                    {formatPercentage(
-                      dashboardData?.financial.appointmentQuality
-                        .cancellationRate || 0
-                    )}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm font-medium mb-3">Promedios</p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Ingreso por Paciente
-                  </span>
-                  <span className="text-sm font-medium">
-                    {formatCurrency(
-                      dashboardData?.financial.averages.revenuePerPatient || 0
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Ingreso por Cita
-                  </span>
-                  <span className="text-sm font-medium">
-                    {formatCurrency(
-                      dashboardData?.financial.averages.revenuePerAppointment ||
-                        0
-                    )}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Outstanding and Performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-sm font-medium mb-3">
-                Cuentas por Cobrar por Terapeuta
-              </p>
-              <div className="space-y-2">
-                {(dashboardData?.financial.outstandingByTherapist || []).map(
-                  (t) => (
-                    <div
-                      key={t.therapistId}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-sm text-muted-foreground">
-                        {t.therapistName}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {formatCurrency(t.amount)}
-                      </span>
-                    </div>
-                  )
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
+        {/* Therapist Performance */}
+        <div className="grid grid-cols-1 gap-6 mt-8">
           <Card>
             <CardContent className="p-6">
               <p className="text-sm font-medium mb-3">
                 Rendimiento de Terapeutas (Mes)
               </p>
-              <div className="space-y-2">
-                {(dashboardData?.financial.monthlyTherapistPerformance || [])
-                  .slice(0, 6)
-                  .map((t) => (
-                    <div
-                      key={t.therapistId}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-sm text-muted-foreground">
-                        {t.therapistName}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Prog: {t.scheduled}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Comp: {t.completed}
-                      </span>
-                      <span
-                        className={`text-sm font-medium ${getGrowthColor((t.completionRate || 0) - 70)}`}
-                      >
-                        {formatPercentage(t.completionRate || 0)}
-                      </span>
-                    </div>
-                  ))}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Terapeuta</TableHead>
+                      <TableHead className="text-right">Programadas</TableHead>
+                      <TableHead className="text-right">Completadas</TableHead>
+                      <TableHead className="text-right">Canceladas</TableHead>
+                      <TableHead className="text-right">No Show</TableHead>
+                      <TableHead className="text-right">
+                        Tasa Cumplimiento
+                      </TableHead>
+                      <TableHead className="text-right">Ingresos</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(
+                      dashboardData?.financial.monthlyTherapistPerformance || []
+                    )
+                      .slice(0, 10)
+                      .map((t) => (
+                        <TableRow key={t.therapistId}>
+                          <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                            {t.therapistName}
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
+                            {t.scheduled}
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
+                            {t.completed}
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
+                            {t.cancelled}
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
+                            {t.noShow}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center gap-2 justify-end">
+                              <div className="w-32">
+                                <Progress value={t.completionRate || 0} />
+                              </div>
+                              <span
+                                className={`text-sm font-medium ${getGrowthColor((t.completionRate || 0) - 70)}`}
+                              >
+                                {formatPercentage(t.completionRate || 0)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right text-sm font-medium">
+                            {formatCurrency(t.revenue || 0)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>

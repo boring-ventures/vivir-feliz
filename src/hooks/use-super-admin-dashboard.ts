@@ -54,7 +54,10 @@ export interface SuperAdminDashboardData {
       therapistName: string;
       scheduled: number;
       completed: number;
+      cancelled: number;
+      noShow: number;
       completionRate: number;
+      revenue: number;
     }>;
   };
   today: { appointments: number };
