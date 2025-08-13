@@ -478,6 +478,7 @@ export default function ScheduleAppointmentPage() {
               }}
               placeholder="Nombre completo del niño/a"
               className={cn(
+                "capitalize",
                 errors.childName && "border-red-500 focus:border-red-500"
               )}
               required
@@ -697,6 +698,7 @@ export default function ScheduleAppointmentPage() {
                 clearError("parentRequired");
               }}
               placeholder="Nombre completo de la madre"
+              className="capitalize"
             />
           </div>
           <div>
@@ -808,6 +810,7 @@ export default function ScheduleAppointmentPage() {
                 clearError("parentRequired");
               }}
               placeholder="Nombre completo del padre"
+              className="capitalize"
             />
           </div>
           <div>
@@ -1005,6 +1008,7 @@ export default function ScheduleAppointmentPage() {
               setDatosEscolares({ ...datosEscolares, maestra: e.target.value })
             }
             placeholder="Nombre completo de la maestra"
+            className="capitalize"
           />
         </div>
       </div>
@@ -1058,6 +1062,7 @@ export default function ScheduleAppointmentPage() {
                     clearError("familyHistory");
                   }}
                   placeholder="Nombre del hijo/a"
+                  className="capitalize"
                 />
               </div>
               <div>

@@ -36,6 +36,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const date = searchParams.get("date");
     const search = searchParams.get("search") || "";
+    const patientId = searchParams.get("patientId");
+    const therapistId = searchParams.get("therapistId");
 
     // Build where clause
     const whereClause: Prisma.AppointmentWhereInput = {};
@@ -56,6 +58,14 @@ export async function GET(request: NextRequest) {
         gte: new Date(date),
         lt: new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000), // Next day
       };
+    }
+
+    if (patientId) {
+      whereClause.patientId = patientId;
+    }
+
+    if (therapistId) {
+      whereClause.therapistId = therapistId;
     }
 
     if (search) {

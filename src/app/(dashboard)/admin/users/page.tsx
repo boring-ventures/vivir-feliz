@@ -868,9 +868,9 @@ export default function AdminUsersPage() {
                     <Label htmlFor="firstName">Nombres *</Label>
                     <Input
                       {...form.register("firstName")}
-                      className={
+                      className={`capitalize ${
                         form.formState.errors.firstName ? "border-red-500" : ""
-                      }
+                      }`}
                     />
                     <FieldError
                       error={form.formState.errors.firstName?.message}
@@ -880,9 +880,9 @@ export default function AdminUsersPage() {
                     <Label htmlFor="lastName">Apellidos *</Label>
                     <Input
                       {...form.register("lastName")}
-                      className={
+                      className={`capitalize ${
                         form.formState.errors.lastName ? "border-red-500" : ""
-                      }
+                      }`}
                     />
                     <FieldError
                       error={form.formState.errors.lastName?.message}

@@ -18,6 +18,7 @@ import {
   useAvailableSlots,
   useBookAppointment,
 } from "@/hooks/use-available-slots";
+import { getSpecialtyLabelEs } from "@/lib/specialties";
 import { useRequestStatus } from "@/hooks/use-request-status";
 
 function SelectTimePageContent() {
@@ -26,6 +27,7 @@ function SelectTimePageContent() {
   const [selectedTherapist, setSelectedTherapist] = useState<{
     id: string;
     name: string;
+    specialty?: string;
   } | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [requestData, setRequestData] = useState<{
@@ -226,10 +228,15 @@ function SelectTimePageContent() {
   const handleTimeClick = (
     time: string,
     therapistId: string,
-    therapistName: string
+    therapistName: string,
+    therapistSpecialty?: string
   ) => {
     setSelectedTime(time);
-    setSelectedTherapist({ id: therapistId, name: therapistName });
+    setSelectedTherapist({
+      id: therapistId,
+      name: therapistName,
+      specialty: therapistSpecialty,
+    });
   };
 
   const handleConfirm = async () => {
@@ -488,11 +495,13 @@ function SelectTimePageContent() {
                               ? "bg-blue-600 hover:bg-blue-700"
                               : ""
                           )}
+                          aria-label={`${slot.time} - ${slot.therapistName}${slot.therapistSpecialty ? `, ${getSpecialtyLabelEs(slot.therapistSpecialty)}` : ""}`}
                           onClick={() =>
                             handleTimeClick(
                               slot.time,
                               slot.therapistId,
-                              slot.therapistName
+                              slot.therapistName,
+                              slot.therapistSpecialty
                             )
                           }
                         >
@@ -524,11 +533,13 @@ function SelectTimePageContent() {
                               ? "bg-blue-600 hover:bg-blue-700"
                               : ""
                           )}
+                          aria-label={`${slot.time} - ${slot.therapistName}${slot.therapistSpecialty ? `, ${getSpecialtyLabelEs(slot.therapistSpecialty)}` : ""}`}
                           onClick={() =>
                             handleTimeClick(
                               slot.time,
                               slot.therapistId,
-                              slot.therapistName
+                              slot.therapistName,
+                              slot.therapistSpecialty
                             )
                           }
                         >
@@ -560,6 +571,10 @@ function SelectTimePageContent() {
                     </p>
                     <p className="text-sm text-gray-600">
                       Terapeuta: {selectedTherapist.name}
+                      <span>
+                        {" "}
+                        - {getSpecialtyLabelEs(selectedTherapist.specialty)}
+                      </span>
                     </p>
                     <p className="text-sm text-gray-600 mt-1">
                       {getTipoDisplay()}

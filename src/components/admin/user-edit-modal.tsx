@@ -203,9 +203,9 @@ export function UserEditModal({
               <Label htmlFor="firstName">Nombres *</Label>
               <Input
                 {...form.register("firstName")}
-                className={
+                className={`${
                   form.formState.errors.firstName ? "border-red-500" : ""
-                }
+                } capitalize`}
               />
               <FieldError error={form.formState.errors.firstName?.message} />
             </div>
@@ -213,9 +213,9 @@ export function UserEditModal({
               <Label htmlFor="lastName">Apellidos *</Label>
               <Input
                 {...form.register("lastName")}
-                className={
+                className={`${
                   form.formState.errors.lastName ? "border-red-500" : ""
-                }
+                } capitalize`}
               />
               <FieldError error={form.formState.errors.lastName?.message} />
             </div>

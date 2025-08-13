@@ -5,6 +5,7 @@ export type AvailableSlot = {
   time: string;
   therapistId: string;
   therapistName: string;
+  therapistSpecialty?: string;
 };
 
 export type AvailableSlotsResponse = {

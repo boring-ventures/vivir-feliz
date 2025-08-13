@@ -228,23 +228,38 @@ export async function GET(request: NextRequest) {
       where: {
         role: "THERAPIST",
         active: true,
-        canTakeConsultations: true, // Only therapists who can take consultations
-        ...(requiredSpecialties.length > 0 && {
-          specialty: {
-            in: requiredSpecialties as (
-              | "SPEECH_THERAPIST"
-              | "OCCUPATIONAL_THERAPIST"
-              | "PSYCHOPEDAGOGUE"
-              | "NEUROPSYCHOLOGIST"
-              | "COORDINATOR"
-              | "PSYCHOMOTRICIAN"
-              | "PEDIATRIC_KINESIOLOGIST"
-              | "PSYCHOLOGIST"
-              | "COORDINATION_ASSISTANT"
-              | "BEHAVIORAL_THERAPIST"
-            )[],
-          },
-        }),
+        // For consultations, only therapists who can take consultations
+        ...(appointmentType === "CONSULTATION"
+          ? { canTakeConsultations: true }
+          : {}),
+        // For interviews, restrict to coordinator roles only
+        ...(appointmentType === "INTERVIEW"
+          ? {
+              specialty: {
+                in: ["COORDINATOR", "COORDINATION_ASSISTANT"] as (
+                  | "COORDINATOR"
+                  | "COORDINATION_ASSISTANT"
+                )[],
+              },
+            }
+          : requiredSpecialties.length > 0
+            ? {
+                specialty: {
+                  in: requiredSpecialties as (
+                    | "SPEECH_THERAPIST"
+                    | "OCCUPATIONAL_THERAPIST"
+                    | "PSYCHOPEDAGOGUE"
+                    | "NEUROPSYCHOLOGIST"
+                    | "COORDINATOR"
+                    | "PSYCHOMOTRICIAN"
+                    | "PEDIATRIC_KINESIOLOGIST"
+                    | "PSYCHOLOGIST"
+                    | "COORDINATION_ASSISTANT"
+                    | "BEHAVIORAL_THERAPIST"
+                  )[],
+                },
+              }
+            : {}),
       },
       include: {
         schedule: {
@@ -289,7 +304,12 @@ export async function GET(request: NextRequest) {
     // Process available slots for each day in the range
     const availableSlots: Record<
       string,
-      Array<{ time: string; therapistId: string; therapistName: string }>
+      Array<{
+        time: string;
+        therapistId: string;
+        therapistName: string;
+        therapistSpecialty?: string;
+      }>
     > = {};
 
     const dayNames = [
@@ -364,6 +384,7 @@ export async function GET(request: NextRequest) {
                 time: currentSlotTime,
                 therapistId: therapist.id,
                 therapistName: `${therapist.firstName} ${therapist.lastName}`,
+                therapistSpecialty: therapist.specialty || undefined,
               });
             }
 
@@ -387,7 +408,12 @@ export async function GET(request: NextRequest) {
       // Sort slots by time and remove duplicates (keeping first available therapist)
       const uniqueSlots = new Map<
         string,
-        { time: string; therapistId: string; therapistName: string }
+        {
+          time: string;
+          therapistId: string;
+          therapistName: string;
+          therapistSpecialty?: string;
+        }
       >();
       availableSlots[dateStr]
         .sort((a, b) => a.time.localeCompare(b.time))

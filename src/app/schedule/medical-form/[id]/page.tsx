@@ -618,6 +618,7 @@ export default function MedicalFormPage({
                   value={formData.nombreNino}
                   onChange={(e) => updateFormData("nombreNino", e.target.value)}
                   placeholder="Ingrese el nombre completo"
+                  className="capitalize"
                   required
                 />
               </div>

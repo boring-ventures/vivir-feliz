@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Heart,
   Brain,
+  BrainCircuit,
   MessageCircle,
   Activity,
   Users,
@@ -21,6 +22,9 @@ import {
   Mail,
   MapPin,
   Clock,
+  Stethoscope,
+  Accessibility,
+  Puzzle,
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
@@ -35,7 +39,7 @@ export default function LandingPage() {
 
   const services = [
     {
-      icon: Brain,
+      icon: Users,
       title: "Psicología Infantil",
       description:
         "Evaluación y tratamiento especializado para el desarrollo emocional y cognitivo",
@@ -58,7 +62,7 @@ export default function LandingPage() {
       description: "Rehabilitación física y desarrollo motor para niños",
     },
     {
-      icon: Users,
+      icon: Star,
       title: "Psicopedagogía",
       description: "Apoyo en dificultades de aprendizaje y rendimiento escolar",
     },
@@ -66,6 +70,31 @@ export default function LandingPage() {
       icon: Brain,
       title: "Neuropsicología",
       description: "Evaluación y rehabilitación de funciones cognitivas",
+    },
+    // Additional specialties (excluding Coordination roles)
+    {
+      icon: Puzzle,
+      title: "Terapia para TEA",
+      description:
+        "Intervención especializada en habilidades sociales, comunicación y conductas adaptativas",
+    },
+    {
+      icon: Accessibility,
+      title: "Psicomotricidad",
+      description:
+        "Trabajo corporal para mejorar el equilibrio, la coordinación y la planificación motora",
+    },
+    {
+      icon: Stethoscope,
+      title: "Kinesiología Pediátrica",
+      description:
+        "Rehabilitación motora y respiratoria enfocada en población infantil",
+    },
+    {
+      icon: BrainCircuit,
+      title: "Terapia Conductual",
+      description:
+        "Apoyo en regulación emocional y modificación de conductas para favorecer la autonomía",
     },
   ];
 
@@ -164,9 +193,12 @@ export default function LandingPage() {
               especializados en el desarrollo infantil
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:flex lg:flex-wrap lg:justify-center">
             {services.map((service, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
+              <Card
+                key={index}
+                className="hover:shadow-lg transition-shadow w-full max-w-sm lg:max-w-none lg:basis-1/4"
+              >
                 <CardHeader>
                   <service.icon className="h-12 w-12 text-blue-600 mb-4" />
                   <CardTitle className="text-xl">{service.title}</CardTitle>
@@ -383,9 +415,10 @@ export default function LandingPage() {
                 </CardHeader>
                 <CardContent className="text-center">
                   <p className="text-gray-600 mb-4">
-                    Con derivación
+                    Con derivación del colegio
                     <br />
-                    del colegio
+                    derivación médica o diagnóstico emitido en los últimos 6
+                    meses
                   </p>
                   <div className="mb-4 h-10"></div>{" "}
                   {/* Espacio para mantener la alineación */}

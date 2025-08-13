@@ -18,6 +18,8 @@ export interface TherapistProfile {
   updatedAt: Date;
   schedule: TherapistSchedule | null;
   appointments: TherapistAppointment[];
+  // Active therapist-patient relations for quick patients count in admin
+  therapistPatients?: { id: string }[];
 }
 
 export interface TherapistSchedule {
