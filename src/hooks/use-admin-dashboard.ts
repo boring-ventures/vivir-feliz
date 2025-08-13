@@ -29,6 +29,8 @@ export interface AdminDashboardData {
       totalBySpecialty: Record<string, number>;
       monthlyTotal: number;
       total: number;
+      activeBySpecialty?: Record<string, number>;
+      activeTotal?: number;
     };
     programas: { neuro: number; atencionTemprana: number };
     agendaPorTerapeuta: Array<{
@@ -55,6 +57,13 @@ export interface AdminDashboardData {
   staff: {
     activeTherapists: number;
     totalTherapists: number;
+    availableForConsultations?: number;
+    activeList?: Array<{
+      id: string;
+      name: string;
+      canTakeConsultations: boolean;
+    }>;
+    bySpecialty?: Record<string, { active: number; available: number }>;
   };
   patients: {
     active: number;

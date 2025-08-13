@@ -38,6 +38,9 @@ export async function GET() {
       scheduledInterviewRequests,
       activeTherapists,
       totalTherapists,
+      availableForConsultationsCount,
+      activeTherapistsList,
+      therapistsForAreaBreakdown,
       todayAppointments,
       pendingPayments,
       completedPayments,
@@ -57,6 +60,8 @@ export async function GET() {
       proposalServicesAll,
       therapeuticPlansNeuro,
       therapeuticPlansTemprana,
+      // Active therapist-patient links for specialty aggregation
+      activeTherapistPatients,
       prevMonthPatientIdsRaw,
       currMonthPatientIdsRaw,
       agendaGroupBy,
@@ -166,6 +171,34 @@ export async function GET() {
       // Total therapists
       prisma.profile.count({
         where: { role: "THERAPIST" },
+      }),
+
+      // Active therapists who can take consultations
+      prisma.profile.count({
+        where: {
+          role: "THERAPIST",
+          active: true,
+          canTakeConsultations: true,
+        },
+      }),
+
+      // Small list of active therapists with consultation availability
+      prisma.profile.findMany({
+        where: { role: "THERAPIST", active: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          canTakeConsultations: true,
+        },
+        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+        take: 8,
+      }),
+
+      // Active therapists for per-area breakdown
+      prisma.profile.findMany({
+        where: { role: "THERAPIST", active: true },
+        select: { specialty: true, canTakeConsultations: true },
       }),
 
       // Today's appointments
@@ -300,6 +333,12 @@ export async function GET() {
         select: { patientId: true },
       }),
 
+      // Active therapist-patient relationships
+      prisma.therapistPatient.findMany({
+        where: { active: true },
+        include: { therapist: { select: { specialty: true } } },
+      }),
+
       // Retention/Churn via distinct patientIds by month
       prisma.appointment.findMany({
         where: {
@@ -402,6 +441,14 @@ export async function GET() {
       totalBySpecialty[spec] = (totalBySpecialty[spec] || 0) + 1;
     }
 
+    // Active treatments by area via TherapistPatient relationships
+    const activeBySpecialty: Record<string, number> = {};
+    for (const tp of activeTherapistPatients) {
+      const spec = tp.therapist?.specialty || "UNKNOWN";
+      activeBySpecialty[spec] = (activeBySpecialty[spec] || 0) + 1;
+    }
+    const activeTotal = activeTherapistPatients.length;
+
     const neuroPatients = new Set(
       therapeuticPlansNeuro.map((p) => p.patientId)
     );
@@ -503,6 +550,8 @@ export async function GET() {
           totalBySpecialty,
           monthlyTotal: proposalServicesMonthly.length,
           total: proposalServicesAll.length,
+          activeBySpecialty,
+          activeTotal,
         },
         programas: {
           neuro: neuroPatients.size,
@@ -525,6 +574,22 @@ export async function GET() {
       staff: {
         activeTherapists,
         totalTherapists,
+        availableForConsultations: availableForConsultationsCount,
+        activeList: (activeTherapistsList || []).map((t) => ({
+          id: t.id,
+          name: `${t.firstName ?? ""} ${t.lastName ?? ""}`.trim(),
+          canTakeConsultations: Boolean(t.canTakeConsultations),
+        })),
+        bySpecialty: (() => {
+          const map: Record<string, { active: number; available: number }> = {};
+          for (const t of therapistsForAreaBreakdown) {
+            const key = (t.specialty as string) || "UNKNOWN";
+            if (!map[key]) map[key] = { active: 0, available: 0 };
+            map[key].active += 1;
+            if (t.canTakeConsultations) map[key].available += 1;
+          }
+          return map;
+        })(),
       },
       patients: {
         active: activePatients,
