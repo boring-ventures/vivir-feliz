@@ -371,9 +371,6 @@ export default function SuperAdminDashboardPage() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-right text-sm font-medium">
-                            {formatCurrency(t.revenue || 0)}
-                          </TableCell>
                         </TableRow>
                       ))}
                   </TableBody>
