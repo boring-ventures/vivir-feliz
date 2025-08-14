@@ -223,6 +223,26 @@ export async function GET(request: NextRequest) {
 
     const requiredSpecialties = getRequiredSpecialties(consultationReasons);
 
+    // Get specialty IDs for the required specialties
+    let specialtyIds: string[] = [];
+
+    if (requiredSpecialties.length > 0) {
+      const specialties = await prisma.specialty.findMany({
+        where: {
+          specialtyId: {
+            in: requiredSpecialties,
+          },
+          isActive: true,
+        },
+        select: {
+          id: true,
+        },
+      });
+      specialtyIds = specialties.map(
+        (specialty: { id: string }) => specialty.id
+      );
+    }
+
     // Get all active therapists with their schedules
     const therapists = await prisma.profile.findMany({
       where: {
@@ -235,33 +255,26 @@ export async function GET(request: NextRequest) {
         // For interviews, restrict to coordinator roles only
         ...(appointmentType === "INTERVIEW"
           ? {
-              specialty: {
-                in: ["COORDINATOR", "COORDINATION_ASSISTANT"] as (
-                  | "COORDINATOR"
-                  | "COORDINATION_ASSISTANT"
-                )[],
+              specialtyId: {
+                in: specialtyIds.length > 0 ? specialtyIds : undefined,
               },
             }
           : requiredSpecialties.length > 0
             ? {
-                specialty: {
-                  in: requiredSpecialties as (
-                    | "SPEECH_THERAPIST"
-                    | "OCCUPATIONAL_THERAPIST"
-                    | "PSYCHOPEDAGOGUE"
-                    | "NEUROPSYCHOLOGIST"
-                    | "COORDINATOR"
-                    | "PSYCHOMOTRICIAN"
-                    | "PEDIATRIC_KINESIOLOGIST"
-                    | "PSYCHOLOGIST"
-                    | "COORDINATION_ASSISTANT"
-                    | "BEHAVIORAL_THERAPIST"
-                  )[],
+                specialtyId: {
+                  in: specialtyIds,
                 },
               }
             : {}),
       },
       include: {
+        specialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+          },
+        },
         schedule: {
           where: {
             isActive: true,
@@ -384,7 +397,7 @@ export async function GET(request: NextRequest) {
                 time: currentSlotTime,
                 therapistId: therapist.id,
                 therapistName: `${therapist.firstName} ${therapist.lastName}`,
-                therapistSpecialty: therapist.specialty || undefined,
+                therapistSpecialty: therapist.specialty?.name || undefined,
               });
             }
 

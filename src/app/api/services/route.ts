@@ -9,25 +9,16 @@ const serviceSchema = z.object({
   sessions: z.number().int().positive("Sessions must be a positive integer"),
   costPerSession: z.number().positive("Cost per session must be positive"),
   type: z.enum(["EVALUATION", "TREATMENT"]),
-  specialty: z.enum([
-    "SPEECH_THERAPIST",
-    "OCCUPATIONAL_THERAPIST",
-    "PSYCHOPEDAGOGUE",
-    "ASD_THERAPIST",
-    "NEUROPSYCHOLOGIST",
-    "COORDINATOR",
-    "PSYCHOMOTRICIAN",
-    "PEDIATRIC_KINESIOLOGIST",
-    "PSYCHOLOGIST",
-    "COORDINATION_ASSISTANT",
-    "BEHAVIORAL_THERAPIST",
-  ]),
+  specialty: z.string().optional(),
   status: z.boolean().optional().default(true),
 });
 
 export async function GET() {
   try {
     const services = await prisma.service.findMany({
+      include: {
+        specialty: true,
+      },
       orderBy: {
         createdAt: "desc",
       },
@@ -60,16 +51,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // If specialty is provided, verify it exists and get its ID
+    let specialtyId = null;
+    if (
+      validatedData.specialty &&
+      validatedData.specialty.trim() !== "" &&
+      validatedData.specialty !== "none"
+    ) {
+      const specialtyExists = await prisma.specialty.findUnique({
+        where: { specialtyId: validatedData.specialty },
+      });
+
+      if (!specialtyExists) {
+        return NextResponse.json(
+          { error: "Selected specialty does not exist" },
+          { status: 400 }
+        );
+      }
+
+      specialtyId = specialtyExists.id; // Use the actual ID, not the specialtyId string
+    }
+
+    const serviceData = {
+      code: validatedData.code,
+      serviceName: validatedData.serviceName,
+      description: validatedData.description,
+      sessions: validatedData.sessions,
+      costPerSession: validatedData.costPerSession,
+      type: validatedData.type,
+      specialtyId: specialtyId,
+      status: validatedData.status,
+    };
+
     const service = await prisma.service.create({
-      data: {
-        code: validatedData.code,
-        serviceName: validatedData.serviceName,
-        description: validatedData.description,
-        sessions: validatedData.sessions,
-        costPerSession: validatedData.costPerSession,
-        type: validatedData.type,
-        specialty: validatedData.specialty,
-        status: validatedData.status,
+      data: serviceData,
+      include: {
+        specialty: true,
       },
     });
 

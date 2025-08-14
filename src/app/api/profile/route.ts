@@ -23,6 +23,19 @@ export async function GET() {
     // Fetch profile from the database
     const profile = await prisma.profile.findUnique({
       where: { userId },
+      include: {
+        specialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+            description: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
     });
 
     if (!profile) {
@@ -77,6 +90,19 @@ export async function PUT(request: NextRequest) {
         active,
         acceptWhatsApp,
         ...(specialty && { specialty }),
+      },
+      include: {
+        specialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+            description: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
       },
     });
 

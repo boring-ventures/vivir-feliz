@@ -9,19 +9,7 @@ const updateServiceSchema = z.object({
   sessions: z.number().int().positive("Sessions must be a positive integer"),
   costPerSession: z.number().positive("Cost per session must be positive"),
   type: z.enum(["EVALUATION", "TREATMENT"]),
-  specialty: z.enum([
-    "SPEECH_THERAPIST",
-    "OCCUPATIONAL_THERAPIST",
-    "PSYCHOPEDAGOGUE",
-    "ASD_THERAPIST",
-    "NEUROPSYCHOLOGIST",
-    "COORDINATOR",
-    "PSYCHOMOTRICIAN",
-    "PEDIATRIC_KINESIOLOGIST",
-    "PSYCHOLOGIST",
-    "COORDINATION_ASSISTANT",
-    "BEHAVIORAL_THERAPIST",
-  ]),
+  specialty: z.string().optional(),
   status: z.boolean(),
 });
 
@@ -33,6 +21,9 @@ export async function GET(
     const { id } = await params;
     const service = await prisma.service.findUnique({
       where: { id },
+      include: {
+        specialty: true,
+      },
     });
 
     if (!service) {
@@ -81,6 +72,27 @@ export async function PUT(
       }
     }
 
+    // If specialty is provided, verify it exists and get its ID
+    let specialtyId = null;
+    if (
+      validatedData.specialty &&
+      validatedData.specialty.trim() !== "" &&
+      validatedData.specialty !== "none"
+    ) {
+      const specialtyExists = await prisma.specialty.findUnique({
+        where: { specialtyId: validatedData.specialty },
+      });
+
+      if (!specialtyExists) {
+        return NextResponse.json(
+          { error: "Selected specialty does not exist" },
+          { status: 400 }
+        );
+      }
+
+      specialtyId = specialtyExists.id; // Use the actual ID, not the specialtyId string
+    }
+
     const updatedService = await prisma.service.update({
       where: { id },
       data: {
@@ -90,8 +102,11 @@ export async function PUT(
         sessions: validatedData.sessions,
         costPerSession: validatedData.costPerSession,
         type: validatedData.type,
-        specialty: validatedData.specialty,
+        specialtyId: specialtyId,
         status: validatedData.status,
+      },
+      include: {
+        specialty: true,
       },
     });
 
