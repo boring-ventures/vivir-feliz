@@ -1,4 +1,5 @@
-import { SpecialtyType, DayOfWeek, AppointmentType } from "@prisma/client";
+import { DayOfWeek, AppointmentType } from "@prisma/client";
+import { Specialty } from "@/lib/specialties";
 
 export interface TherapistProfile {
   id: string;
@@ -6,7 +7,7 @@ export interface TherapistProfile {
   firstName: string | null;
   lastName: string | null;
   phone: string | null;
-  specialty: SpecialtyType | null;
+  specialty: Specialty | null;
   avatarUrl: string | null;
   biography: string | null;
   nationalId: string | null;

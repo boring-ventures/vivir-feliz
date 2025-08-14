@@ -9,8 +9,10 @@ import {
   PaymentStatus,
   AppointmentStatus,
   AppointmentType,
-  SpecialtyType,
 } from "@prisma/client";
+
+// Import the new Specialty interface from our specialties utility
+import { Specialty } from "@/lib/specialties";
 
 // Extended types with relations
 export interface PatientWithRelations extends Patient {
@@ -238,8 +240,10 @@ export {
   PaymentStatus,
   AppointmentStatus,
   AppointmentType,
-  SpecialtyType,
 } from "@prisma/client";
+
+// Re-export the Specialty interface for convenience
+export type { Specialty } from "@/lib/specialties";
 
 // Status mapping utilities
 export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
@@ -280,7 +284,8 @@ export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
   RESCHEDULED: "Reprogramada",
 };
 
-export const SPECIALTY_LABELS: Record<SpecialtyType, string> = {
+// Legacy specialty labels for backward compatibility
+const LEGACY_SPECIALTY_LABELS: Record<string, string> = {
   SPEECH_THERAPIST: "Fonoaudiología",
   OCCUPATIONAL_THERAPIST: "Terapia Ocupacional",
   PSYCHOPEDAGOGUE: "Psicopedagogía",
@@ -293,6 +298,28 @@ export const SPECIALTY_LABELS: Record<SpecialtyType, string> = {
   COORDINATION_ASSISTANT: "Asistente de Coordinación",
   BEHAVIORAL_THERAPIST: "Terapeuta Conductual",
 };
+
+// Updated function to handle both new object structure and legacy string types
+export const getSpecialtyLabel = (
+  specialty?: string | Specialty | null
+): string => {
+  if (!specialty) return "Sin especialidad";
+
+  // If specialty is an object (new structure), use the name
+  if (typeof specialty === "object" && "name" in specialty) {
+    return specialty.name || "Sin especialidad";
+  }
+
+  // If specialty is a string (legacy structure), use the mapping
+  if (typeof specialty === "string") {
+    return LEGACY_SPECIALTY_LABELS[specialty] || specialty;
+  }
+
+  return "Sin especialidad";
+};
+
+// Legacy export for backward compatibility (deprecated)
+export const SPECIALTY_LABELS = LEGACY_SPECIALTY_LABELS;
 
 // Patient types for therapist views
 export interface PatientWithSessions {

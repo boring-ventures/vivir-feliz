@@ -58,7 +58,7 @@ export interface TherapistReportContribution {
   therapistId: string;
   objectives?: string[];
   background?: string;
-  indicators?: string[];
+  indicators?: (string | { name?: string; indicator?: string; status?: string })[]; // Can be strings or objects with name property
   indicatorsComment?: string;
   conclusions?: string;
   createdAt: string;
@@ -89,7 +89,7 @@ export interface TherapeuticPlan {
   diagnoses?: string[];
   generalObjective?: string;
   specificObjectives?: string[];
-  indicators?: string[];
+  indicators?: (string | { name?: string; indicator?: string; status?: string })[]; // Can be strings or objects with name/indicator property
   methodologies?: string[];
   observations?: string;
   status: string;
