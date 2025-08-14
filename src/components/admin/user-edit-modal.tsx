@@ -29,21 +29,7 @@ import {
   type AdminUser,
   type UpdateUserData,
 } from "@/hooks/use-admin-users";
-
-// Available specialties with Spanish labels for UI
-const specialties = [
-  { value: "SPEECH_THERAPIST", label: "Fonoaudiólogo" },
-  { value: "OCCUPATIONAL_THERAPIST", label: "Terapeuta Ocupacional" },
-  { value: "PSYCHOPEDAGOGUE", label: "Psicopedagogo" },
-  { value: "ASD_THERAPIST", label: "Terapeuta TEA" },
-  { value: "NEUROPSYCHOLOGIST", label: "Neuropsicólogo" },
-  { value: "COORDINATOR", label: "Coordinador o Asistente" },
-  { value: "PSYCHOMOTRICIAN", label: "Psicomotricista" },
-  { value: "PEDIATRIC_KINESIOLOGIST", label: "Kinesiólogo Infantil" },
-  { value: "PSYCHOLOGIST", label: "Psicólogo" },
-  { value: "COORDINATION_ASSISTANT", label: "Asistente de Coordinación" },
-  { value: "BEHAVIORAL_THERAPIST", label: "Terapeuta Conductual" },
-] as const;
+import { useActiveSpecialties } from "@/hooks/use-specialties";
 
 // Enhanced validation schema
 const editUserSchema = z.object({
@@ -78,22 +64,9 @@ const editUserSchema = z.object({
     .string()
     .max(1000, "Biografía no puede exceder 1000 caracteres")
     .optional(),
-  specialty: z
-    .enum([
-      "SPEECH_THERAPIST",
-      "OCCUPATIONAL_THERAPIST",
-      "PSYCHOPEDAGOGUE",
-      "ASD_THERAPIST",
-      "NEUROPSYCHOLOGIST",
-      "COORDINATOR",
-      "PSYCHOMOTRICIAN",
-      "PEDIATRIC_KINESIOLOGIST",
-      "PSYCHOLOGIST",
-      "COORDINATION_ASSISTANT",
-      "BEHAVIORAL_THERAPIST",
-    ])
-    .optional(),
+  specialty: z.string().optional(),
   active: z.boolean(),
+  canTakeConsultations: z.boolean().optional(),
 });
 
 type FormData = z.infer<typeof editUserSchema>;
@@ -110,6 +83,7 @@ export function UserEditModal({
   onOpenChange,
 }: UserEditModalProps) {
   const editUserMutation = useEditUser();
+  const { data: specialties = [] } = useActiveSpecialties();
 
   const form = useForm<FormData>({
     resolver: zodResolver(editUserSchema),
@@ -127,6 +101,16 @@ export function UserEditModal({
         ? new Date(user.dateOfBirth).toISOString().split("T")[0]
         : "";
 
+      // Handle specialty mapping for form reset
+      let specialtyValue = undefined;
+      if (user.specialty) {
+        if (typeof user.specialty === "object" && user.specialty.specialtyId) {
+          specialtyValue = user.specialty.specialtyId;
+        } else if (typeof user.specialty === "string") {
+          specialtyValue = user.specialty;
+        }
+      }
+
       form.reset({
         firstName: user.firstName || "",
         lastName: user.lastName || "",
@@ -136,8 +120,9 @@ export function UserEditModal({
         address: user.address || "",
         dateOfBirth: formattedDateOfBirth,
         biography: user.biography || "",
-        specialty: user.specialty || undefined,
+        specialty: specialtyValue,
         active: user.active,
+        canTakeConsultations: user.canTakeConsultations ?? undefined,
       });
     }
   }, [user, open, form]);
@@ -157,6 +142,8 @@ export function UserEditModal({
       biography: data.biography || undefined,
       specialty: data.role === "THERAPIST" ? data.specialty : undefined,
       active: data.active,
+      canTakeConsultations:
+        data.role === "THERAPIST" ? data.canTakeConsultations : undefined,
     };
 
     editUserMutation.mutate(
@@ -283,9 +270,12 @@ export function UserEditModal({
                   value: "SUPER_ADMIN" | "ADMIN" | "THERAPIST" | "PARENT"
                 ) => {
                   form.setValue("role", value);
-                  // Reset specialty when role changes
+                  // Reset specialty and canTakeConsultations when role changes
                   if (value !== "THERAPIST") {
                     form.setValue("specialty", undefined);
+                    form.setValue("canTakeConsultations", undefined);
+                  } else {
+                    form.setValue("canTakeConsultations", true);
                   }
                 }}
                 value={watchedFields.role}
@@ -312,20 +302,9 @@ export function UserEditModal({
               <div>
                 <Label htmlFor="specialty">Especialidad *</Label>
                 <Select
-                  onValueChange={(
-                    value:
-                      | "SPEECH_THERAPIST"
-                      | "OCCUPATIONAL_THERAPIST"
-                      | "PSYCHOPEDAGOGUE"
-                      | "ASD_THERAPIST"
-                      | "NEUROPSYCHOLOGIST"
-                      | "COORDINATOR"
-                      | "PSYCHOMOTRICIAN"
-                      | "PEDIATRIC_KINESIOLOGIST"
-                      | "PSYCHOLOGIST"
-                      | "COORDINATION_ASSISTANT"
-                      | "BEHAVIORAL_THERAPIST"
-                  ) => form.setValue("specialty", value)}
+                  onValueChange={(value: string) =>
+                    form.setValue("specialty", value)
+                  }
                   value={watchedFields.specialty}
                 >
                   <SelectTrigger
@@ -337,8 +316,11 @@ export function UserEditModal({
                   </SelectTrigger>
                   <SelectContent>
                     {specialties.map((specialty) => (
-                      <SelectItem key={specialty.value} value={specialty.value}>
-                        {specialty.label}
+                      <SelectItem
+                        key={specialty.id}
+                        value={specialty.specialtyId}
+                      >
+                        {specialty.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -359,6 +341,32 @@ export function UserEditModal({
                   }
                 />
                 <FieldError error={form.formState.errors.biography?.message} />
+              </div>
+            )}
+
+            {selectedRole === "THERAPIST" && (
+              <div className="col-span-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="canTakeConsultations"
+                    checked={form.watch("canTakeConsultations") || false}
+                    onChange={(e) =>
+                      form.setValue("canTakeConsultations", e.target.checked)
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  <Label
+                    htmlFor="canTakeConsultations"
+                    className="text-sm font-medium"
+                  >
+                    Puede tomar consultas
+                  </Label>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Si está desactivado, el terapeuta no aparecerá en el
+                  calendario de consultas para nuevos pacientes
+                </p>
               </div>
             )}
           </div>

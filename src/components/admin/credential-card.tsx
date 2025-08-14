@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, User, Mail, Lock, Building } from "lucide-react";
 import html2canvas from "html2canvas";
+import { useActiveSpecialties } from "@/hooks/use-specialties";
 
 interface CredentialCardProps {
   user: {
@@ -19,6 +20,9 @@ interface CredentialCardProps {
 
 export function CredentialCard({ user, onClose }: CredentialCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+
+  // Fetch specialties for dynamic display
+  const { data: specialties = [] } = useActiveSpecialties();
 
   const downloadAsImage = async () => {
     if (!cardRef.current) return;
@@ -53,22 +57,25 @@ export function CredentialCard({ user, onClose }: CredentialCardProps) {
     }
   };
 
-  const getSpecialtyLabel = (specialty?: string) => {
+  const getSpecialtyLabel = (
+    specialty?: string | { specialtyId: string; name: string }
+  ) => {
     if (!specialty) return "";
-    const specialties = {
-      SPEECH_THERAPIST: "Fonoaudiólogo",
-      OCCUPATIONAL_THERAPIST: "Terapeuta Ocupacional",
-      PSYCHOPEDAGOGUE: "Psicopedagogo",
-      ASD_THERAPIST: "Terapeuta TEA",
-      NEUROPSYCHOLOGIST: "Neuropsicólogo",
-      COORDINATOR: "Coordinador o Asistente",
-      PSYCHOMOTRICIAN: "Psicomotricista",
-      PEDIATRIC_KINESIOLOGIST: "Kinesiólogo Infantil",
-      PSYCHOLOGIST: "Psicólogo",
-      COORDINATION_ASSISTANT: "Asistente de Coordinación",
-      BEHAVIORAL_THERAPIST: "Terapeuta Conductual",
-    };
-    return specialties[specialty as keyof typeof specialties] || specialty;
+
+    // If specialty is an object (new structure), use the name directly
+    if (typeof specialty === "object" && specialty.name) {
+      return specialty.name;
+    }
+
+    // If specialty is a string (old structure or specialtyId), use the mapping
+    if (typeof specialty === "string") {
+      const specialtyObj = specialties.find(
+        (spec) => spec.specialtyId === specialty
+      );
+      return specialtyObj?.name || specialty;
+    }
+
+    return "";
   };
 
   return (
