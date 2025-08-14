@@ -40,7 +40,13 @@ export async function GET() {
                 id: true,
                 firstName: true,
                 lastName: true,
-                specialty: true,
+                specialty: {
+                  select: {
+                    id: true,
+                    specialtyId: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -54,7 +60,13 @@ export async function GET() {
                 id: true,
                 firstName: true,
                 lastName: true,
-                specialty: true,
+                specialty: {
+                  select: {
+                    id: true,
+                    specialtyId: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -68,7 +80,13 @@ export async function GET() {
                 id: true,
                 firstName: true,
                 lastName: true,
-                specialty: true,
+                specialty: {
+                  select: {
+                    id: true,
+                    specialtyId: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -82,7 +100,13 @@ export async function GET() {
                 id: true,
                 firstName: true,
                 lastName: true,
-                specialty: true,
+                specialty: {
+                  select: {
+                    id: true,
+                    specialtyId: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
