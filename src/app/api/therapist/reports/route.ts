@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { isCoordinator } from "@/lib/specialties";
 
 export async function GET() {
   try {
@@ -23,6 +24,19 @@ export async function GET() {
     // Get user profile
     const profile = await prisma.profile.findUnique({
       where: { userId: user.id },
+      include: {
+        specialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+            description: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
     });
 
     if (!profile || profile.role !== "THERAPIST") {
@@ -33,7 +47,7 @@ export async function GET() {
     }
 
     // Check if user is COORDINATOR
-    if (profile.specialty !== "COORDINATOR") {
+    if (!isCoordinator(profile.specialty)) {
       console.log("User is not coordinator:", { specialty: profile.specialty });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -48,7 +62,17 @@ export async function GET() {
             id: true,
             firstName: true,
             lastName: true,
-            specialty: true,
+            specialty: {
+              select: {
+                id: true,
+                specialtyId: true,
+                name: true,
+                description: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
           },
         },
         patient: {
@@ -72,7 +96,17 @@ export async function GET() {
             id: true,
             firstName: true,
             lastName: true,
-            specialty: true,
+            specialty: {
+              select: {
+                id: true,
+                specialtyId: true,
+                name: true,
+                description: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
           },
         },
         patient: {

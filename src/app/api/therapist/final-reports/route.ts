@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { isCoordinator } from "@/lib/specialties";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,19 @@ export async function POST(request: NextRequest) {
     // Get therapist profile
     const therapist = await prisma.profile.findUnique({
       where: { userId: user.id },
+      include: {
+        specialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+            description: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
     });
 
     if (!therapist || therapist.role !== "THERAPIST") {
@@ -27,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is COORDINATOR
-    if (therapist.specialty !== "COORDINATOR") {
+    if (!isCoordinator(therapist.specialty)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -139,6 +153,19 @@ export async function GET(request: NextRequest) {
     // Get therapist profile
     const therapist = await prisma.profile.findUnique({
       where: { userId: user.id },
+      include: {
+        specialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+            description: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
     });
 
     if (!therapist || therapist.role !== "THERAPIST") {
@@ -146,7 +173,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is COORDINATOR
-    if (therapist.specialty !== "COORDINATOR") {
+    if (!isCoordinator(therapist.specialty)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -164,7 +191,17 @@ export async function GET(request: NextRequest) {
               id: true,
               firstName: true,
               lastName: true,
-              specialty: true,
+              specialty: {
+                select: {
+                  id: true,
+                  specialtyId: true,
+                  name: true,
+                  description: true,
+                  isActive: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
             },
           },
         },

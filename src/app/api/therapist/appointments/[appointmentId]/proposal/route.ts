@@ -186,7 +186,9 @@ export async function GET(
         codigo: service.code,
         terapeutaId: service.therapist.id,
         terapeutaNombre: `${service.therapist.firstName} ${service.therapist.lastName}`,
-        terapeutaEspecialidad: service.therapist.specialty || "",
+        terapeutaEspecialidad: typeof service.therapist.specialty === "string" 
+          ? service.therapist.specialty 
+          : service.therapist.specialty?.specialtyId || "",
         servicio: service.service,
         sesiones: service.sessions,
         proposalType: service.proposalType,

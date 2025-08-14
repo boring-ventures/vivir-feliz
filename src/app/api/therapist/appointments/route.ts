@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 import { AppointmentStatus, AppointmentType } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ cookies });
+    console.log("🔍 API Debug - Starting therapist appointments fetch");
+
+    const supabase = createRouteHandlerClient({ cookies });
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
+    console.log("🔍 API Debug - Session check:", {
+      hasSession: !!session,
+      userId: session?.user?.id,
+    });
+
     if (!session) {
+      console.log("🔍 API Debug - No session found, returning 401");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -22,7 +30,14 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    console.log("🔍 API Debug - Profile check:", {
+      hasProfile: !!profile,
+      profileRole: profile?.role,
+      profileId: profile?.id,
+    });
+
     if (!profile || profile.role !== "THERAPIST") {
+      console.log("🔍 API Debug - Invalid profile, returning 404");
       return NextResponse.json(
         { error: "Therapist profile not found" },
         { status: 404 }
@@ -35,14 +50,26 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const skip = (page - 1) * limit;
 
+    console.log("🔍 API Debug - Query parameters:", {
+      status,
+      page,
+      limit,
+      skip,
+      therapistId: profile.id,
+      appointmentTypes: [AppointmentType.CONSULTA, AppointmentType.ENTREVISTA],
+    });
+
     // Build where clause - include all appointment types for the therapist
     const whereClause: {
       therapistId: string;
-      type?: AppointmentType;
+      type?: { in: AppointmentType[] };
       status?: { in: AppointmentStatus[] } | AppointmentStatus;
     } = {
       therapistId: profile.id,
-      // Remove type filter to include all appointment types
+      // Filter to only include CONSULTA and ENTREVISTA appointments
+      type: {
+        in: [AppointmentType.CONSULTA, AppointmentType.ENTREVISTA],
+      },
     };
 
     if (status !== "all") {
@@ -95,6 +122,33 @@ export async function GET(request: NextRequest) {
       }),
       prisma.appointment.count({ where: whereClause }),
     ]);
+
+    console.log("🔍 API Debug - Database query results:", {
+      appointmentsFound: appointments.length,
+      totalCount: total,
+      whereClause,
+    });
+
+    if (appointments.length > 0) {
+      console.log("🔍 API Debug - First appointment sample:", {
+        id: appointments[0].id,
+        type: appointments[0].type,
+        status: appointments[0].status,
+        date: appointments[0].date,
+        patientName: appointments[0].patientName,
+      });
+
+      // Log appointment types distribution
+      const typeCounts = appointments.reduce(
+        (acc, apt) => {
+          acc[apt.type] = (acc[apt.type] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      console.log("🔍 API Debug - Appointment types found:", typeCounts);
+    }
 
     // Helper function to calculate age from birthdate
     const calculateAge = (birthDate: Date): number => {
@@ -204,7 +258,10 @@ export async function GET(request: NextRequest) {
     // Get stats for all appointment types
     const allAppointmentsWhereClause = {
       therapistId: profile.id,
-      // Include all appointment types for stats
+      // Only include CONSULTA and ENTREVISTA appointments for stats
+      type: {
+        in: [AppointmentType.CONSULTA, AppointmentType.ENTREVISTA],
+      },
     };
 
     const [
@@ -239,18 +296,26 @@ export async function GET(request: NextRequest) {
       // Count consultations specifically
       prisma.appointment.count({
         where: {
-          therapistId: profile.id,
+          ...allAppointmentsWhereClause,
           type: AppointmentType.CONSULTA,
         },
       }),
       // Count interviews specifically
       prisma.appointment.count({
         where: {
-          therapistId: profile.id,
+          ...allAppointmentsWhereClause,
           type: AppointmentType.ENTREVISTA,
         },
       }),
     ]);
+
+    console.log("🔍 API Debug - Stats calculation:", {
+      allScheduled,
+      allCompleted,
+      allHighPriority,
+      consultationCount,
+      interviewCount,
+    });
 
     return NextResponse.json({
       appointments: transformedAppointments,

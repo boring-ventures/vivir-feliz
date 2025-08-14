@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
     console.log("API Debug - Therapist profile:", {
       id: therapist?.id,
       role: therapist?.role,
-      specialty: therapist?.specialty,
+      specialtyId: therapist?.specialtyId,
       firstName: therapist?.firstName,
       lastName: therapist?.lastName,
     });
@@ -271,7 +271,17 @@ export async function GET(request: NextRequest) {
               id: true,
               firstName: true,
               lastName: true,
-              specialty: true,
+              specialty: {
+                select: {
+                  id: true,
+                  specialtyId: true,
+                  name: true,
+                  description: true,
+                  isActive: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
             },
           },
         },
