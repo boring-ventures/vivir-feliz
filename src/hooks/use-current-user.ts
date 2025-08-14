@@ -5,9 +5,22 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@prisma/client";
 
+// Extended Profile type that includes the specialty relation
+type ProfileWithSpecialty = Profile & {
+  specialty?: {
+    id: string;
+    specialtyId: string;
+    name: string;
+    description: string | null;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
+};
+
 type CurrentUserData = {
   user: User | null;
-  profile: Profile | null;
+  profile: ProfileWithSpecialty | null;
   isLoading: boolean;
   error: Error | null;
   refetch?: () => Promise<void>;

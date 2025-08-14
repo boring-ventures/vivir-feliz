@@ -36,6 +36,7 @@ import {
   CreateServiceData,
   UpdateServiceData,
 } from "@/hooks/useServices";
+import { useActiveSpecialties } from "@/hooks/use-specialties";
 import { toast } from "@/components/ui/use-toast";
 
 export default function SuperAdminServicesPage() {
@@ -47,6 +48,7 @@ export default function SuperAdminServicesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: services = [], isLoading, refetch } = useServices();
+  const { data: specialties = [] } = useActiveSpecialties();
   const createServiceMutation = useCreateService();
   const updateServiceMutation = useUpdateService();
   const deleteServiceMutation = useDeleteService();
@@ -61,7 +63,9 @@ export default function SuperAdminServicesPage() {
 
     const matchesType = typeFilter === "all" || service.type === typeFilter;
     const matchesSpecialty =
-      specialtyFilter === "all" || service.specialty === specialtyFilter;
+      specialtyFilter === "all" || 
+      (typeof service.specialty === "string" && service.specialty === specialtyFilter) ||
+      (typeof service.specialty === "object" && service.specialty?.specialtyId === specialtyFilter);
     const matchesStatus =
       statusFilter === "all" ||
       (statusFilter === "active" && service.status) ||
@@ -254,27 +258,11 @@ export default function SuperAdminServicesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las Especialidades</SelectItem>
-                <SelectItem value="SPEECH_THERAPIST">Fonoaudiólogo</SelectItem>
-                <SelectItem value="OCCUPATIONAL_THERAPIST">
-                  Terapeuta Ocupacional
-                </SelectItem>
-                <SelectItem value="PSYCHOPEDAGOGUE">Psicopedagogo</SelectItem>
-                <SelectItem value="ASD_THERAPIST">Terapeuta TEA</SelectItem>
-                <SelectItem value="NEUROPSYCHOLOGIST">
-                  Neuropsicólogo
-                </SelectItem>
-                <SelectItem value="COORDINATOR">Coordinador</SelectItem>
-                <SelectItem value="PSYCHOMOTRICIAN">Psicomotricista</SelectItem>
-                <SelectItem value="PEDIATRIC_KINESIOLOGIST">
-                  Kinesiólogo Pediátrico
-                </SelectItem>
-                <SelectItem value="PSYCHOLOGIST">Psicólogo</SelectItem>
-                <SelectItem value="COORDINATION_ASSISTANT">
-                  Asistente de Coordinación
-                </SelectItem>
-                <SelectItem value="BEHAVIORAL_THERAPIST">
-                  Terapeuta Conductual
-                </SelectItem>
+                {specialties.map((specialty) => (
+                  <SelectItem key={specialty.id} value={specialty.specialtyId}>
+                    {specialty.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>

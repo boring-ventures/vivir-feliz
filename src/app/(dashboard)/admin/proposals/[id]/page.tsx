@@ -259,9 +259,14 @@ export default function AdminProposalEditPage() {
     if (!requiredSpecialty) {
       return allTherapists; // If no specific specialty required, show all therapists
     }
-    return allTherapists.filter(
-      (therapist) => therapist.specialty === requiredSpecialty
-    );
+    return allTherapists.filter((therapist) => {
+      if (typeof therapist.specialty === "string") {
+        return therapist.specialty === requiredSpecialty;
+      } else if (therapist.specialty && typeof therapist.specialty === "object") {
+        return therapist.specialty.specialtyId === requiredSpecialty;
+      }
+      return false;
+    });
   };
 
   // Patient data from database using consultation request data

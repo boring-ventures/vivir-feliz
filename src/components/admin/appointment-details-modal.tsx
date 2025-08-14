@@ -23,6 +23,7 @@ import {
   UserX,
   CreditCard,
 } from "lucide-react";
+import { useActiveSpecialties } from "@/hooks/use-specialties";
 
 interface Appointment {
   id: string;
@@ -88,6 +89,9 @@ export function AppointmentDetailsModal({
   open,
   onOpenChange,
 }: AppointmentDetailsModalProps) {
+  // Fetch specialties for dynamic display
+  const { data: specialties = [] } = useActiveSpecialties();
+
   if (!appointment) return null;
 
   // Format date and time
@@ -191,34 +195,25 @@ export function AppointmentDetailsModal({
   };
 
   // Get specialty label
-  const getSpecialtyLabel = (specialty?: string) => {
+  const getSpecialtyLabel = (
+    specialty?: string | { specialtyId: string; name: string }
+  ) => {
     if (!specialty) return "N/A";
-    switch (specialty) {
-      case "SPEECH_THERAPIST":
-        return "Fonoaudiólogo";
-      case "OCCUPATIONAL_THERAPIST":
-        return "Terapeuta Ocupacional";
-      case "PSYCHOPEDAGOGUE":
-        return "Psicopedagogo";
-      case "ASD_THERAPIST":
-        return "Terapeuta TEA";
-      case "NEUROPSYCHOLOGIST":
-        return "Neuropsicólogo";
-      case "COORDINATOR":
-        return "Coordinador";
-      case "PSYCHOMOTRICIAN":
-        return "Psicomotricista";
-      case "PEDIATRIC_KINESIOLOGIST":
-        return "Kinesiólogo Infantil";
-      case "PSYCHOLOGIST":
-        return "Psicólogo";
-      case "COORDINATION_ASSISTANT":
-        return "Asistente de Coordinación";
-      case "BEHAVIORAL_THERAPIST":
-        return "Terapeuta Conductual";
-      default:
-        return specialty;
+
+    // If specialty is an object (new structure), use the name directly
+    if (typeof specialty === "object" && specialty.name) {
+      return specialty.name;
     }
+
+    // If specialty is a string (old structure or specialtyId), use the mapping
+    if (typeof specialty === "string") {
+      const specialtyObj = specialties.find(
+        (spec) => spec.specialtyId === specialty
+      );
+      return specialtyObj?.name || specialty;
+    }
+
+    return "N/A";
   };
 
   const patientName = appointment.patient

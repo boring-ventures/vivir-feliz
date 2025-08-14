@@ -14,19 +14,7 @@ export type AdminUser = {
   address: string | null;
   dateOfBirth: Date | null;
   biography: string | null;
-  specialty:
-    | "SPEECH_THERAPIST"
-    | "OCCUPATIONAL_THERAPIST"
-    | "PSYCHOPEDAGOGUE"
-    | "ASD_THERAPIST"
-    | "NEUROPSYCHOLOGIST"
-    | "COORDINATOR"
-    | "PSYCHOMOTRICIAN"
-    | "PEDIATRIC_KINESIOLOGIST"
-    | "PSYCHOLOGIST"
-    | "COORDINATION_ASSISTANT"
-    | "BEHAVIORAL_THERAPIST"
-    | null;
+  specialty: string | null | { id: string; specialtyId: string; name: string };
   canTakeConsultations: boolean | null;
   active: boolean;
   createdAt: Date;
@@ -43,18 +31,7 @@ export type CreateUserData = {
   address?: string;
   dateOfBirth?: string;
   biography?: string;
-  specialty?:
-    | "SPEECH_THERAPIST"
-    | "OCCUPATIONAL_THERAPIST"
-    | "PSYCHOPEDAGOGUE"
-    | "ASD_THERAPIST"
-    | "NEUROPSYCHOLOGIST"
-    | "COORDINATOR"
-    | "PSYCHOMOTRICIAN"
-    | "PEDIATRIC_KINESIOLOGIST"
-    | "PSYCHOLOGIST"
-    | "COORDINATION_ASSISTANT"
-    | "BEHAVIORAL_THERAPIST";
+  specialty?: string;
   canTakeConsultations?: boolean | null;
   password: string;
 };
@@ -68,19 +45,7 @@ export type UpdateUserData = {
   address?: string;
   dateOfBirth?: string;
   biography?: string;
-  specialty?:
-    | "SPEECH_THERAPIST"
-    | "OCCUPATIONAL_THERAPIST"
-    | "PSYCHOPEDAGOGUE"
-    | "ASD_THERAPIST"
-    | "NEUROPSYCHOLOGIST"
-    | "COORDINATOR"
-    | "PSYCHOMOTRICIAN"
-    | "PEDIATRIC_KINESIOLOGIST"
-    | "PSYCHOLOGIST"
-    | "COORDINATION_ASSISTANT"
-    | "BEHAVIORAL_THERAPIST"
-    | null;
+  specialty?: string | null;
   canTakeConsultations?: boolean | null;
   active?: boolean;
 };

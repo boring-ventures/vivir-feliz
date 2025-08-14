@@ -198,7 +198,16 @@ export async function GET() {
       // Active therapists for per-area breakdown
       prisma.profile.findMany({
         where: { role: "THERAPIST", active: true },
-        select: { specialty: true, canTakeConsultations: true },
+        select: { 
+          specialty: {
+            select: {
+              id: true,
+              specialtyId: true,
+              name: true,
+            }
+          }, 
+          canTakeConsultations: true 
+        },
       }),
 
       // Today's appointments
@@ -316,11 +325,37 @@ export async function GET() {
           type: "TREATMENT",
           createdAt: { gte: startOfMonth, lte: endOfMonth },
         },
-        include: { therapist: { select: { id: true, specialty: true } } },
+        include: { 
+          therapist: { 
+            select: { 
+              id: true, 
+              specialty: {
+                select: {
+                  id: true,
+                  specialtyId: true,
+                  name: true,
+                }
+              } 
+            } 
+          } 
+        },
       }),
       prisma.proposalService.findMany({
         where: { type: "TREATMENT" },
-        include: { therapist: { select: { id: true, specialty: true } } },
+        include: { 
+          therapist: { 
+            select: { 
+              id: true, 
+              specialty: {
+                select: {
+                  id: true,
+                  specialtyId: true,
+                  name: true,
+                }
+              } 
+            } 
+          } 
+        },
       }),
 
       // Programs (Neuro / Atención Temprana) via TherapeuticPlan.treatmentArea keyword search
@@ -336,7 +371,19 @@ export async function GET() {
       // Active therapist-patient relationships
       prisma.therapistPatient.findMany({
         where: { active: true },
-        include: { therapist: { select: { specialty: true } } },
+        include: { 
+          therapist: { 
+            select: { 
+              specialty: {
+                select: {
+                  id: true,
+                  specialtyId: true,
+                  name: true,
+                }
+              } 
+            } 
+          } 
+        },
       }),
 
       // Retention/Churn via distinct patientIds by month
@@ -432,19 +479,19 @@ export async function GET() {
 
     const monthlyBySpecialty: Record<string, number> = {};
     for (const s of proposalServicesMonthly) {
-      const spec = s.therapist?.specialty || "UNKNOWN";
+      const spec = s.therapist?.specialty?.specialtyId || "UNKNOWN";
       monthlyBySpecialty[spec] = (monthlyBySpecialty[spec] || 0) + 1;
     }
     const totalBySpecialty: Record<string, number> = {};
     for (const s of proposalServicesAll) {
-      const spec = s.therapist?.specialty || "UNKNOWN";
+      const spec = s.therapist?.specialty?.specialtyId || "UNKNOWN";
       totalBySpecialty[spec] = (totalBySpecialty[spec] || 0) + 1;
     }
 
     // Active treatments by area via TherapistPatient relationships
     const activeBySpecialty: Record<string, number> = {};
     for (const tp of activeTherapistPatients) {
-      const spec = tp.therapist?.specialty || "UNKNOWN";
+      const spec = tp.therapist?.specialty?.specialtyId || "UNKNOWN";
       activeBySpecialty[spec] = (activeBySpecialty[spec] || 0) + 1;
     }
     const activeTotal = activeTherapistPatients.length;
@@ -583,7 +630,7 @@ export async function GET() {
         bySpecialty: (() => {
           const map: Record<string, { active: number; available: number }> = {};
           for (const t of therapistsForAreaBreakdown) {
-            const key = (t.specialty as string) || "UNKNOWN";
+            const key = t.specialty?.specialtyId || "UNKNOWN";
             if (!map[key]) map[key] = { active: 0, available: 0 };
             map[key].active += 1;
             if (t.canTakeConsultations) map[key].available += 1;

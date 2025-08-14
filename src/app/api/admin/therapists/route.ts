@@ -9,6 +9,7 @@ export async function GET() {
         active: true,
       },
       include: {
+        specialty: true,
         schedule: {
           include: {
             timeSlots: true,

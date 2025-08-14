@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "./use-current-user";
+import { isCoordinator } from "@/lib/specialties";
 
 interface TherapeuticPlan {
   id: string;
@@ -89,7 +90,7 @@ export function useReports() {
       const data = await response.json();
       return data;
     },
-    enabled: !!profile && profile.specialty === "COORDINATOR",
+    enabled: !!profile && isCoordinator(profile.specialty),
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
   });

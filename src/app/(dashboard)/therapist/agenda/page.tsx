@@ -29,26 +29,9 @@ import {
   DayOfWeek,
   TherapistAppointment,
 } from "@/types/therapists";
-import { SpecialtyType } from "@prisma/client";
+// Removed unused import: useActiveSpecialties
 import { APPOINTMENT_STATUS_LABELS } from "@/types/patients";
-
-// Utility functions
-const getSpecialtyDisplay = (specialty: SpecialtyType | null): string => {
-  const specialtyMap: Record<SpecialtyType, string> = {
-    SPEECH_THERAPIST: "Fonoaudiología",
-    OCCUPATIONAL_THERAPIST: "Terapia Ocupacional",
-    PSYCHOPEDAGOGUE: "Psicopedagogía",
-    ASD_THERAPIST: "Especialista TEA",
-    NEUROPSYCHOLOGIST: "Neuropsicología",
-    COORDINATOR: "Coordinación",
-    PSYCHOMOTRICIAN: "Psicomotricista",
-    PEDIATRIC_KINESIOLOGIST: "Kinesiólogo Infantil",
-    PSYCHOLOGIST: "Psicólogo",
-    COORDINATION_ASSISTANT: "Asistente de Coordinación",
-    BEHAVIORAL_THERAPIST: "Terapeuta Conductual",
-  };
-  return specialty ? specialtyMap[specialty] : "Sin especialidad";
-};
+import { getSpecialtyDisplayName } from "@/lib/specialties";
 
 // Helper function to create Date object from date string without timezone issues
 const createDateFromString = (dateString: string): Date => {
@@ -144,6 +127,12 @@ export default function TherapistAgendaPage() {
   } = useTherapistAppointments({ status: "all", limit: 1000 });
 
   const updateAppointmentStatusMutation = useUpdateAppointmentStatus();
+
+  // Fetch specialties for dynamic display (unused but kept for future use)
+  // const { data: specialties = [] } = useActiveSpecialties();
+
+  // Utility function to get specialty display name
+  const getSpecialtyDisplay = getSpecialtyDisplayName;
 
   // Find current therapist's profile and merge with appointments
   const currentTherapist = useMemo(() => {

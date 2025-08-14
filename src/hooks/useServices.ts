@@ -8,18 +8,15 @@ export interface Service {
   sessions: number;
   costPerSession: number;
   type: "EVALUATION" | "TREATMENT";
-  specialty:
-    | "SPEECH_THERAPIST"
-    | "OCCUPATIONAL_THERAPIST"
-    | "PSYCHOPEDAGOGUE"
-    | "ASD_THERAPIST"
-    | "NEUROPSYCHOLOGIST"
-    | "COORDINATOR"
-    | "PSYCHOMOTRICIAN"
-    | "PEDIATRIC_KINESIOLOGIST"
-    | "PSYCHOLOGIST"
-    | "COORDINATION_ASSISTANT"
-    | "BEHAVIORAL_THERAPIST";
+  specialty?: string | {
+    id: string;
+    specialtyId: string;
+    name: string;
+    description?: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
   status: boolean;
   createdAt: string;
   updatedAt: string;
@@ -32,18 +29,7 @@ export interface CreateServiceData {
   sessions: number;
   costPerSession: number;
   type: "EVALUATION" | "TREATMENT";
-  specialty:
-    | "SPEECH_THERAPIST"
-    | "OCCUPATIONAL_THERAPIST"
-    | "PSYCHOPEDAGOGUE"
-    | "ASD_THERAPIST"
-    | "NEUROPSYCHOLOGIST"
-    | "COORDINATOR"
-    | "PSYCHOMOTRICIAN"
-    | "PEDIATRIC_KINESIOLOGIST"
-    | "PSYCHOLOGIST"
-    | "COORDINATION_ASSISTANT"
-    | "BEHAVIORAL_THERAPIST";
+  specialty?: string;
   status?: boolean;
 }
 

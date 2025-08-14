@@ -7,7 +7,15 @@ export interface Therapist {
   id: string;
   firstName: string | null;
   lastName: string | null;
-  specialty: string | null;
+  specialty: {
+    id: string;
+    specialtyId: string;
+    name: string;
+    description: string | null;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
   active: boolean;
 }
 
@@ -28,7 +36,7 @@ export const useTherapists = (specialty?: string) => {
       }
 
       const result = await response.json();
-      return result.data;
+      return result; // Return the result directly, not result.data
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
@@ -92,21 +100,44 @@ export const getTherapistDisplayName = (therapist: Therapist): string => {
   return `${firstName} ${lastName}`.trim() || "Sin nombre";
 };
 
-// Utility function to get specialty display name
-export const getSpecialtyDisplayName = (specialty: string | null): string => {
-  const specialtyMap: Record<string, string> = {
-    SPEECH_THERAPIST: "Fonoaudiólogo",
-    OCCUPATIONAL_THERAPIST: "Terapeuta Ocupacional",
-    PSYCHOPEDAGOGUE: "Psicopedagogo",
-    ASD_THERAPIST: "Especialista en TGD",
-    NEUROPSYCHOLOGIST: "Neuropsicólogo",
-    COORDINATOR: "Coordinador",
-    PSYCHOMOTRICIAN: "Psicomotricista",
-    PEDIATRIC_KINESIOLOGIST: "Kinesiólogo Infantil",
-    PSYCHOLOGIST: "Psicólogo",
-    COORDINATION_ASSISTANT: "Asistente de Coordinación",
-    BEHAVIORAL_THERAPIST: "Terapeuta Conductual",
-  };
+// Utility function to get specialty display name - updated to handle both string and object types
+export const getSpecialtyDisplayName = (
+  specialty:
+    | string
+    | {
+        id: string;
+        specialtyId: string;
+        name: string;
+        description: string | null;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+      }
+    | null
+): string => {
+  // If specialty is null, return default message
+  if (!specialty) {
+    return "No especificado";
+  }
 
-  return specialty ? specialtyMap[specialty] || specialty : "No especificado";
+  // If specialty is a string (legacy format), use the old mapping
+  if (typeof specialty === "string") {
+    const specialtyMap: Record<string, string> = {
+      SPEECH_THERAPIST: "Fonoaudiólogo",
+      OCCUPATIONAL_THERAPIST: "Terapeuta Ocupacional",
+      PSYCHOPEDAGOGUE: "Psicopedagogo",
+      ASD_THERAPIST: "Terapeuta TEA",
+      NEUROPSYCHOLOGIST: "Neuropsicólogo",
+      COORDINATOR: "Coordinador",
+      PSYCHOMOTRICIAN: "Psicomotricista",
+      PEDIATRIC_KINESIOLOGIST: "Kinesiólogo Pediátrico",
+      PSYCHOLOGIST: "Psicólogo",
+      COORDINATION_ASSISTANT: "Asistente de Coordinación",
+      BEHAVIORAL_THERAPIST: "Terapeuta Conductual",
+    };
+    return specialtyMap[specialty] || specialty;
+  }
+
+  // If specialty is an object (new format), return the name
+  return specialty.name || "No especificado";
 };

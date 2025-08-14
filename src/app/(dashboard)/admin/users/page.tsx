@@ -71,21 +71,7 @@ import {
   useUpdateSchedule,
   type ScheduleFormData,
 } from "@/hooks/use-schedule";
-
-// Available specialties with Spanish labels for UI
-const specialties = [
-  { value: "SPEECH_THERAPIST", label: "Fonoaudiólogo" },
-  { value: "OCCUPATIONAL_THERAPIST", label: "Terapeuta Ocupacional" },
-  { value: "PSYCHOPEDAGOGUE", label: "Psicopedagogo" },
-  { value: "ASD_THERAPIST", label: "Terapeuta TEA" },
-  { value: "NEUROPSYCHOLOGIST", label: "Neuropsicólogo" },
-  { value: "COORDINATOR", label: "Coordinador o Asistente" },
-  { value: "PSYCHOMOTRICIAN", label: "Psicomotricista" },
-  { value: "PEDIATRIC_KINESIOLOGIST", label: "Kinesiólogo Infantil" },
-  { value: "PSYCHOLOGIST", label: "Psicólogo" },
-  { value: "COORDINATION_ASSISTANT", label: "Asistente de Coordinación" },
-  { value: "BEHAVIORAL_THERAPIST", label: "Terapeuta Conductual" },
-] as const;
+import { useActiveSpecialties } from "@/hooks/use-specialties";
 
 // Enhanced validation schema with more comprehensive rules
 const createUserSchema = z.object({
@@ -124,21 +110,7 @@ const createUserSchema = z.object({
     .string()
     .max(1000, "Biografía no puede exceder 1000 caracteres")
     .optional(),
-  specialty: z
-    .enum([
-      "SPEECH_THERAPIST",
-      "OCCUPATIONAL_THERAPIST",
-      "PSYCHOPEDAGOGUE",
-      "ASD_THERAPIST",
-      "NEUROPSYCHOLOGIST",
-      "COORDINATOR",
-      "PSYCHOMOTRICIAN",
-      "PEDIATRIC_KINESIOLOGIST",
-      "PSYCHOLOGIST",
-      "COORDINATION_ASSISTANT",
-      "BEHAVIORAL_THERAPIST",
-    ])
-    .optional(),
+  specialty: z.string().optional(),
   canTakeConsultations: z.boolean().optional(),
   password: z
     .string()
@@ -304,6 +276,7 @@ export default function AdminUsersPage() {
   const createUserMutation = useCreateUser();
   const createScheduleMutation = useCreateSchedule();
   const updateScheduleMutation = useUpdateSchedule();
+  const { data: specialties = [] } = useActiveSpecialties();
 
   // Fetch schedule data for the selected therapist
   const {
@@ -786,9 +759,23 @@ export default function AdminUsersPage() {
   };
 
   // Get specialty label
-  const getSpecialtyLabel = (value: string | null) => {
+  const getSpecialtyLabel = (
+    value: string | null | { specialtyId: string; name: string }
+  ) => {
     if (!value) return "-";
-    return specialties.find((spec) => spec.value === value)?.label || value;
+
+    // If value is an object (new structure), use the name directly
+    if (typeof value === "object" && value.name) {
+      return value.name;
+    }
+
+    // If value is a string (old structure or specialtyId), use the mapping
+    if (typeof value === "string") {
+      const specialty = specialties.find((spec) => spec.specialtyId === value);
+      return specialty?.name || value;
+    }
+
+    return "-";
   };
 
   // Get role label and color
@@ -987,20 +974,9 @@ export default function AdminUsersPage() {
                     <div>
                       <Label htmlFor="specialty">Especialidad *</Label>
                       <Select
-                        onValueChange={(
-                          value:
-                            | "SPEECH_THERAPIST"
-                            | "OCCUPATIONAL_THERAPIST"
-                            | "PSYCHOPEDAGOGUE"
-                            | "ASD_THERAPIST"
-                            | "NEUROPSYCHOLOGIST"
-                            | "COORDINATOR"
-                            | "PSYCHOMOTRICIAN"
-                            | "PEDIATRIC_KINESIOLOGIST"
-                            | "PSYCHOLOGIST"
-                            | "COORDINATION_ASSISTANT"
-                            | "BEHAVIORAL_THERAPIST"
-                        ) => form.setValue("specialty", value)}
+                        onValueChange={(value: string) =>
+                          form.setValue("specialty", value)
+                        }
                         value={watchedFields.specialty}
                       >
                         <SelectTrigger
@@ -1015,10 +991,10 @@ export default function AdminUsersPage() {
                         <SelectContent>
                           {specialties.map((specialty) => (
                             <SelectItem
-                              key={specialty.value}
-                              value={specialty.value}
+                              key={specialty.specialtyId}
+                              value={specialty.specialtyId}
                             >
-                              {specialty.label}
+                              {specialty.name}
                             </SelectItem>
                           ))}
                         </SelectContent>

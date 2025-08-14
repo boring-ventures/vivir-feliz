@@ -26,6 +26,7 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useServices, type Service } from "@/hooks/useServices";
+import { isCoordinator } from "@/lib/specialties";
 
 interface ServiceItem {
   id: number;
@@ -72,9 +73,39 @@ export default function TherapistProposalEditPage() {
       return allTherapists; // If service not found, show all therapists
     }
 
-    return allTherapists.filter(
-      (therapist) => therapist.specialty === service.specialty
-    );
+    return allTherapists.filter((therapist) => {
+      // If service has no specialty, show all therapists
+      if (!service.specialty) {
+        return true;
+      }
+
+      // If therapist has no specialty, don't show them for specialized services
+      if (!therapist.specialty) {
+        return false;
+      }
+
+      // Get service specialty ID
+      let serviceSpecialtyId: string | null = null;
+      if (typeof service.specialty === "string") {
+        serviceSpecialtyId = service.specialty;
+      } else if (service.specialty && typeof service.specialty === "object") {
+        serviceSpecialtyId = service.specialty.id;
+      }
+
+      // Get therapist specialty ID
+      let therapistSpecialtyId: string | null = null;
+      if (typeof therapist.specialty === "string") {
+        therapistSpecialtyId = therapist.specialty;
+      } else if (
+        therapist.specialty &&
+        typeof therapist.specialty === "object"
+      ) {
+        therapistSpecialtyId = therapist.specialty.id;
+      }
+
+      // Compare specialty IDs
+      return serviceSpecialtyId === therapistSpecialtyId;
+    });
   };
 
   // Patient data from database using consultation request data
@@ -202,7 +233,7 @@ export default function TherapistProposalEditPage() {
   }, [proposalServices]);
 
   // Check if user is COORDINATOR - moved after all hooks
-  if (profile?.specialty !== "COORDINATOR") {
+  if (!isCoordinator(profile?.specialty)) {
     return (
       <RoleGuard allowedRoles={["THERAPIST"]}>
         <div className="min-h-screen bg-gray-100 flex items-center justify-center">

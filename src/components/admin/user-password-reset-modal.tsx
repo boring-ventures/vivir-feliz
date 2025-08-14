@@ -66,7 +66,9 @@ export function UserPasswordResetModal({
             email: user.email || "",
             password: newPassword,
             role: user.role,
-            specialty: user.specialty || undefined,
+            specialty: typeof user.specialty === "string" 
+              ? user.specialty 
+              : user.specialty?.specialtyId || undefined,
           });
           setShowCredentials(true);
           setNewPassword("");

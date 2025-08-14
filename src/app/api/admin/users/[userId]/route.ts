@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
-import { SpecialtyType } from "@prisma/client";
 
 // DELETE: Delete user (admin only)
 export async function DELETE(
@@ -119,7 +118,7 @@ export async function PATCH(
       address: string | null;
       dateOfBirth: Date | null;
       biography: string | null;
-      specialty: SpecialtyType | null;
+      specialtyId: string | null;
       canTakeConsultations: boolean | null;
       active: boolean;
     }> = {};
@@ -136,7 +135,24 @@ export async function PATCH(
         : null;
     }
     if (body.biography !== undefined) updateData.biography = body.biography;
-    if (body.specialty !== undefined) updateData.specialty = body.specialty;
+    if (body.specialty !== undefined) {
+      // Handle specialty mapping
+      if (body.specialty && body.specialty.trim() !== "") {
+        const specialtyExists = await prisma.specialty.findUnique({
+          where: { specialtyId: body.specialty },
+        });
+
+        if (!specialtyExists) {
+          return NextResponse.json(
+            { error: "Selected specialty does not exist" },
+            { status: 400 }
+          );
+        }
+        updateData.specialtyId = specialtyExists.id;
+      } else {
+        updateData.specialtyId = null;
+      }
+    }
     if (body.canTakeConsultations !== undefined)
       updateData.canTakeConsultations = body.canTakeConsultations;
     if (body.active !== undefined) updateData.active = body.active;
@@ -162,6 +178,15 @@ export async function PATCH(
     const updatedProfile = await prisma.profile.update({
       where: { userId },
       data: updateData,
+      include: {
+        specialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json({

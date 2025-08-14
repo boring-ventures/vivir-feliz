@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { UserRole, SpecialtyType } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,14 +11,14 @@ export async function GET(request: NextRequest) {
     const whereClause: {
       role: UserRole;
       active: boolean;
-      specialty?: SpecialtyType;
+      specialtyId?: string;
     } = {
       role: UserRole.THERAPIST,
       active: true,
     };
 
     if (specialty && specialty !== "all") {
-      whereClause.specialty = specialty as SpecialtyType;
+      whereClause.specialtyId = specialty;
     }
 
     const therapists = await prisma.profile.findMany({
@@ -27,16 +27,21 @@ export async function GET(request: NextRequest) {
         id: true,
         firstName: true,
         lastName: true,
-        specialty: true,
+        specialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+            description: true,
+            isActive: true,
+          },
+        },
         active: true,
       },
       orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
     });
 
-    return NextResponse.json({
-      success: true,
-      data: therapists,
-    });
+    return NextResponse.json(therapists);
   } catch (error) {
     console.error("Error fetching therapists:", error);
     return NextResponse.json(

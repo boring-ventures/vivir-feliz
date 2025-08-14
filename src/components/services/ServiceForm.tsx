@@ -23,6 +23,7 @@ import {
   CreateServiceData,
   UpdateServiceData,
 } from "@/hooks/useServices";
+import { useActiveSpecialties } from "@/hooks/use-specialties";
 
 const serviceSchema = z.object({
   code: z.string().min(1, "Code is required"),
@@ -31,24 +32,11 @@ const serviceSchema = z.object({
   sessions: z.number().int().positive("Sessions must be a positive integer"),
   costPerSession: z.number().positive("Cost per session must be positive"),
   type: z.enum(["EVALUATION", "TREATMENT"]),
-  specialty: z.enum([
-    "SPEECH_THERAPIST",
-    "OCCUPATIONAL_THERAPIST",
-    "PSYCHOPEDAGOGUE",
-    "ASD_THERAPIST",
-    "NEUROPSYCHOLOGIST",
-    "COORDINATOR",
-    "PSYCHOMOTRICIAN",
-    "PEDIATRIC_KINESIOLOGIST",
-    "PSYCHOLOGIST",
-    "COORDINATION_ASSISTANT",
-    "BEHAVIORAL_THERAPIST",
-  ]),
+  specialty: z.string().optional(),
   status: z.boolean(),
 });
 
 type ServiceFormData = z.infer<typeof serviceSchema>;
-type SpecialtyType = ServiceFormData["specialty"];
 
 interface ServiceFormProps {
   service?: Service;
@@ -64,6 +52,11 @@ export function ServiceForm({
   isLoading,
 }: ServiceFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    data: specialties = [],
+    isLoading: specialtiesLoading,
+    error: specialtiesError,
+  } = useActiveSpecialties();
 
   const {
     register,
@@ -81,7 +74,12 @@ export function ServiceForm({
           sessions: service.sessions,
           costPerSession: service.costPerSession,
           type: service.type,
-          specialty: service.specialty,
+          specialty:
+            (service.specialty && typeof service.specialty === "object" && "specialtyId" in service.specialty)
+              ? (service.specialty as { specialtyId: string }).specialtyId
+              : typeof service.specialty === "string"
+                ? service.specialty
+                : "none",
           status: service.status,
         }
       : {
@@ -91,7 +89,7 @@ export function ServiceForm({
           sessions: 1,
           costPerSession: 0,
           type: "EVALUATION",
-          specialty: "PSYCHOLOGIST",
+          specialty: "none",
           status: true,
         },
   });
@@ -217,49 +215,55 @@ export function ServiceForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="specialty">Especialidad *</Label>
+              <Label htmlFor="specialty">Especialidad</Label>
               <Select
-                value={watchedSpecialty}
+                value={watchedSpecialty || "none"}
                 onValueChange={(value) =>
-                  setValue("specialty", value as SpecialtyType)
+                  setValue("specialty", value === "none" ? undefined : value)
                 }
+                disabled={specialtiesLoading}
               >
                 <SelectTrigger
                   className={errors.specialty ? "border-red-500" : ""}
                 >
-                  <SelectValue placeholder="Seleccionar especialidad" />
+                  <SelectValue
+                    placeholder={
+                      specialtiesLoading
+                        ? "Cargando especialidades..."
+                        : "Seleccionar especialidad (opcional)"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SPEECH_THERAPIST">
-                    Fonoaudiólogo
-                  </SelectItem>
-                  <SelectItem value="OCCUPATIONAL_THERAPIST">
-                    Terapeuta Ocupacional
-                  </SelectItem>
-                  <SelectItem value="PSYCHOPEDAGOGUE">Psicopedagogo</SelectItem>
-                  <SelectItem value="ASD_THERAPIST">Terapeuta TEA</SelectItem>
-                  <SelectItem value="NEUROPSYCHOLOGIST">
-                    Neuropsicólogo
-                  </SelectItem>
-                  <SelectItem value="COORDINATOR">Coordinador</SelectItem>
-                  <SelectItem value="PSYCHOMOTRICIAN">
-                    Psicomotricista
-                  </SelectItem>
-                  <SelectItem value="PEDIATRIC_KINESIOLOGIST">
-                    Kinesiólogo Pediátrico
-                  </SelectItem>
-                  <SelectItem value="PSYCHOLOGIST">Psicólogo</SelectItem>
-                  <SelectItem value="COORDINATION_ASSISTANT">
-                    Asistente de Coordinación
-                  </SelectItem>
-                  <SelectItem value="BEHAVIORAL_THERAPIST">
-                    Terapeuta Conductual
-                  </SelectItem>
+                  <SelectItem value="none">Sin especialidad</SelectItem>
+                  {specialtiesLoading ? (
+                    <SelectItem value="" disabled>
+                      Cargando...
+                    </SelectItem>
+                  ) : specialtiesError ? (
+                    <SelectItem value="" disabled>
+                      Error al cargar especialidades
+                    </SelectItem>
+                  ) : (
+                    specialties.map((specialty) => (
+                      <SelectItem
+                        key={specialty.id}
+                        value={specialty.specialtyId}
+                      >
+                        {specialty.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               {errors.specialty && (
                 <p className="text-sm text-red-500">
                   {errors.specialty.message}
+                </p>
+              )}
+              {specialtiesError && (
+                <p className="text-sm text-red-500">
+                  Error al cargar especialidades: {specialtiesError.message}
                 </p>
               )}
             </div>

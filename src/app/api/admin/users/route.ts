@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
-import { UserRole, SpecialtyType } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { z } from "zod";
 
 // Server-side password hashing function (mirrors client-side)
@@ -37,16 +37,7 @@ const createUserSchema = z.object({
   address: z.string().optional(),
   dateOfBirth: z.string().optional(),
   biography: z.string().optional(),
-  specialty: z
-    .enum([
-      "SPEECH_THERAPIST",
-      "OCCUPATIONAL_THERAPIST",
-      "PSYCHOPEDAGOGUE",
-      "ASD_THERAPIST",
-      "NEUROPSYCHOLOGIST",
-      "COORDINATOR",
-    ])
-    .optional(),
+  specialty: z.string().optional(),
   canTakeConsultations: z.boolean().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
@@ -121,6 +112,15 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       skip: offset,
       take: limit,
+      include: {
+        specialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+          },
+        },
+      },
     });
 
     // Get user data from Supabase for each profile
@@ -245,6 +245,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Handle specialty mapping
+    let specialtyId = null;
+    if (validatedData.specialty && validatedData.specialty.trim() !== "") {
+      const specialtyExists = await prisma.specialty.findUnique({
+        where: { specialtyId: validatedData.specialty },
+      });
+
+      if (!specialtyExists) {
+        return NextResponse.json(
+          { error: "Selected specialty does not exist" },
+          { status: 400 }
+        );
+      }
+      specialtyId = specialtyExists.id;
+    }
+
     // Create profile in database
     const newProfile = await prisma.profile.create({
       data: {
@@ -259,9 +275,18 @@ export async function POST(request: NextRequest) {
           ? new Date(validatedData.dateOfBirth)
           : null,
         biography: validatedData.biography || null,
-        specialty: (validatedData.specialty as SpecialtyType) || null,
+        specialtyId: specialtyId,
         canTakeConsultations: validatedData.canTakeConsultations ?? null,
         active: true,
+      },
+      include: {
+        specialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+          },
+        },
       },
     });
 

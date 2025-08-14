@@ -9,6 +9,8 @@ import {
   Indicator,
 } from "@/types/reports";
 import { format } from "date-fns";
+import { useActiveSpecialties } from "@/hooks/use-specialties";
+import { getSpecialtyDisplayName } from "@/lib/specialties";
 
 interface ReportPDFTemplateProps {
   report:
@@ -18,24 +20,6 @@ interface ReportPDFTemplateProps {
     | TherapistReportContribution;
   type: string;
 }
-
-// Helper function to translate specialties to Spanish
-const translateSpecialty = (specialty: string): string => {
-  const translations: { [key: string]: string } = {
-    SPEECH_THERAPIST: "Fonoaudiología",
-    OCCUPATIONAL_THERAPIST: "Terapia Ocupacional",
-    PSYCHOPEDAGOGUE: "Psicopedagogía",
-    ASD_THERAPIST: "Terapeuta TEA",
-    NEUROPSYCHOLOGIST: "Neuropsicología",
-    COORDINATOR: "Coordinación",
-    PSYCHOMOTRICIAN: "Psicomotricidad",
-    PEDIATRIC_KINESIOLOGIST: "Kinesiología Pediátrica",
-    PSYCHOLOGIST: "Psicología",
-    COORDINATION_ASSISTANT: "Asistente de Coordinación",
-    BEHAVIORAL_THERAPIST: "Terapia Conductual",
-  };
-  return translations[specialty] || specialty;
-};
 
 // Helper function to get report properties safely
 const getReportProperty = (
@@ -109,6 +93,9 @@ const getReportDate = (
 };
 
 export function ReportPDFTemplate({ report, type }: ReportPDFTemplateProps) {
+  // Fetch specialties for dynamic display
+  const { data: specialties = [] } = useActiveSpecialties();
+
   const getReportTitle = () => {
     switch (type) {
       case "final":
@@ -130,7 +117,7 @@ export function ReportPDFTemplate({ report, type }: ReportPDFTemplateProps) {
       return {
         title: "Coordinador",
         name: `${finalReport.coordinator.firstName} ${finalReport.coordinator.lastName}`,
-        specialty: translateSpecialty(finalReport.coordinator.specialty),
+        specialty: getSpecialtyDisplayName(finalReport.coordinator.specialty),
       };
     } else {
       const otherReport = report as
@@ -140,7 +127,7 @@ export function ReportPDFTemplate({ report, type }: ReportPDFTemplateProps) {
       return {
         title: "Terapeuta",
         name: `${otherReport.therapist.firstName} ${otherReport.therapist.lastName}`,
-        specialty: translateSpecialty(otherReport.therapist.specialty),
+        specialty: getSpecialtyDisplayName(otherReport.therapist.specialty),
       };
     }
   };
@@ -219,7 +206,10 @@ export function ReportPDFTemplate({ report, type }: ReportPDFTemplateProps) {
 
       {/* Content based on report type */}
       {type === "final" && (
-        <FinalReportContent report={report as FinalReport} />
+        <FinalReportContent
+          report={report as FinalReport}
+          specialties={specialties}
+        />
       )}
 
       {type === "progress" && (
@@ -252,7 +242,12 @@ export function ReportPDFTemplate({ report, type }: ReportPDFTemplateProps) {
 }
 
 // Final Report Content Component
-function FinalReportContent({ report }: { report: FinalReport }) {
+function FinalReportContent({
+  report,
+}: {
+  report: FinalReport;
+  specialties: Array<{ id: string; specialtyId: string; name: string }>;
+}) {
   return (
     <>
       {/* Combined Objectives */}
@@ -283,7 +278,8 @@ function FinalReportContent({ report }: { report: FinalReport }) {
                     className="p-3 bg-gray-50 border-l-4 border-blue-500 rounded"
                   >
                     <h4 className="font-medium text-gray-900 mb-2">
-                      Objetivo de {translateSpecialty(therapistData.specialty)}
+                      Objetivo de{" "}
+                      {getSpecialtyDisplayName(therapistData.specialty)}
                     </h4>
                     {therapistData.objectives && (
                       <div className="space-y-1">
@@ -335,7 +331,7 @@ function FinalReportContent({ report }: { report: FinalReport }) {
                   >
                     <h4 className="font-medium text-gray-900 mb-2">
                       Antecedentes de{" "}
-                      {translateSpecialty(therapistData.specialty)}
+                      {getSpecialtyDisplayName(therapistData.specialty)}
                     </h4>
                     <div className="text-sm text-gray-700">
                       {therapistData.background}
@@ -363,7 +359,7 @@ function FinalReportContent({ report }: { report: FinalReport }) {
                   >
                     <h4 className="font-medium text-gray-900 mb-2">
                       Avances en el área de{" "}
-                      {translateSpecialty(therapistData.specialty)}
+                      {getSpecialtyDisplayName(therapistData.specialty)}
                     </h4>
                     {therapistData.indicators &&
                     Array.isArray(therapistData.indicators) &&
@@ -528,7 +524,7 @@ function FinalReportContent({ report }: { report: FinalReport }) {
                     className="p-3 bg-gray-50 border-l-4 border-orange-500 rounded"
                   >
                     <h4 className="font-medium text-gray-900 mb-2">
-                      Desde {translateSpecialty(therapistData.specialty)}
+                      Desde {getSpecialtyDisplayName(therapistData.specialty)}
                     </h4>
                     <div className="text-sm text-gray-700">
                       {therapistData.conclusions}
@@ -688,14 +684,65 @@ function TherapeuticPlanContent({ report }: { report: TherapeuticPlan }) {
             Indicadores
           </h2>
           <div className="space-y-4">
-            {report.indicators.map((indicator: string, index: number) => (
-              <div
-                key={index}
-                className="p-3 bg-gray-50 border-l-4 border-blue-500 rounded"
-              >
-                <div className="text-sm text-gray-700">{indicator}</div>
-              </div>
-            ))}
+            {report.indicators.map((indicator: string | { name?: string; indicator?: string; status?: string }, index: number) => {
+              const indicatorText =
+                typeof indicator === "string"
+                  ? indicator
+                  : indicator.name ||
+                    indicator.indicator ||
+                    "Indicador sin nombre";
+
+              const status =
+                typeof indicator === "object" ? indicator.status : null;
+
+              const getStatusColor = (statusValue: string) => {
+                switch (statusValue) {
+                  case "not_achieved":
+                    return "border-red-500 bg-red-50 text-red-700";
+                  case "with_help":
+                    return "border-yellow-500 bg-yellow-50 text-yellow-700";
+                  case "in_progress":
+                    return "border-blue-500 bg-blue-50 text-blue-700";
+                  case "achieved":
+                    return "border-green-500 bg-green-50 text-green-700";
+                  default:
+                    return "border-gray-200 bg-gray-50 text-gray-600";
+                }
+              };
+
+              const getStatusLabel = (statusValue: string) => {
+                switch (statusValue) {
+                  case "not_achieved":
+                    return "No logra";
+                  case "with_help":
+                    return "Con ayuda";
+                  case "in_progress":
+                    return "En progreso";
+                  case "achieved":
+                    return "Logrado";
+                  default:
+                    return "Sin evaluar";
+                }
+              };
+
+              return (
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 border-l-4 border-blue-500 rounded"
+                >
+                  <div className="text-sm text-gray-700 mb-2">
+                    {indicatorText}
+                  </div>
+                  {status && (
+                    <div
+                      className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}
+                    >
+                      {getStatusLabel(status)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -774,14 +821,65 @@ function ContributionReportContent({
             Indicadores
           </h2>
           <div className="space-y-4">
-            {report.indicators.map((indicator: string, index: number) => (
-              <div
-                key={index}
-                className="p-3 bg-gray-50 border-l-4 border-blue-500 rounded"
-              >
-                <div className="text-sm text-gray-700">{indicator}</div>
-              </div>
-            ))}
+            {report.indicators.map((indicator: string | { name?: string; indicator?: string; status?: string }, index: number) => {
+              const indicatorText =
+                typeof indicator === "string"
+                  ? indicator
+                  : indicator.name ||
+                    indicator.indicator ||
+                    "Indicador sin nombre";
+
+              const status =
+                typeof indicator === "object" ? indicator.status : null;
+
+              const getStatusColor = (statusValue: string) => {
+                switch (statusValue) {
+                  case "not_achieved":
+                    return "border-red-500 bg-red-50 text-red-700";
+                  case "with_help":
+                    return "border-yellow-500 bg-yellow-50 text-yellow-700";
+                  case "in_progress":
+                    return "border-blue-500 bg-blue-50 text-blue-700";
+                  case "achieved":
+                    return "border-green-500 bg-green-50 text-green-700";
+                  default:
+                    return "border-gray-200 bg-gray-50 text-gray-600";
+                }
+              };
+
+              const getStatusLabel = (statusValue: string) => {
+                switch (statusValue) {
+                  case "not_achieved":
+                    return "No logra";
+                  case "with_help":
+                    return "Con ayuda";
+                  case "in_progress":
+                    return "En progreso";
+                  case "achieved":
+                    return "Logrado";
+                  default:
+                    return "Sin evaluar";
+                }
+              };
+
+              return (
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 border-l-4 border-blue-500 rounded"
+                >
+                  <div className="text-sm text-gray-700 mb-2">
+                    {indicatorText}
+                  </div>
+                  {status && (
+                    <div
+                      className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}
+                    >
+                      {getStatusLabel(status)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
