@@ -63,21 +63,7 @@ import {
   type CreateUserData,
   type AdminUser,
 } from "@/hooks/use-admin-users";
-
-// Available specialties with Spanish labels for UI
-const specialties = [
-  { value: "SPEECH_THERAPIST", label: "Fonoaudiólogo" },
-  { value: "OCCUPATIONAL_THERAPIST", label: "Terapeuta Ocupacional" },
-  { value: "PSYCHOPEDAGOGUE", label: "Psicopedagogo" },
-  { value: "ASD_THERAPIST", label: "Terapeuta TEA" },
-  { value: "NEUROPSYCHOLOGIST", label: "Neuropsicólogo" },
-  { value: "COORDINATOR", label: "Coordinador o Asistente" },
-  { value: "PSYCHOMOTRICIAN", label: "Psicomotricista" },
-  { value: "PEDIATRIC_KINESIOLOGIST", label: "Kinesiólogo Infantil" },
-  { value: "PSYCHOLOGIST", label: "Psicólogo" },
-  { value: "COORDINATION_ASSISTANT", label: "Asistente de Coordinación" },
-  { value: "BEHAVIORAL_THERAPIST", label: "Terapeuta Conductual" },
-] as const;
+import { useActiveSpecialties } from "@/hooks/use-specialties";
 
 // Enhanced validation schema with more comprehensive rules
 const createUserSchema = z.object({
@@ -122,6 +108,8 @@ export default function SuperAdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [showPassword, setShowPassword] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState("");
+
+  const { data: specialties = [] } = useActiveSpecialties();
 
   // Fix: Pass proper parameters to useAdminUsers hook
   const {
@@ -207,10 +195,23 @@ export default function SuperAdminUsersPage() {
     setIsPasswordResetDialogOpen(true);
   };
 
-  const getSpecialtyLabel = (value: string | null) => {
+  const getSpecialtyLabel = (
+    value: string | null | { specialtyId: string; name: string }
+  ) => {
     if (!value) return "Sin especialidad";
-    const specialty = specialties.find((s) => s.value === value);
-    return specialty ? specialty.label : value;
+
+    // If value is an object (new structure), use the name directly
+    if (typeof value === "object" && value.name) {
+      return value.name;
+    }
+
+    // If value is a string (old structure or specialtyId), use the mapping
+    if (typeof value === "string") {
+      const specialty = specialties.find((spec) => spec.specialtyId === value);
+      return specialty?.name || value;
+    }
+
+    return "Sin especialidad";
   };
 
   const getRoleInfo = (role: string) => {
@@ -482,10 +483,10 @@ export default function SuperAdminUsersPage() {
                         <SelectContent>
                           {specialties.map((specialty) => (
                             <SelectItem
-                              key={specialty.value}
-                              value={specialty.value}
+                              key={specialty.id}
+                              value={specialty.specialtyId}
                             >
-                              {specialty.label}
+                              {specialty.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
