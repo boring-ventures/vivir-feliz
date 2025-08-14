@@ -130,7 +130,11 @@ export function ServiceTable({
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline">
-                    {service.specialty.replace(/_/g, " ")}
+                    {(service.specialty && typeof service.specialty === "object" && "name" in service.specialty)
+                      ? (service.specialty as { name: string }).name
+                      : typeof service.specialty === "string"
+                        ? service.specialty
+                        : "Sin especialidad"}
                   </Badge>
                 </TableCell>
                 <TableCell>{service.sessions}</TableCell>

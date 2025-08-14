@@ -15,7 +15,9 @@ import {
   Clock,
   CreditCard,
   Package,
+  Stethoscope,
 } from "lucide-react";
+import { isCoordinator } from "@/lib/specialties";
 
 export const getRoleBasedSidebarData = (
   userRole: string,
@@ -54,6 +56,11 @@ export const getRoleBasedSidebarData = (
                 title: "Servicios",
                 url: "/super-admin/services",
                 icon: Package,
+              },
+              {
+                title: "Especialidades",
+                url: "/super-admin/specialty",
+                icon: Stethoscope,
               },
               {
                 title: "Terapeutas",
@@ -134,7 +141,7 @@ export const getRoleBasedSidebarData = (
 
     case "THERAPIST":
       // Check if therapist is COORDINATOR
-      if (specialty === "COORDINATOR") {
+      if (isCoordinator(specialty)) {
         return {
           user: {
             name: "Coordinador",
@@ -160,6 +167,11 @@ export const getRoleBasedSidebarData = (
                   title: "Citas",
                   url: "/therapist/appointments",
                   icon: Calendar,
+                },
+                {
+                  title: "Análisis de Consulta",
+                  url: "/therapist/analysis",
+                  icon: BookOpen,
                 },
                 {
                   title: "Propuestas",

@@ -292,7 +292,9 @@ export function TherapeuticPlanModal({
           grade: "", // We'll need to get this from consultation request separately
           objectivesDate: "",
           planning: "",
-          treatmentArea: profile?.specialty || "",
+          treatmentArea: typeof profile?.specialty === "string" 
+            ? profile.specialty 
+            : profile?.specialty?.specialtyId || "",
           frequency: "", // We'll need to get this from proposal services separately
           therapyStartDate: firstTherapyAppointment
             ? firstTherapyAppointment.date.split("T")[0]
