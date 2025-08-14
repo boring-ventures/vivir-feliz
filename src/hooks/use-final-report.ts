@@ -23,7 +23,15 @@ interface FinalReport {
     id: string;
     firstName: string;
     lastName: string;
-    specialty: string;
+    specialty: {
+      id: string;
+      specialtyId: string;
+      name: string;
+      description: string | null;
+      isActive: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+    } | null;
   };
 }
 

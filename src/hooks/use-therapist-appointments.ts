@@ -81,13 +81,23 @@ export const useTherapistAppointments = (
       );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch appointments");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
       }
 
       return response.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      // Don't retry on 401 (Unauthorized) or 404 (Not Found)
+      if (error.message.includes("401") || error.message.includes("404")) {
+        return false;
+      }
+      // Retry up to 3 times for other errors
+      return failureCount < 3;
+    },
   });
 };
 
