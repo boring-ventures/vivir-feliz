@@ -39,25 +39,13 @@ import {
   DayOfWeek,
   TherapistAppointment,
 } from "@/types/therapists";
-import { SpecialtyType } from "@prisma/client";
+// Removed unused import: useActiveSpecialties
+
+// Import the centralized specialty function
+import { getSpecialtyDisplayName } from "@/lib/specialties";
 
 // Utility functions
-const getSpecialtyDisplay = (specialty: SpecialtyType | null): string => {
-  const specialtyMap: Record<SpecialtyType, string> = {
-    SPEECH_THERAPIST: "Fonoaudiología",
-    OCCUPATIONAL_THERAPIST: "Terapia Ocupacional",
-    PSYCHOPEDAGOGUE: "Psicopedagogía",
-    ASD_THERAPIST: "Especialista TEA",
-    NEUROPSYCHOLOGIST: "Neuropsicología",
-    COORDINATOR: "Coordinación",
-    PSYCHOMOTRICIAN: "Psicomotricista",
-    PEDIATRIC_KINESIOLOGIST: "Kinesiólogo Infantil",
-    PSYCHOLOGIST: "Psicólogo",
-    COORDINATION_ASSISTANT: "Asistente de Coordinación",
-    BEHAVIORAL_THERAPIST: "Terapeuta Conductual",
-  };
-  return specialty ? specialtyMap[specialty] : "Sin especialidad";
-};
+const getSpecialtyDisplay = getSpecialtyDisplayName;
 
 const getTherapistColor = (index: number): string => {
   const colors = [
@@ -289,7 +277,10 @@ export default function TherapistsPage() {
   }, [therapists]);
 
   // Get the dynamic time slots (recompute when therapists or week changes)
-  const horarios = useMemo(() => getAvailableTimeSlots(), [weekStart, getAvailableTimeSlots]);
+  const horarios = useMemo(
+    () => getAvailableTimeSlots(),
+    [getAvailableTimeSlots]
+  );
 
   // Convert database schedule to weekly availability format
   const getTherapistAvailability = (

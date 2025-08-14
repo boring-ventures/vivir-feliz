@@ -24,7 +24,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import {
   Search,
   FileText,
@@ -54,6 +53,8 @@ import {
   TherapeuticPlan,
   TherapistReportContribution,
 } from "@/types/reports";
+import { getSpecialtyDisplayName } from "@/lib/specialties";
+import { QueryProvider } from "@/lib/providers/QueryProvider";
 
 export default function AdminReportsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -72,24 +73,6 @@ export default function AdminReportsPage() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const { profile } = useCurrentUser();
   const { data, isLoading, error } = useAdminReports();
-
-  // Helper function to translate specialties to Spanish
-  const translateSpecialty = (specialty: string): string => {
-    const translations: { [key: string]: string } = {
-      SPEECH_THERAPIST: "Fonoaudiología",
-      OCCUPATIONAL_THERAPIST: "Terapia Ocupacional",
-      PSYCHOPEDAGOGUE: "Psicopedagogía",
-      ASD_THERAPIST: "Terapeuta TEA",
-      NEUROPSYCHOLOGIST: "Neuropsicología",
-      COORDINATOR: "Coordinación",
-      PSYCHOMOTRICIAN: "Psicomotricidad",
-      PEDIATRIC_KINESIOLOGIST: "Kinesiología Pediátrica",
-      PSYCHOLOGIST: "Psicología",
-      COORDINATION_ASSISTANT: "Asistente de Coordinación",
-      BEHAVIORAL_THERAPIST: "Terapia Conductual",
-    };
-    return translations[specialty] || specialty;
-  };
 
   // Helper function to get status badge variant
   const getStatusBadgeVariant = (status: string) => {
@@ -168,66 +151,9 @@ export default function AdminReportsPage() {
     }
   };
 
-  // Helper function to get therapist/coordinator name
-  const getReportAuthor = (
-    report:
-      | FinalReport
-      | ProgressReport
-      | TherapeuticPlan
-      | TherapistReportContribution,
-    type: string
-  ): string => {
-    switch (type) {
-      case "final":
-        const finalReport = report as FinalReport;
-        return finalReport.coordinator
-          ? `${finalReport.coordinator.firstName} ${finalReport.coordinator.lastName}`
-          : "N/A";
-      case "progress":
-        const progressReport = report as ProgressReport;
-        return progressReport.therapist
-          ? `${progressReport.therapist.firstName} ${progressReport.therapist.lastName}`
-          : "N/A";
-      case "therapeutic":
-        const therapeuticPlan = report as TherapeuticPlan;
-        return therapeuticPlan.therapist
-          ? `${therapeuticPlan.therapist.firstName} ${therapeuticPlan.therapist.lastName}`
-          : "N/A";
-      case "contribution":
-        const contribution = report as TherapistReportContribution;
-        return contribution.therapist
-          ? `${contribution.therapist.firstName} ${contribution.therapist.lastName}`
-          : "N/A";
-      default:
-        return "N/A";
-    }
-  };
 
-  // Helper function to get status
-  const getReportStatus = (
-    report:
-      | FinalReport
-      | ProgressReport
-      | TherapeuticPlan
-      | TherapistReportContribution,
-    type: string
-  ): string => {
-    switch (type) {
-      case "final":
-        const finalReport = report as FinalReport;
-        return finalReport.isPublished ? "Publicado" : "Borrador";
-      case "progress":
-        const progressReport = report as ProgressReport;
-        return translateStatus(progressReport.status);
-      case "therapeutic":
-        const therapeuticPlan = report as TherapeuticPlan;
-        return translateStatus(therapeuticPlan.status);
-      case "contribution":
-        return "Contribución";
-      default:
-        return "N/A";
-    }
-  };
+
+
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
@@ -296,9 +222,13 @@ export default function AdminReportsPage() {
       tempContainer.style.fontSize = "12px";
       tempContainer.style.lineHeight = "1.4";
 
-      // Create a React root and render the template
+      // Create a React root and render the template with QueryProvider
       const root = createRoot(tempContainer);
-      root.render(<ReportPDFTemplate report={report} type={type} />);
+      root.render(
+        <QueryProvider>
+          <ReportPDFTemplate report={report} type={type} />
+        </QueryProvider>
+      );
 
       // Add to DOM temporarily
       document.body.appendChild(tempContainer);
@@ -898,7 +828,7 @@ export default function AdminReportsPage() {
                                             variant="outline"
                                             className="text-xs"
                                           >
-                                            {translateSpecialty(
+                                            {getSpecialtyDisplayName(
                                               report.therapist.specialty
                                             )}
                                           </Badge>
@@ -981,7 +911,7 @@ export default function AdminReportsPage() {
                                             variant="outline"
                                             className="text-xs"
                                           >
-                                            {translateSpecialty(
+                                            {getSpecialtyDisplayName(
                                               plan.therapist.specialty
                                             )}
                                           </Badge>
@@ -1057,7 +987,7 @@ export default function AdminReportsPage() {
                                               variant="outline"
                                               className="text-xs"
                                             >
-                                              {translateSpecialty(
+                                              {getSpecialtyDisplayName(
                                                 contribution.therapist.specialty
                                               )}
                                             </Badge>
@@ -1142,86 +1072,15 @@ export default function AdminReportsPage() {
 
             {selectedReport && (
               <div className="space-y-6">
-                {/* Basic Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      Información Básica
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">
-                          Nombre del Paciente
-                        </Label>
-                        <p className="text-sm text-gray-900 mt-1">
-                          {getReportProperty(
-                            selectedReport,
-                            "patientName",
-                            selectedReportType
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">
-                          Edad
-                        </Label>
-                        <p className="text-sm text-gray-900 mt-1">
-                          {getReportProperty(
-                            selectedReport,
-                            "patientAge",
-                            selectedReportType
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">
-                          {selectedReportType === "final"
-                            ? "Coordinador"
-                            : "Terapeuta"}
-                        </Label>
-                        <p className="text-sm text-gray-900 mt-1">
-                          {getReportAuthor(selectedReport, selectedReportType)}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">
-                          Estado
-                        </Label>
-                        <p className="text-sm text-gray-900 mt-1">
-                          {getReportStatus(selectedReport, selectedReportType)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Report Content - This would need to be customized based on report type */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      Contenido del Informe
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-gray-600">
-                      <p>
-                        El contenido detallado del informe se mostraría aquí.
-                      </p>
-                      <p className="mt-2">
-                        Tipo:{" "}
-                        {selectedReportType === "final"
-                          ? "Informe Final"
-                          : selectedReportType === "progress"
-                            ? "Informe de Progreso"
-                            : selectedReportType === "therapeutic"
-                              ? "Plan Terapéutico"
-                              : "Contribución de Terapeuta"}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Report Content */}
+                <div className="bg-white rounded-lg border">
+                  <QueryProvider>
+                    <ReportPDFTemplate
+                      report={selectedReport}
+                      type={selectedReportType}
+                    />
+                  </QueryProvider>
+                </div>
               </div>
             )}
 

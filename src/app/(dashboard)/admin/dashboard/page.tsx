@@ -24,22 +24,21 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
+import { useActiveSpecialties } from "@/hooks/use-specialties";
 
 export default function AdminDashboardPage() {
   const { data: dashboardData, isLoading, error } = useAdminDashboard();
-  const SPECIALTY_LABELS: Record<string, string> = {
-    SPEECH_THERAPIST: "Terapia de Lenguaje",
-    OCCUPATIONAL_THERAPIST: "Terapia Ocupacional",
-    PSYCHOPEDAGOGUE: "Psicopedagogía",
-    ASD_THERAPIST: "Terapeuta TEA",
-    NEUROPSYCHOLOGIST: "Neuropsicología",
-    COORDINATOR: "Coordinación",
-    PSYCHOMOTRICIAN: "Psicomotricidad",
-    PEDIATRIC_KINESIOLOGIST: "Kinesiología Pediátrica",
-    PSYCHOLOGIST: "Psicología",
-    COORDINATION_ASSISTANT: "Asistente de Coordinación",
-    BEHAVIORAL_THERAPIST: "Terapia Conductual",
-    UNKNOWN: "Otro",
+  const { data: specialties = [] } = useActiveSpecialties();
+
+  // Create a mapping from specialtyId to name for display purposes
+  const specialtyLabels = specialties.reduce((acc, specialty) => {
+    acc[specialty.specialtyId] = specialty.name;
+    return acc;
+  }, {} as Record<string, string>);
+
+  // Helper function to get specialty display name
+  const getSpecialtyDisplayName = (specialtyId: string) => {
+    return specialtyLabels[specialtyId] || specialtyId || "Sin especialidad";
   };
 
   const formatPercentage = (value: number) => {
@@ -395,7 +394,7 @@ export default function AdminDashboardPage() {
                       className="flex items-center justify-between"
                     >
                       <span className="text-sm text-muted-foreground">
-                        {SPECIALTY_LABELS[spec as string] ?? spec}
+                        {getSpecialtyDisplayName(spec)}
                       </span>
                       <Badge variant="secondary">{count}</Badge>
                     </div>
@@ -437,7 +436,7 @@ export default function AdminDashboardPage() {
                         className="flex items-center justify-between"
                       >
                         <span className="text-sm text-muted-foreground">
-                          {SPECIALTY_LABELS[spec as string] ?? spec}
+                          {getSpecialtyDisplayName(spec)}
                         </span>
                         <span className="text-sm">
                           <Badge className="bg-zinc-100 text-zinc-800 mr-2">

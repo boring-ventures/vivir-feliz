@@ -41,6 +41,7 @@ import {
   TreatmentProposalWithRelations,
 } from "@/types/patients";
 import { useTherapistMonthlyAppointments } from "@/hooks/use-therapist-appointments";
+import { useTherapistSchedule } from "@/hooks/use-therapist-schedule";
 
 // Parent creation schema
 const createParentSchema = z.object({
@@ -289,6 +290,11 @@ export default function AdminNuevosPacientesPage() {
     mesActual.getMonth() + 1
   );
 
+  // Add therapist schedule fetching
+  const { data: therapistSchedule } = useTherapistSchedule(
+    currentService?.therapistId
+  );
+
   // Add helper to check if a slot is busy
   const isSlotBusy = (fecha: Date, hora: string) => {
     if (!therapistAppointments) return false;
@@ -310,6 +316,40 @@ export default function AdminNuevosPacientesPage() {
     date.setHours(hours, minutes);
     date.setHours(date.getHours() + 1);
     return `${date.getHours().toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+  };
+
+  // Helper to check if a time slot is available according to therapist's schedule
+  const isSlotAvailableInSchedule = (fecha: Date, hora: string) => {
+    if (!therapistSchedule?.timeSlots) return true; // If no schedule, allow all slots
+
+    const dayNames = [
+      "SUNDAY",
+      "MONDAY", 
+      "TUESDAY",
+      "WEDNESDAY",
+      "THURSDAY",
+      "FRIDAY",
+      "SATURDAY",
+    ];
+    const dayOfWeek = dayNames[fecha.getDay()];
+
+    // Check if there's a time slot for this day and time
+    return therapistSchedule.timeSlots.some((slot) => {
+      if (slot.dayOfWeek !== dayOfWeek || !slot.isAvailable) return false;
+
+      const timeMinutes = timeToMinutes(hora);
+      const slotStartMinutes = timeToMinutes(slot.startTime);
+      const slotEndMinutes = timeToMinutes(slot.endTime);
+
+      // Check if the time falls within this time slot
+      return timeMinutes >= slotStartMinutes && timeMinutes < slotEndMinutes;
+    });
+  };
+
+  // Helper to convert time string to minutes
+  const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
   };
 
   const pacientesFiltrados = pacientes.filter(
@@ -1452,12 +1492,16 @@ export default function AdminNuevosPacientesPage() {
                     (Propuesta {databaseSelectedProposal}). Necesitas{" "}
                     {proposalServices?.[currentServiceIndex]?.sessions || 0}{" "}
                     sesiones y has seleccionado {getCitasSeleccionadas().length}
-                    .
+                    . Solo se muestran los horarios disponibles según el horario del terapeuta.
                   </p>
                   <div className="flex gap-2 text-xs">
                     <div className="flex items-center">
                       <div className="w-3 h-3 bg-destructive rounded-sm mr-1" />
                       <span>Horario ocupado</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-secondary rounded-sm mr-1" />
+                      <span>No disponible (terapeuta)</span>
                     </div>
                     <div className="flex items-center">
                       <div className="w-3 h-3 bg-primary rounded-sm mr-1" />
@@ -1583,6 +1627,10 @@ export default function AdminNuevosPacientesPage() {
                                     diaInfo.fecha,
                                     hora
                                   );
+                                  const isAvailableInSchedule = isSlotAvailableInSchedule(
+                                    diaInfo.fecha,
+                                    hora
+                                  );
                                   return (
                                     <Button
                                       key={hora}
@@ -1590,9 +1638,11 @@ export default function AdminNuevosPacientesPage() {
                                       variant={
                                         isBusy
                                           ? "destructive"
-                                          : isSelected
-                                            ? "default"
-                                            : "outline"
+                                          : !isAvailableInSchedule
+                                            ? "secondary"
+                                            : isSelected
+                                              ? "default"
+                                              : "outline"
                                       }
                                       onClick={() =>
                                         toggleCita(diaInfo.fecha, hora)
@@ -1600,6 +1650,7 @@ export default function AdminNuevosPacientesPage() {
                                       disabled={
                                         !isSelectable || // Disable if date is in the past
                                         isBusy || // Disable if slot is busy
+                                        !isAvailableInSchedule || // Disable if not in therapist's schedule
                                         (getCitasSeleccionadas().length >=
                                           (proposalServices?.[
                                             currentServiceIndex
