@@ -26,6 +26,7 @@ import { RoleGuard } from "@/components/auth/role-guard";
 import { useTherapistProposals } from "@/hooks/useTherapistProposals";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { format } from "date-fns";
+import { isCoordinator } from "@/lib/specialties";
 import { toast } from "@/components/ui/use-toast";
 
 interface DisplayProposal {
@@ -236,7 +237,7 @@ export default function TherapistProposalsPage() {
   }
 
   // Check if user is COORDINATOR - moved after all hooks
-  if (profile?.specialty !== "COORDINATOR") {
+  if (!isCoordinator(profile?.specialty)) {
     return (
       <RoleGuard allowedRoles={["THERAPIST"]}>
         <div className="min-h-screen bg-gray-100 flex items-center justify-center">

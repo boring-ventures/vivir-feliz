@@ -214,9 +214,39 @@ export default function TerapeutaPropuestaServicioPage() {
       return allTherapists; // If service not found, show all therapists
     }
 
-    return allTherapists.filter(
-      (therapist) => therapist.specialty === service.specialty
-    );
+    return allTherapists.filter((therapist) => {
+      // If service has no specialty, show all therapists
+      if (!service.specialty) {
+        return true;
+      }
+
+      // If therapist has no specialty, don't show them for specialized services
+      if (!therapist.specialty) {
+        return false;
+      }
+
+      // Get service specialty ID
+      let serviceSpecialtyId: string | null = null;
+      if (typeof service.specialty === "string") {
+        serviceSpecialtyId = service.specialty;
+      } else if (service.specialty && typeof service.specialty === "object") {
+        serviceSpecialtyId = service.specialty.id;
+      }
+
+      // Get therapist specialty ID
+      let therapistSpecialtyId: string | null = null;
+      if (typeof therapist.specialty === "string") {
+        therapistSpecialtyId = therapist.specialty;
+      } else if (
+        therapist.specialty &&
+        typeof therapist.specialty === "object"
+      ) {
+        therapistSpecialtyId = therapist.specialty.id;
+      }
+
+      // Compare specialty IDs
+      return serviceSpecialtyId === therapistSpecialtyId;
+    });
   };
 
   const handleTerapeutaEvaluacionChangeA = (

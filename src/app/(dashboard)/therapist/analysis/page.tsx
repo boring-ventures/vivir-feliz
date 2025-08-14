@@ -39,7 +39,7 @@ export default function TherapistAnalysisPage() {
 
   const sendAnalysisToAdmin = useSendAnalysisToAdmin();
 
-  // Filter appointments based on search (API now only returns CONSULTA appointments)
+  // Filter appointments based on search (API now properly filters for CONSULTA and ENTREVISTA only)
   const filteredAppointments =
     data?.appointments?.filter(
       (appointment) =>
@@ -123,12 +123,9 @@ export default function TherapistAnalysisPage() {
                 <p className="text-gray-600 mt-1">
                   Gestiona y analiza las consultas programadas
                 </p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
-                  <p className="text-sm text-blue-800">
-                    <strong>💡 Nuevo:</strong> Las consultas ahora incluyen
-                    formularios médicos detallados completados por los padres,
-                    proporcionando información completa sobre desarrollo,
-                    historia médica y contexto familiar.
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
+                  <p className="text-sm text-red-800">
+                    <strong>⚠️ Error:</strong> {error.message}
                   </p>
                 </div>
               </div>
@@ -142,9 +139,21 @@ export default function TherapistAnalysisPage() {
                   Error al cargar las citas
                 </h3>
                 <p className="text-gray-500 mb-4">
-                  No se pudieron cargar las citas programadas
+                  {error.message.includes("401")
+                    ? "No tienes autorización para acceder a esta página. Por favor, inicia sesión nuevamente."
+                    : error.message.includes("404")
+                      ? "No se encontró el perfil de terapeuta. Contacta al administrador."
+                      : "No se pudieron cargar las citas programadas. Verifica tu conexión e intenta de nuevo."}
                 </p>
-                <Button onClick={() => refetch()}>Intentar de nuevo</Button>
+                <div className="space-y-2">
+                  <Button onClick={() => refetch()}>Intentar de nuevo</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.reload()}
+                  >
+                    Recargar página
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

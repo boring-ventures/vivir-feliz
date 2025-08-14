@@ -38,15 +38,28 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
-import Link from "next/link";
+// Removed unused import: Link
 import { RoleGuard } from "@/components/auth/role-guard";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useReports } from "@/hooks/use-reports";
+import { isCoordinator } from "@/lib/specialties";
 import { useTherapistContributions } from "@/hooks/use-therapist-contributions";
 import { useFinalReport } from "@/hooks/use-final-report";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import { TherapistData } from "@/types/reports";
+
+type SpecialtyType = {
+  id: string;
+  specialtyId: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+// Removed unused ObjectiveType
 
 interface TherapistContribution {
   id: string;
@@ -63,7 +76,18 @@ interface TherapistContribution {
     id: string;
     firstName: string;
     lastName: string;
-    specialty: string;
+    specialty:
+      | string
+      | {
+          id: string;
+          specialtyId: string;
+          name: string;
+          description: string | null;
+          isActive: boolean;
+          createdAt: Date;
+          updatedAt: Date;
+        }
+      | null;
   };
 }
 
@@ -94,7 +118,18 @@ interface TherapeuticPlan {
     id: string;
     firstName: string;
     lastName: string;
-    specialty: string;
+    specialty:
+      | string
+      | {
+          id: string;
+          specialtyId: string;
+          name: string;
+          description: string | null;
+          isActive: boolean;
+          createdAt: Date;
+          updatedAt: Date;
+        }
+      | null;
   };
 }
 
@@ -121,7 +156,18 @@ interface ProgressReport {
     id: string;
     firstName: string;
     lastName: string;
-    specialty: string;
+    specialty:
+      | string
+      | {
+          id: string;
+          specialtyId: string;
+          name: string;
+          description: string | null;
+          isActive: boolean;
+          createdAt: Date;
+          updatedAt: Date;
+        }
+      | null;
   };
 }
 
@@ -130,11 +176,17 @@ export default function InformesPage() {
   const [reportTypeFilter, setReportTypeFilter] = useState("all");
   const [openPatients, setOpenPatients] = useState<Set<string>>(new Set());
   const [showFinalReportModal, setShowFinalReportModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<{
     patientId: string;
     patientName: string;
     patientAge: string;
     patientDateOfBirth: string;
+  } | null>(null);
+  const [selectedReport, setSelectedReport] = useState<{
+    type: "therapeutic" | "progress";
+    data: TherapeuticPlan | ProgressReport;
   } | null>(null);
   const { profile } = useCurrentUser();
   const { data: reportsData, isLoading, error } = useReports();
@@ -200,6 +252,32 @@ export default function InformesPage() {
     });
   };
 
+  const handleOpenViewModal = (
+    report: TherapeuticPlan | ProgressReport,
+    type: "therapeutic" | "progress"
+  ) => {
+    setSelectedReport({ type, data: report });
+    setShowViewModal(true);
+  };
+
+  const handleOpenEditModal = (
+    report: TherapeuticPlan | ProgressReport,
+    type: "therapeutic" | "progress"
+  ) => {
+    setSelectedReport({ type, data: report });
+    setShowEditModal(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setShowViewModal(false);
+    setSelectedReport(null);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedReport(null);
+  };
+
   // Preload existing final report data when modal opens
   useEffect(() => {
     if (showFinalReportModal && existingFinalReport && !finalReportLoading) {
@@ -235,7 +313,9 @@ export default function InformesPage() {
           progressReports: [],
         });
       }
-      patientGroups.get(plan.patientId)!.therapeuticPlans.push(plan);
+      patientGroups
+        .get(plan.patientId)!
+        .therapeuticPlans.push(plan as unknown as TherapeuticPlan);
     });
 
     // Group progress reports
@@ -249,14 +329,16 @@ export default function InformesPage() {
           progressReports: [],
         });
       }
-      patientGroups.get(report.patientId)!.progressReports.push(report);
+      patientGroups
+        .get(report.patientId)!
+        .progressReports.push(report as unknown as ProgressReport);
     });
 
     return patientGroups;
   };
 
   // Check if user is COORDINATOR - moved after all hooks
-  if (profile?.specialty !== "COORDINATOR") {
+  if (!isCoordinator(profile?.specialty)) {
     return (
       <RoleGuard allowedRoles={["THERAPIST"]}>
         <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -297,7 +379,12 @@ export default function InformesPage() {
             </p>
             <div className="mt-4 p-4 bg-gray-200 rounded text-left text-xs">
               <p>Debug info:</p>
-              <p>Profile specialty: {profile?.specialty}</p>
+              <p>
+                Profile specialty:{" "}
+                {profile?.specialty
+                  ? JSON.stringify(profile.specialty)
+                  : "null"}
+              </p>
               <p>Profile role: {profile?.role}</p>
               <p>Error details: {JSON.stringify(error, null, 2)}</p>
             </div>
@@ -556,7 +643,15 @@ export default function InformesPage() {
                                                 {plan.therapist.lastName}
                                               </p>
                                               <p className="text-xs text-gray-500">
-                                                {plan.therapist.specialty}
+                                                {typeof plan.therapist
+                                                  .specialty === "object" &&
+                                                plan.therapist.specialty !==
+                                                  null
+                                                  ? (
+                                                                                                          plan.therapist
+                                                      .specialty as SpecialtyType
+                                                    ).name
+                                                  : plan.therapist.specialty}
                                               </p>
                                             </div>
 
@@ -585,29 +680,33 @@ export default function InformesPage() {
 
                                         <div className="ml-6 flex-shrink-0">
                                           <div className="flex gap-2">
-                                            <Link
-                                              href={`/therapist/reports/therapeutic-plans/${plan.id}`}
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="border-gray-200 hover:border-gray-300"
+                                              onClick={() =>
+                                                handleOpenEditModal(
+                                                  plan,
+                                                  "therapeutic"
+                                                )
+                                              }
                                             >
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="border-gray-200 hover:border-gray-300"
-                                              >
-                                                <Edit className="h-4 w-4 mr-2" />
-                                                Editar
-                                              </Button>
-                                            </Link>
-                                            <Link
-                                              href={`/therapist/reports/therapeutic-plans/${plan.id}/view`}
+                                              <Edit className="h-4 w-4 mr-2" />
+                                              Editar
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              className="bg-green-600 hover:bg-green-700 text-white"
+                                              onClick={() =>
+                                                handleOpenViewModal(
+                                                  plan,
+                                                  "therapeutic"
+                                                )
+                                              }
                                             >
-                                              <Button
-                                                size="sm"
-                                                className="bg-green-600 hover:bg-green-700 text-white"
-                                              >
-                                                <Eye className="h-4 w-4 mr-2" />
-                                                Ver
-                                              </Button>
-                                            </Link>
+                                              <Eye className="h-4 w-4 mr-2" />
+                                              Ver
+                                            </Button>
                                           </div>
                                         </div>
                                       </div>
@@ -645,7 +744,15 @@ export default function InformesPage() {
                                                 {report.therapist.lastName}
                                               </p>
                                               <p className="text-xs text-gray-500">
-                                                {report.therapist.specialty}
+                                                {typeof report.therapist
+                                                  .specialty === "object" &&
+                                                report.therapist.specialty !==
+                                                  null
+                                                  ? (
+                                                      report.therapist
+                                                        .specialty as SpecialtyType
+                                                    ).name
+                                                  : report.therapist.specialty}
                                               </p>
                                             </div>
 
@@ -674,29 +781,33 @@ export default function InformesPage() {
 
                                         <div className="ml-6 flex-shrink-0">
                                           <div className="flex gap-2">
-                                            <Link
-                                              href={`/therapist/reports/progress-reports/${report.id}`}
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="border-gray-200 hover:border-gray-300"
+                                              onClick={() =>
+                                                handleOpenEditModal(
+                                                  report,
+                                                  "progress"
+                                                )
+                                              }
                                             >
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="border-gray-200 hover:border-gray-300"
-                                              >
-                                                <Edit className="h-4 w-4 mr-2" />
-                                                Editar
-                                              </Button>
-                                            </Link>
-                                            <Link
-                                              href={`/therapist/reports/progress-reports/${report.id}/view`}
+                                              <Edit className="h-4 w-4 mr-2" />
+                                              Editar
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              className="bg-green-600 hover:bg-green-700 text-white"
+                                              onClick={() =>
+                                                handleOpenViewModal(
+                                                  report,
+                                                  "progress"
+                                                )
+                                              }
                                             >
-                                              <Button
-                                                size="sm"
-                                                className="bg-green-600 hover:bg-green-700 text-white"
-                                              >
-                                                <Eye className="h-4 w-4 mr-2" />
-                                                Ver
-                                              </Button>
-                                            </Link>
+                                              <Eye className="h-4 w-4 mr-2" />
+                                              Ver
+                                            </Button>
                                           </div>
                                         </div>
                                       </div>
@@ -898,7 +1009,12 @@ export default function InformesPage() {
                                 {contribution.therapist.lastName}
                               </h4>
                               <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                {contribution.therapist.specialty}
+                                {typeof contribution.therapist.specialty ===
+                                  "object" &&
+                                contribution.therapist.specialty !== null
+                                  ? (contribution.therapist.specialty as SpecialtyType)
+                                      .name
+                                  : contribution.therapist.specialty}
                               </span>
                             </div>
                             {contribution.objectives &&
@@ -906,17 +1022,16 @@ export default function InformesPage() {
                             contribution.objectives.length > 0 ? (
                               <div className="space-y-2">
                                 {contribution.objectives.map(
-                                  (
-                                    objectiveData: TherapistData,
-                                    index: number
-                                  ) => {
+                                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                  (objective: any, index: number) => {
                                     return (
                                       <div
                                         key={index}
                                         className="text-sm text-gray-700"
                                       >
                                         <span className="font-medium">•</span>{" "}
-                                        {objectiveData.objectives?.join(", ") ||
+                                        {objective.name ||
+                                          objective.description ||
                                           "Objetivo sin descripción"}
                                       </div>
                                     );
@@ -994,7 +1109,12 @@ export default function InformesPage() {
                                 {contribution.therapist.lastName}
                               </h4>
                               <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                {contribution.therapist.specialty}
+                                {typeof contribution.therapist.specialty ===
+                                  "object" &&
+                                contribution.therapist.specialty !== null
+                                  ? (contribution.therapist.specialty as SpecialtyType)
+                                      .name
+                                  : contribution.therapist.specialty}
                               </span>
                             </div>
                             {contribution.background ? (
@@ -1049,7 +1169,12 @@ export default function InformesPage() {
                                 {contribution.therapist.lastName}
                               </h4>
                               <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
-                                {contribution.therapist.specialty}
+                                {typeof contribution.therapist.specialty ===
+                                  "object" &&
+                                contribution.therapist.specialty !== null
+                                  ? (contribution.therapist.specialty as SpecialtyType)
+                                      .name
+                                  : contribution.therapist.specialty}
                               </span>
                             </div>
                             {contribution.indicators &&
@@ -1057,114 +1182,110 @@ export default function InformesPage() {
                             contribution.indicators.length > 0 ? (
                               <div className="space-y-4">
                                 {contribution.indicators.map(
-                                  (
-                                    indicatorData: TherapistData,
-                                    index: number
-                                  ) => (
-                                    <div
-                                      key={index}
-                                      className="space-y-2 p-4 border rounded-lg"
-                                    >
-                                      <div className="flex gap-2">
-                                        <Input
-                                          value={
-                                            indicatorData.indicators?.[0]
-                                              ?.name || ""
-                                          }
-                                          placeholder="Descripción del indicador..."
-                                          className="flex-1"
-                                          disabled
-                                        />
-                                      </div>
-
-                                      <div className="space-y-3">
-                                        <Label>Estado de Progreso</Label>
+                                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                  (indicator: any, index: number) => {
+                                    return (
+                                      <div
+                                        key={index}
+                                        className="space-y-2 p-4 border rounded-lg"
+                                      >
                                         <div className="flex gap-2">
-                                          {[
-                                            {
-                                              value: "not_achieved",
-                                              label: "No logra",
-                                            },
-                                            {
-                                              value: "with_help",
-                                              label: "Con ayuda",
-                                            },
-                                            {
-                                              value: "in_progress",
-                                              label: "En progreso",
-                                            },
-                                            {
-                                              value: "achieved",
-                                              label: "Logrado",
-                                            },
-                                          ].map((status) => {
-                                            const isSelected =
-                                              indicatorData.indicators?.[0]
-                                                ?.newStatus === status.value;
-                                            const isPrevious =
-                                              indicatorData.indicators?.[0]
-                                                ?.initialStatus ===
-                                              status.value;
+                                          <Input
+                                            value={indicator.name || ""}
+                                            placeholder="Descripción del indicador..."
+                                            className="flex-1"
+                                            disabled
+                                          />
+                                        </div>
 
-                                            const getStatusColor = (
-                                              statusValue: string
-                                            ) => {
-                                              switch (statusValue) {
-                                                case "not_achieved":
-                                                  return isSelected
-                                                    ? "border-red-500 bg-red-50 text-red-700"
-                                                    : isPrevious
-                                                      ? "border-red-300 bg-red-25 text-red-500"
-                                                      : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
-                                                case "with_help":
-                                                  return isSelected
-                                                    ? "border-yellow-500 bg-yellow-50 text-yellow-700"
-                                                    : isPrevious
-                                                      ? "border-yellow-300 bg-yellow-25 text-yellow-500"
-                                                      : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
-                                                case "in_progress":
-                                                  return isSelected
-                                                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                                                    : isPrevious
-                                                      ? "border-blue-300 bg-blue-25 text-blue-500"
-                                                      : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
-                                                case "achieved":
-                                                  return isSelected
-                                                    ? "border-green-500 bg-green-50 text-green-700"
-                                                    : isPrevious
-                                                      ? "border-green-300 bg-green-25 text-green-500"
-                                                      : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
-                                                default:
-                                                  return "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
-                                              }
-                                            };
+                                        <div className="space-y-3">
+                                          <Label>Estado de Progreso</Label>
+                                          <div className="flex gap-2">
+                                            {[
+                                              {
+                                                value: "not_achieved",
+                                                label: "No logra",
+                                              },
+                                              {
+                                                value: "with_help",
+                                                label: "Con ayuda",
+                                              },
+                                              {
+                                                value: "in_progress",
+                                                label: "En progreso",
+                                              },
+                                              {
+                                                value: "achieved",
+                                                label: "Logrado",
+                                              },
+                                            ].map((status) => {
+                                              const isSelected =
+                                                indicator.newStatus ===
+                                                status.value;
+                                              const isPrevious =
+                                                indicator.initialStatus ===
+                                                status.value;
 
-                                            return (
-                                              <div
-                                                key={status.value}
-                                                className={`p-3 rounded-lg border-2 transition-all flex-1 ${getStatusColor(status.value)}`}
-                                              >
-                                                <div className="text-sm font-medium">
-                                                  {status.label}
+                                              const getStatusColor = (
+                                                statusValue: string
+                                              ) => {
+                                                switch (statusValue) {
+                                                  case "not_achieved":
+                                                    return isSelected
+                                                      ? "border-red-500 bg-red-50 text-red-700"
+                                                      : isPrevious
+                                                        ? "border-red-300 bg-red-25 text-red-500"
+                                                        : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
+                                                  case "with_help":
+                                                    return isSelected
+                                                      ? "border-yellow-500 bg-yellow-50 text-yellow-700"
+                                                      : isPrevious
+                                                        ? "border-yellow-300 bg-yellow-25 text-yellow-500"
+                                                        : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
+                                                  case "in_progress":
+                                                    return isSelected
+                                                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                                                      : isPrevious
+                                                        ? "border-blue-300 bg-blue-25 text-blue-500"
+                                                        : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
+                                                  case "achieved":
+                                                    return isSelected
+                                                      ? "border-green-500 bg-green-50 text-green-700"
+                                                      : isPrevious
+                                                        ? "border-green-300 bg-green-25 text-green-500"
+                                                        : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
+                                                  default:
+                                                    return "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300";
+                                                }
+                                              };
+
+                                              return (
+                                                <div
+                                                  key={status.value}
+                                                  className={`p-3 rounded-lg border-2 transition-all flex-1 ${getStatusColor(status.value)}`}
+                                                >
+                                                  <div className="text-sm font-medium">
+                                                    {status.label}
+                                                  </div>
+
+                                                  {isPrevious && (
+                                                    <div className="text-xs mt-1 text-gray-500">
+                                                      (Estado inicial)
+                                                    </div>
+                                                  )}
+                                                  {isSelected && (
+                                                    <div className="text-xs mt-1 text-gray-500">
+                                                      (Estado actual)
+                                                    </div>
+                                                  )}
                                                 </div>
-
-                                                {isPrevious && (
-                                                  <div className="text-xs mt-1 text-gray-500">
-                                                    (Estado inicial)
-                                                  </div>
-                                                )}
-                                                {isSelected && (
-                                                  <div className="text-xs mt-1 text-gray-500">
-                                                    (Estado actual)
-                                                  </div>
-                                                )}
-                                              </div>
-                                            );
-                                          })}
+                                              );
+                                            })}
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  )
+                                    );
+                                  }
                                 )}
 
                                 {/* Indicators Comment */}
@@ -1253,7 +1374,12 @@ export default function InformesPage() {
                                 {contribution.therapist.lastName}
                               </h4>
                               <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                                {contribution.therapist.specialty}
+                                {typeof contribution.therapist.specialty ===
+                                  "object" &&
+                                contribution.therapist.specialty !== null
+                                  ? (contribution.therapist.specialty as SpecialtyType)
+                                      .name
+                                  : contribution.therapist.specialty}
                               </span>
                             </div>
                             {contribution.conclusions ? (
@@ -1294,7 +1420,7 @@ export default function InformesPage() {
                       // Process therapist contributions data
                       const contributions =
                         contributionsData?.contributions || [];
-                      const otherObjectives = contributions
+                      const otherObjectives = (contributions as TherapistContribution[])
                         .filter(
                           (c: TherapistContribution) =>
                             c.objectives &&
@@ -1304,17 +1430,16 @@ export default function InformesPage() {
                         .map((c: TherapistContribution) => ({
                           therapistName: `${c.therapist.firstName} ${c.therapist.lastName}`,
                           specialty: c.therapist.specialty,
-                          objectives:
-                            c.objectives
-                              ?.map((objective: TherapistData) => {
-                                // Extract text content from objectives
-                                return objective.objectives?.join(", ") || "";
-                              })
-                              .filter((text: string) => text.trim() !== "") ||
+                                                      objectives:
+                              c.objectives
+                                ?.flatMap((objectiveData: TherapistData) => 
+                                  objectiveData.objectives || []
+                                )
+                                .filter((text: string) => text.trim() !== "") ||
                             [],
                         }));
 
-                      const therapistBackgrounds = contributions
+                      const therapistBackgrounds = (contributions as TherapistContribution[])
                         .filter((c: TherapistContribution) => c.background)
                         .map((c: TherapistContribution) => ({
                           therapistName: `${c.therapist.firstName} ${c.therapist.lastName}`,
@@ -1428,9 +1553,12 @@ export default function InformesPage() {
                         specialty: c.therapist.specialty,
                         objectives:
                           c.objectives
-                            ?.map((objective: TherapistData) => {
+                                                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              ?.map((objective: any) => {
                               // Extract text content from objectives
-                              return objective.objectives?.join(", ") || "";
+                              return (
+                                objective.name || objective.description || ""
+                              );
                             })
                             .filter((text: string) => text.trim() !== "") || [],
                       }));
@@ -1529,7 +1657,668 @@ export default function InformesPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* View Report Modal */}
+        <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>
+                  Ver{" "}
+                  {selectedReport?.type === "therapeutic"
+                    ? "Plan Terapéutico"
+                    : "Informe de Progreso"}{" "}
+                  - {selectedReport?.data.patientName}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseViewModal}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </DialogTitle>
+              <DialogDescription>
+                Información detallada del{" "}
+                {selectedReport?.type === "therapeutic"
+                  ? "plan terapéutico"
+                  : "informe de progreso"}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Información Básica</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Nombre del Paciente
+                      </Label>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {selectedReport?.data.patientName}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Edad
+                      </Label>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {selectedReport?.data.patientAge}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Terapeuta
+                      </Label>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {selectedReport?.data.therapist.firstName}{" "}
+                        {selectedReport?.data.therapist.lastName}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Área de Tratamiento
+                      </Label>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {selectedReport?.data.treatmentArea}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Report Content */}
+              {selectedReport?.type === "therapeutic" && (
+                <TherapeuticPlanViewContent
+                  plan={selectedReport.data as TherapeuticPlan}
+                />
+              )}
+
+              {selectedReport?.type === "progress" && (
+                <ProgressReportViewContent
+                  report={selectedReport.data as ProgressReport}
+                />
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-6">
+              <Button variant="outline" onClick={handleCloseViewModal}>
+                Cerrar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Report Modal */}
+        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>
+                  Editar{" "}
+                  {selectedReport?.type === "therapeutic"
+                    ? "Plan Terapéutico"
+                    : "Informe de Progreso"}{" "}
+                  - {selectedReport?.data.patientName}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseEditModal}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </DialogTitle>
+              <DialogDescription>
+                Modifica la información del{" "}
+                {selectedReport?.type === "therapeutic"
+                  ? "plan terapéutico"
+                  : "informe de progreso"}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Información Básica</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Nombre del Paciente
+                      </Label>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {selectedReport?.data.patientName}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Edad
+                      </Label>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {selectedReport?.data.patientAge}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Terapeuta
+                      </Label>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {selectedReport?.data.therapist.firstName}{" "}
+                        {selectedReport?.data.therapist.lastName}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Área de Tratamiento
+                      </Label>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {selectedReport?.data.treatmentArea}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Edit Form */}
+              {selectedReport?.type === "therapeutic" && (
+                <TherapeuticPlanEditContent
+                  plan={selectedReport.data as TherapeuticPlan}
+                  onClose={handleCloseEditModal}
+                />
+              )}
+
+              {selectedReport?.type === "progress" && (
+                <ProgressReportEditContent
+                  report={selectedReport.data as ProgressReport}
+                  onClose={handleCloseEditModal}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </RoleGuard>
+  );
+}
+
+// Therapeutic Plan View Content Component
+function TherapeuticPlanViewContent({ plan }: { plan: TherapeuticPlan }) {
+  return (
+    <>
+      {/* Background */}
+      {plan.background && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Antecedentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 whitespace-pre-wrap">
+              {plan.background}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Diagnoses */}
+      {plan.diagnoses && Array.isArray(plan.diagnoses) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Diagnósticos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+                                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {plan.diagnoses.map((diagnosis: any, index: number) => (
+                <div key={index} className="text-sm text-gray-700">
+                  <span className="font-medium">•</span>{" "}
+                  {typeof diagnosis === "string"
+                    ? diagnosis
+                    : diagnosis?.diagnosis ||
+                      diagnosis?.text ||
+                      "Diagnóstico sin descripción"}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* General Objective */}
+      {plan.generalObjective && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Objetivo General</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 whitespace-pre-wrap">
+              {plan.generalObjective}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Specific Objectives */}
+      {plan.specificObjectives && Array.isArray(plan.specificObjectives) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Objetivos Específicos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+                                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {plan.specificObjectives.map((objective: any, index: number) => (
+                <div key={index} className="text-sm text-gray-700">
+                  <span className="font-medium">•</span>{" "}
+                  {typeof objective === "string"
+                    ? objective
+                    : objective?.objective ||
+                      objective?.text ||
+                      "Objetivo sin descripción"}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Indicators */}
+      {plan.indicators && Array.isArray(plan.indicators) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Indicadores</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+                                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {plan.indicators.map((indicator: any, index: number) => (
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 border-l-4 border-blue-500 rounded"
+                >
+                  <div className="text-sm text-gray-700">
+                    {typeof indicator === "string"
+                      ? indicator
+                      : indicator?.indicator ||
+                        indicator?.name ||
+                        "Indicador sin descripción"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Methodologies */}
+      {plan.methodologies && Array.isArray(plan.methodologies) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              Metodologías y Estrategias
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+                                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {plan.methodologies.map((methodology: any, index: number) => (
+                <div key={index} className="text-sm text-gray-700">
+                  <span className="font-medium">•</span>{" "}
+                  {typeof methodology === "string"
+                    ? methodology
+                    : methodology?.methodology ||
+                      methodology?.text ||
+                      "Metodología sin descripción"}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Observations */}
+      {plan.observations && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Observaciones</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 whitespace-pre-wrap">
+              {plan.observations}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </>
+  );
+}
+
+// Progress Report View Content Component
+function ProgressReportViewContent({ report }: { report: ProgressReport }) {
+  return (
+    <>
+      {/* General Objective */}
+      {report.generalObjective && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Objetivo General</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 whitespace-pre-wrap">
+              {report.generalObjective}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Specific Objectives */}
+      {report.specificObjectives &&
+        Array.isArray(report.specificObjectives) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Objetivos Específicos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {report.specificObjectives.map(
+                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              (objective: any, index: number) => (
+                    <div key={index} className="text-sm text-gray-700">
+                      <span className="font-medium">•</span>{" "}
+                      {typeof objective === "string"
+                        ? objective
+                        : objective?.objective ||
+                          objective?.text ||
+                          "Objetivo sin descripción"}
+                    </div>
+                  )
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+      {/* Progress Entries */}
+      {report.progressEntries && Array.isArray(report.progressEntries) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Entradas de Progreso</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+                                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {report.progressEntries.map((entry: any, index: number) => (
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 border-l-4 border-green-500 rounded"
+                >
+                  <div className="text-sm text-gray-700">
+                    {typeof entry === "string"
+                      ? entry
+                      : entry?.entry ||
+                        entry?.text ||
+                        "Entrada sin descripción"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recommendations */}
+      {report.recommendations && Array.isArray(report.recommendations) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Recomendaciones</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {report.recommendations.map(
+                                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              (recommendation: any, index: number) => (
+                  <div key={index} className="text-sm text-gray-700">
+                    <span className="font-medium">•</span>{" "}
+                    {typeof recommendation === "string"
+                      ? recommendation
+                      : recommendation?.recommendation ||
+                        recommendation?.text ||
+                        "Recomendación sin descripción"}
+                  </div>
+                )
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </>
+  );
+}
+
+// Therapeutic Plan Edit Content Component
+function TherapeuticPlanEditContent({
+  plan,
+  onClose,
+}: {
+  plan: TherapeuticPlan;
+  onClose: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    background: plan.background || "",
+    generalObjective: plan.generalObjective || "",
+    observations: plan.observations || "",
+  });
+
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch(
+        `/api/therapist/therapeutic-plans/${plan.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
+
+      if (response.ok) {
+        toast({
+          title: "Plan terapéutico actualizado",
+          description: "Los cambios se han guardado correctamente",
+        });
+        onClose();
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error al actualizar",
+          description: error.error || "Error desconocido",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating therapeutic plan:", error);
+      toast({
+        title: "Error al actualizar",
+        description: "Error de conexión",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <>
+      {/* Background */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Antecedentes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="Escriba los antecedentes del paciente..."
+            value={formData.background}
+            onChange={(e) =>
+              setFormData({ ...formData, background: e.target.value })
+            }
+            className="min-h-[100px]"
+          />
+        </CardContent>
+      </Card>
+
+      {/* General Objective */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Objetivo General</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="Escriba el objetivo general del tratamiento..."
+            value={formData.generalObjective}
+            onChange={(e) =>
+              setFormData({ ...formData, generalObjective: e.target.value })
+            }
+            className="min-h-[100px]"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Observations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Observaciones</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="Escriba las observaciones..."
+            value={formData.observations}
+            onChange={(e) =>
+              setFormData({ ...formData, observations: e.target.value })
+            }
+            className="min-h-[100px]"
+          />
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end space-x-2 pt-6">
+        <Button variant="outline" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button onClick={handleSubmit}>Guardar Cambios</Button>
+      </div>
+    </>
+  );
+}
+
+// Progress Report Edit Content Component
+function ProgressReportEditContent({
+  report,
+  onClose,
+}: {
+  report: ProgressReport;
+  onClose: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    generalObjective: report.generalObjective || "",
+    recommendations: Array.isArray(report.recommendations)
+      ? report.recommendations.join("\n")
+      : "",
+  });
+
+  const handleSubmit = async () => {
+    try {
+      const recommendations = formData.recommendations
+        .split("\n")
+        .filter((rec) => rec.trim() !== "");
+
+      const response = await fetch(
+        `/api/therapist/progress-reports/${report.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...formData,
+            recommendations,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        toast({
+          title: "Informe de progreso actualizado",
+          description: "Los cambios se han guardado correctamente",
+        });
+        onClose();
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error al actualizar",
+          description: error.error || "Error desconocido",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating progress report:", error);
+      toast({
+        title: "Error al actualizar",
+        description: "Error de conexión",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <>
+      {/* General Objective */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Objetivo General</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="Escriba el objetivo general del tratamiento..."
+            value={formData.generalObjective}
+            onChange={(e) =>
+              setFormData({ ...formData, generalObjective: e.target.value })
+            }
+            className="min-h-[100px]"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Recommendations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Recomendaciones</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="Escriba las recomendaciones (una por línea)..."
+            value={formData.recommendations}
+            onChange={(e) =>
+              setFormData({ ...formData, recommendations: e.target.value })
+            }
+            className="min-h-[100px]"
+          />
+          <p className="text-xs text-gray-500 mt-2">
+            Escriba una recomendación por línea
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end space-x-2 pt-6">
+        <Button variant="outline" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button onClick={handleSubmit}>Guardar Cambios</Button>
+      </div>
+    </>
   );
 }

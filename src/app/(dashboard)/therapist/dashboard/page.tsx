@@ -32,6 +32,7 @@ import { useTherapistAppointments } from "@/hooks/use-therapist-appointments";
 import { useTherapistPatients } from "@/hooks/use-therapist-patients";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useProposals } from "@/hooks/useProposals";
+import { isCoordinator } from "@/lib/specialties";
 
 // COORDINATOR Dashboard Component
 function CoordinatorDashboard() {
@@ -693,7 +694,7 @@ export default function TherapistDashboardPage() {
   const { profile } = useCurrentUser();
 
   // Route to specialty-specific dashboard
-  if (profile?.specialty === "COORDINATOR") {
+  if (isCoordinator(profile?.specialty)) {
     return (
       <RoleGuard allowedRoles={["THERAPIST"]}>
         <CoordinatorDashboard />
