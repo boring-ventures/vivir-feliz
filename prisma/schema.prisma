@@ -24,7 +24,7 @@ model Profile {
   dateOfBirth        DateTime?           @map("date_of_birth")
   nationalId         String?             @unique @map("national_id")
   phone              String?
-  specialty          SpecialtyType?
+  specialtyId        String?             @map("specialty_id")
   updatedAt          DateTime            @updatedAt @map("updated_at")
   appointments       Appointment[]       @relation("TherapistAppointments")
   patients           Patient[]           @relation("ParentPatients")
@@ -42,9 +42,11 @@ model Profile {
   progressReports    ProgressReport[]    @relation("TherapistProgressReports")
   reportContributions TherapistReportContribution[] @relation("TherapistReportContributions")
   finalReports       FinalReport[]       @relation("CoordinatorFinalReports")
+  specialty          Specialty?          @relation("ProfileSpecialty", fields: [specialtyId], references: [id])
 
   @@index([userId])
   @@index([nationalId])
+  @@index([specialtyId])
   @@map("profiles")
 }
 
@@ -886,16 +888,35 @@ model Service {
   sessions        Int           @map("sessions")
   costPerSession  Decimal       @map("cost_per_session") @db.Decimal(10, 2)
   type            ServiceType   @map("type")
-  specialty       SpecialtyType @map("specialty")
+  specialtyId     String?       @map("specialty_id")
   status          Boolean       @default(true) @map("status")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
+  specialty       Specialty?    @relation("ServiceSpecialty", fields: [specialtyId], references: [id])
 
   @@index([code])
   @@index([type])
-  @@index([specialty])
+  @@index([specialtyId])
   @@index([status])
   @@map("services")
+}
+
+model Specialty {
+  id          String    @id @default(cuid())
+  specialtyId String    @unique @map("specialty_id")
+  name        String
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  profiles    Profile[] @relation("ProfileSpecialty")
+  services    Service[] @relation("ServiceSpecialty")
+
+  @@index([specialtyId])
+  @@index([name])
+  @@index([isActive])
+  @@map("specialties")
 }
 
 enum UserRole {
@@ -905,19 +926,7 @@ enum UserRole {
   THERAPIST
 }
 
-enum SpecialtyType {
-  SPEECH_THERAPIST
-  OCCUPATIONAL_THERAPIST
-  PSYCHOPEDAGOGUE
-  ASD_THERAPIST
-  NEUROPSYCHOLOGIST
-  COORDINATOR
-  PSYCHOMOTRICIAN
-  PEDIATRIC_KINESIOLOGIST
-  PSYCHOLOGIST
-  COORDINATION_ASSISTANT
-  BEHAVIORAL_THERAPIST
-}
+
 
 enum DayOfWeek {
   MONDAY
