@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { ConsultationRequestStatus } from "@prisma/client";
+import {
+  capitalizeName,
+  capitalizeAddress,
+  capitalizeWords,
+} from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,40 +60,50 @@ export async function POST(request: NextRequest) {
     // Create consultation request
     const consultationRequest = await prisma.consultationRequest.create({
       data: {
-        // Child data
-        childName,
+        // Child data - capitalize names and addresses
+        childName: capitalizeName(childName),
         childGender,
         childDateOfBirth: new Date(childDateOfBirth),
         childLivesWith,
-        childOtherLivesWith,
-        childAddress,
+        childOtherLivesWith: childOtherLivesWith
+          ? capitalizeWords(childOtherLivesWith)
+          : null,
+        childAddress: capitalizeAddress(childAddress),
 
-        // Parent data
-        motherName,
+        // Parent data - capitalize names, occupations, and addresses
+        motherName: motherName ? capitalizeName(motherName) : null,
         motherAge,
         motherPhone,
         motherEmail,
-        motherEducation,
-        motherOccupation,
-        fatherName,
+        motherEducation: motherEducation
+          ? capitalizeWords(motherEducation)
+          : null,
+        motherOccupation: motherOccupation
+          ? capitalizeWords(motherOccupation)
+          : null,
+        fatherName: fatherName ? capitalizeName(fatherName) : null,
         fatherAge,
         fatherPhone,
         fatherEmail,
-        fatherEducation,
-        fatherOccupation,
+        fatherEducation: fatherEducation
+          ? capitalizeWords(fatherEducation)
+          : null,
+        fatherOccupation: fatherOccupation
+          ? capitalizeWords(fatherOccupation)
+          : null,
 
-        // School data
-        schoolName,
+        // School data - capitalize names and addresses
+        schoolName: schoolName ? capitalizeWords(schoolName) : null,
         schoolPhone,
-        schoolAddress,
-        schoolLevel,
-        teacherName,
+        schoolAddress: schoolAddress ? capitalizeAddress(schoolAddress) : null,
+        schoolLevel: schoolLevel ? capitalizeWords(schoolLevel) : null,
+        teacherName: teacherName ? capitalizeName(teacherName) : null,
 
         // Consultation reasons
         consultationReasons,
-        referredBy,
+        referredBy: referredBy ? capitalizeWords(referredBy) : null,
 
-        // Create related children
+        // Create related children - capitalize names and school grades
         children: {
           create:
             children?.map(
@@ -99,11 +114,13 @@ export async function POST(request: NextRequest) {
                 problemas: boolean;
                 descripcionProblemas: string;
               }) => ({
-                name: child.nombre,
+                name: capitalizeName(child.nombre),
                 dateOfBirth: new Date(child.fechaNacimiento),
-                schoolGrade: child.gradoEscolar,
+                schoolGrade: capitalizeWords(child.gradoEscolar),
                 hasProblems: child.problemas,
-                problemDescription: child.descripcionProblemas,
+                problemDescription: child.descripcionProblemas
+                  ? capitalizeWords(child.descripcionProblemas)
+                  : null,
               })
             ) || [],
         },

@@ -4,6 +4,11 @@ import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
+import {
+  capitalizeName,
+  capitalizeAddress,
+  capitalizeWords,
+} from "@/lib/utils";
 
 // Server-side password hashing function (mirrors client-side)
 async function hashPassword(password: string): Promise<string> {
@@ -224,6 +229,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check if there's an existing "pending_parent" profile with the same phone number
+    const existingPendingParent = await prisma.profile.findFirst({
+      where: {
+        phone: validatedData.phone,
+        role: "PARENT",
+        userId: {
+          startsWith: "pending_parent_",
+        },
+      },
+    });
+
     // Create user in Supabase Auth using salted and hashed password
     const hashedPassword = await saltAndHashPassword(
       validatedData.password,
@@ -261,55 +277,99 @@ export async function POST(request: NextRequest) {
       specialtyId = specialtyExists.id;
     }
 
-    // Create profile in database
-    const newProfile = await prisma.profile.create({
-      data: {
-        userId: authUser.user.id,
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
-        phone: validatedData.phone,
-        role: validatedData.role as UserRole,
-        nationalId: validatedData.nationalId || null,
-        address: validatedData.address || null,
-        dateOfBirth: validatedData.dateOfBirth
-          ? new Date(validatedData.dateOfBirth)
-          : null,
-        biography: validatedData.biography || null,
-        specialtyId: specialtyId,
-        canTakeConsultations: validatedData.canTakeConsultations ?? null,
-        active: true,
-      },
-      include: {
-        specialty: {
-          select: {
-            id: true,
-            specialtyId: true,
-            name: true,
+    let newProfile;
+
+    if (existingPendingParent) {
+      // Update the existing "pending_parent" profile with real auth data
+      newProfile = await prisma.profile.update({
+        where: { id: existingPendingParent.id },
+        data: {
+          userId: authUser.user.id, // Replace pending_parent ID with real auth ID
+          firstName: capitalizeName(validatedData.firstName),
+          lastName: capitalizeName(validatedData.lastName),
+          phone: validatedData.phone,
+          role: validatedData.role as UserRole,
+          nationalId: validatedData.nationalId || null,
+          address: validatedData.address
+            ? capitalizeAddress(validatedData.address)
+            : null,
+          dateOfBirth: validatedData.dateOfBirth
+            ? new Date(validatedData.dateOfBirth)
+            : null,
+          biography: validatedData.biography
+            ? capitalizeWords(validatedData.biography)
+            : null,
+          specialtyId: specialtyId,
+          canTakeConsultations: validatedData.canTakeConsultations ?? null,
+          active: true,
+        },
+        include: {
+          specialty: {
+            select: {
+              id: true,
+              specialtyId: true,
+              name: true,
+            },
           },
         },
-      },
-    });
+      });
+
+      console.log(
+        `Updated existing pending_parent profile ${existingPendingParent.id} with real auth user ${authUser.user.id}`
+      );
+    } else {
+      // Create new profile in database
+      newProfile = await prisma.profile.create({
+        data: {
+          userId: authUser.user.id,
+          firstName: capitalizeName(validatedData.firstName),
+          lastName: capitalizeName(validatedData.lastName),
+          phone: validatedData.phone,
+          role: validatedData.role as UserRole,
+          nationalId: validatedData.nationalId || null,
+          address: validatedData.address
+            ? capitalizeAddress(validatedData.address)
+            : null,
+          dateOfBirth: validatedData.dateOfBirth
+            ? new Date(validatedData.dateOfBirth)
+            : null,
+          biography: validatedData.biography
+            ? capitalizeWords(validatedData.biography)
+            : null,
+          specialtyId: specialtyId,
+          canTakeConsultations: validatedData.canTakeConsultations ?? null,
+          active: true,
+        },
+        include: {
+          specialty: {
+            select: {
+              id: true,
+              specialtyId: true,
+              name: true,
+            },
+          },
+        },
+      });
+    }
 
     return NextResponse.json(
       {
         message: "User created successfully",
-        user: { ...newProfile, email: validatedData.email },
+        user: {
+          id: newProfile.id,
+          userId: newProfile.userId,
+          firstName: newProfile.firstName,
+          lastName: newProfile.lastName,
+          email: validatedData.email,
+          role: newProfile.role,
+          specialty: newProfile.specialty,
+        },
+        profileId: newProfile.id,
       },
       { status: 201 }
     );
   } catch (error) {
     console.error("Error creating user:", error);
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation error", details: error.errors },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error creating user" }, { status: 500 });
   }
 }

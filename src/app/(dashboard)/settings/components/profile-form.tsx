@@ -109,6 +109,7 @@ export function ProfileForm() {
                       placeholder="John"
                       {...field}
                       value={field.value ?? ""}
+                      className="capitalize"
                     />
                   </FormControl>
                   <FormMessage />
@@ -127,6 +128,7 @@ export function ProfileForm() {
                       placeholder="Doe"
                       {...field}
                       value={field.value ?? ""}
+                      className="capitalize"
                     />
                   </FormControl>
                   <FormMessage />

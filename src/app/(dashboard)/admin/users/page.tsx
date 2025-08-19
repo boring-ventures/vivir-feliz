@@ -918,9 +918,9 @@ export default function AdminUsersPage() {
                     <Label htmlFor="address">Dirección</Label>
                     <Input
                       {...form.register("address")}
-                      className={
+                      className={`capitalize ${
                         form.formState.errors.address ? "border-red-500" : ""
-                      }
+                      }`}
                     />
                     <FieldError
                       error={form.formState.errors.address?.message}

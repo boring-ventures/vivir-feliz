@@ -786,6 +786,7 @@ export default function ScheduleAppointmentPage() {
                 })
               }
               placeholder="Ocupación actual"
+              className="capitalize"
             />
           </div>
         </CardContent>
@@ -898,6 +899,7 @@ export default function ScheduleAppointmentPage() {
                 })
               }
               placeholder="Ocupación actual"
+              className="capitalize"
             />
           </div>
         </CardContent>
@@ -931,6 +933,7 @@ export default function ScheduleAppointmentPage() {
             }}
             placeholder="Nombre del colegio o institución educativa"
             className={cn(
+              "capitalize",
               errors.schoolName && "border-red-500 focus:border-red-500"
             )}
           />
@@ -973,6 +976,7 @@ export default function ScheduleAppointmentPage() {
             }}
             placeholder="Ej: 3ro de Primaria, Kinder, etc."
             className={cn(
+              "capitalize",
               errors.schoolLevel && "border-red-500 focus:border-red-500"
             )}
           />
@@ -1087,6 +1091,7 @@ export default function ScheduleAppointmentPage() {
                     actualizarHijo(hijo.id, "gradoEscolar", e.target.value)
                   }
                   placeholder="Grado escolar actual"
+                  className="capitalize"
                 />
               </div>
             </div>

@@ -206,7 +206,11 @@ export function SettingsForm() {
                     <FormItem>
                       <FormLabel>Nombre</FormLabel>
                       <FormControl>
-                        <Input placeholder="Tu nombre" {...field} />
+                        <Input
+                          placeholder="Tu nombre"
+                          {...field}
+                          className="capitalize"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -219,7 +223,11 @@ export function SettingsForm() {
                     <FormItem>
                       <FormLabel>Apellido</FormLabel>
                       <FormControl>
-                        <Input placeholder="Tu apellido" {...field} />
+                        <Input
+                          placeholder="Tu apellido"
+                          {...field}
+                          className="capitalize"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

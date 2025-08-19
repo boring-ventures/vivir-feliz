@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { InterviewRequestStatus } from "@prisma/client";
+import { capitalizeName, capitalizeWords } from "@/lib/utils";
 
 // Validation schema for interview request
 const createInterviewRequestSchema = z.object({
@@ -45,15 +46,15 @@ export async function POST(request: NextRequest) {
     // Create the interview request in the database
     const interviewRequest = await prisma.interviewRequest.create({
       data: {
-        childFirstName: data.childFirstName,
-        childLastName: data.childLastName,
+        childFirstName: capitalizeName(data.childFirstName),
+        childLastName: capitalizeName(data.childLastName),
         childDateOfBirth: new Date(data.childDateOfBirth),
         childGender: data.childGender,
-        parentName: data.parentName,
+        parentName: capitalizeName(data.parentName),
         parentPhone: data.parentPhone,
         parentEmail: data.parentEmail,
-        schoolName: data.schoolName,
-        derivationDescription: data.derivationDescription,
+        schoolName: capitalizeWords(data.schoolName),
+        derivationDescription: capitalizeWords(data.derivationDescription),
         derivationFileUrl: data.derivationFileUrl,
         status: "PENDING",
       },

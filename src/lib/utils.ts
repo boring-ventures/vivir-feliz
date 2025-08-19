@@ -1,8 +1,149 @@
-import { clsx, type ClassValue } from "clsx";
+import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * Capitalizes the first letter of each word in a string
+ * Handles multiple spaces, hyphens, and special characters
+ */
+export function capitalizeWords(str: string): string {
+  if (!str) return str;
+
+  return str
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => {
+      // Handle hyphenated words (e.g., "maria-jose" -> "Maria-Jose")
+      if (word.includes("-")) {
+        return word
+          .split("-")
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join("-");
+      }
+      // Handle regular words
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
+/**
+ * Capitalizes names specifically, handling common name patterns
+ */
+export function capitalizeName(name: string): string {
+  if (!name) return name;
+
+  // Handle common prefixes and suffixes
+  const prefixes = [
+    "de",
+    "del",
+    "la",
+    "las",
+    "el",
+    "los",
+    "van",
+    "von",
+    "di",
+    "da",
+    "du",
+    "del",
+    "della",
+    "delle",
+    "dello",
+    "degli",
+    "dei",
+    "della",
+    "delle",
+    "dello",
+    "degli",
+    "dei",
+  ];
+
+  return name
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word, index) => {
+      // Don't capitalize prefixes unless it's the first word
+      if (index > 0 && prefixes.includes(word)) {
+        return word;
+      }
+
+      // Handle hyphenated names
+      if (word.includes("-")) {
+        return word
+          .split("-")
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join("-");
+      }
+
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
+/**
+ * Capitalizes addresses, handling street names, cities, etc.
+ */
+export function capitalizeAddress(address: string): string {
+  if (!address) return address;
+
+  // Common address words that should remain lowercase
+  const lowercaseWords = [
+    "de",
+    "del",
+    "la",
+    "las",
+    "el",
+    "los",
+    "y",
+    "con",
+    "sin",
+    "por",
+    "para",
+    "entre",
+    "cerca",
+    "lejos",
+    "calle",
+    "avenida",
+    "plaza",
+    "paseo",
+    "carrera",
+    "transversal",
+    "diagonal",
+  ];
+
+  return address
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word, index) => {
+      // Always capitalize the first word
+      if (index === 0) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }
+
+      // Don't capitalize common address words
+      if (lowercaseWords.includes(word)) {
+        return word;
+      }
+
+      // Handle numbers (keep as is)
+      if (/^\d+$/.test(word)) {
+        return word;
+      }
+
+      // Handle hyphenated words
+      if (word.includes("-")) {
+        return word
+          .split("-")
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join("-");
+      }
+
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
 }
 
 /**

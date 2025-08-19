@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { capitalizeName } from "@/lib/utils";
 
 export async function GET(
   request: NextRequest,
@@ -100,8 +101,8 @@ export async function PATCH(
     const updatedProfile = await prisma.profile.update({
       where: { userId },
       data: {
-        firstName: json.firstName || undefined,
-        lastName: json.lastName || undefined,
+        firstName: json.firstName ? capitalizeName(json.firstName) : undefined,
+        lastName: json.lastName ? capitalizeName(json.lastName) : undefined,
         phone: json.phone || undefined,
         avatarUrl: json.avatarUrl || undefined,
         active: json.active !== undefined ? json.active : undefined,

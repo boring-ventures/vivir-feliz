@@ -324,7 +324,7 @@ export default function AdminNuevosPacientesPage() {
 
     const dayNames = [
       "SUNDAY",
-      "MONDAY", 
+      "MONDAY",
       "TUESDAY",
       "WEDNESDAY",
       "THURSDAY",
@@ -1492,7 +1492,8 @@ export default function AdminNuevosPacientesPage() {
                     (Propuesta {databaseSelectedProposal}). Necesitas{" "}
                     {proposalServices?.[currentServiceIndex]?.sessions || 0}{" "}
                     sesiones y has seleccionado {getCitasSeleccionadas().length}
-                    . Solo se muestran los horarios disponibles según el horario del terapeuta.
+                    . Solo se muestran los horarios disponibles según el horario
+                    del terapeuta.
                   </p>
                   <div className="flex gap-2 text-xs">
                     <div className="flex items-center">
@@ -1627,10 +1628,11 @@ export default function AdminNuevosPacientesPage() {
                                     diaInfo.fecha,
                                     hora
                                   );
-                                  const isAvailableInSchedule = isSlotAvailableInSchedule(
-                                    diaInfo.fecha,
-                                    hora
-                                  );
+                                  const isAvailableInSchedule =
+                                    isSlotAvailableInSchedule(
+                                      diaInfo.fecha,
+                                      hora
+                                    );
                                   return (
                                     <Button
                                       key={hora}
@@ -1869,6 +1871,7 @@ export default function AdminNuevosPacientesPage() {
                     <Input
                       {...parentForm.register("address")}
                       placeholder="Dejar vacío para completar después"
+                      className="capitalize"
                     />
                   </div>
                   <div className="col-span-2">
