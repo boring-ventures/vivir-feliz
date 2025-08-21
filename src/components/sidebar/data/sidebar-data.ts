@@ -164,8 +164,8 @@ export const getRoleBasedSidebarData = (
                   icon: Users,
                 },
                 {
-                  title: "Citas",
-                  url: "/therapist/appointments",
+                  title: "Agenda",
+                  url: "/therapist/agenda",
                   icon: Calendar,
                 },
                 {
