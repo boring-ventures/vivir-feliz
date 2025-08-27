@@ -4,6 +4,7 @@ interface RescheduleData {
   newDate: string;
   newStartTime: string;
   newEndTime: string;
+  rescheduleReason?: string;
 }
 
 interface Appointment {

@@ -65,6 +65,7 @@ interface Appointment {
   sessionNotes?: string;
   originalDate?: string; // For rescheduled appointments
   isRescheduled?: boolean; // Flag to indicate if appointment was rescheduled
+  rescheduleReason?: string; // Reason for rescheduling
   patientId?: string; // Patient ID for fetching patient appointments
   patient?: {
     id: string;
@@ -137,7 +138,7 @@ const fetchTherapistOptions = async (): Promise<
   const data: TherapistMinimal[] = await res.json();
   return (data || []).map((t) => ({
     id: t.id,
-    name: (`${t.firstName ?? ""} ${t.lastName ?? ""}`.trim() || "Sin nombre"),
+    name: `${t.firstName ?? ""} ${t.lastName ?? ""}`.trim() || "Sin nombre",
   }));
 };
 
@@ -603,6 +604,14 @@ export default function AdminAppointmentsPage() {
                                       Reprogramada desde:{" "}
                                     </span>
                                     {formatDate(appointment.originalDate)}
+                                    {appointment.rescheduleReason && (
+                                      <div className="mt-1 text-xs text-purple-600">
+                                        <span className="font-medium">
+                                          Motivo:
+                                        </span>{" "}
+                                        {appointment.rescheduleReason}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                             </div>

@@ -4,6 +4,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +95,8 @@ export function RescheduleAppointmentModal({
   const [mesActual, setMesActual] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [rescheduleReason, setRescheduleReason] = useState<string>("");
+  const [scheduleChangeType, setScheduleChangeType] = useState<string>("");
   const rescheduleMutation = useRescheduleAppointment();
 
   // Get therapist ID from appointment - try different possible fields
@@ -112,14 +123,11 @@ export function RescheduleAppointmentModal({
     if (open) {
       setSelectedDate("");
       setSelectedTime("");
+      setRescheduleReason("");
+      setScheduleChangeType("");
 
-      // Set the current month to the appointment's month so it's visible
-      if (appointment?.date) {
-        const appointmentDate = new Date(appointment.date);
-        setMesActual(appointmentDate);
-      } else {
-        setMesActual(new Date());
-      }
+      // Set the current month to the current month
+      setMesActual(new Date());
 
       // Debug: Log appointment data when modal opens
       if (appointment) {
@@ -167,12 +175,23 @@ export function RescheduleAppointmentModal({
 
       const newEndTime = newEnd.toTimeString().slice(0, 5);
 
+      // Prepare reschedule reason
+      let finalRescheduleReason = rescheduleReason;
+      if (
+        scheduleChangeType &&
+        scheduleChangeType !== "other" &&
+        scheduleChangeType !== "no_change"
+      ) {
+        finalRescheduleReason = `Cambio de horario regular: ${scheduleChangeType}`;
+      }
+
       await rescheduleMutation.mutateAsync({
         appointmentId: appointment.id,
         data: {
           newDate: selectedDate,
           newStartTime: selectedTime,
           newEndTime,
+          rescheduleReason: finalRescheduleReason,
         },
       });
 
@@ -434,6 +453,77 @@ export function RescheduleAppointmentModal({
             </CardContent>
           </Card>
 
+          {/* Reschedule Reason */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                Motivo de Reprogramación
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Schedule Change Type */}
+                <div className="space-y-2">
+                  <Label htmlFor="schedule-change-type">
+                    Tipo de Cambio de Horario
+                  </Label>
+                  <Select
+                    value={scheduleChangeType}
+                    onValueChange={setScheduleChangeType}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona si es un cambio de horario regular" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no_change">
+                        No es cambio de horario regular
+                      </SelectItem>
+                      <SelectItem value="cambio_horario_escuela">
+                        Cambio de horario escolar
+                      </SelectItem>
+                      <SelectItem value="cambio_actividad_extra">
+                        Cambio de actividad extracurricular
+                      </SelectItem>
+                      <SelectItem value="cambio_trabajo_padres">
+                        Cambio de horario de trabajo de los padres
+                      </SelectItem>
+                      <SelectItem value="cambio_transporte">
+                        Cambio de disponibilidad de transporte
+                      </SelectItem>
+                      <SelectItem value="otro_compromiso">
+                        Otro compromiso familiar
+                      </SelectItem>
+                      <SelectItem value="other">Otro motivo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Custom Reason */}
+                <div className="space-y-2">
+                  <Label htmlFor="reschedule-reason">
+                    {scheduleChangeType === "other" ||
+                    !scheduleChangeType ||
+                    scheduleChangeType === "no_change"
+                      ? "Motivo de reprogramación"
+                      : "Motivo adicional (opcional)"}
+                  </Label>
+                  <Input
+                    id="reschedule-reason"
+                    placeholder={
+                      scheduleChangeType === "other" ||
+                      !scheduleChangeType ||
+                      scheduleChangeType === "no_change"
+                        ? "Describe el motivo de la reprogramación..."
+                        : "Información adicional sobre el cambio de horario..."
+                    }
+                    value={rescheduleReason}
+                    onChange={(e) => setRescheduleReason(e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Calendar */}
           <Card>
             <CardHeader>
@@ -650,7 +740,11 @@ export function RescheduleAppointmentModal({
           <Button
             onClick={handleReschedule}
             disabled={
-              !selectedDate || !selectedTime || rescheduleMutation.isPending
+              !selectedDate ||
+              !selectedTime ||
+              rescheduleMutation.isPending ||
+              ((!scheduleChangeType || scheduleChangeType === "no_change") &&
+                !rescheduleReason.trim())
             }
             className="bg-blue-600 hover:bg-blue-700"
           >

@@ -25,16 +25,21 @@ import {
 import Link from "next/link";
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
 import { useActiveSpecialties } from "@/hooks/use-specialties";
+import { CreateConsultationRequestModal } from "@/components/admin/create-consultation-request-modal";
+import { CreateInterviewRequestModal } from "@/components/admin/create-interview-request-modal";
 
 export default function AdminDashboardPage() {
   const { data: dashboardData, isLoading, error } = useAdminDashboard();
   const { data: specialties = [] } = useActiveSpecialties();
 
   // Create a mapping from specialtyId to name for display purposes
-  const specialtyLabels = specialties.reduce((acc, specialty) => {
-    acc[specialty.specialtyId] = specialty.name;
-    return acc;
-  }, {} as Record<string, string>);
+  const specialtyLabels = specialties.reduce(
+    (acc, specialty) => {
+      acc[specialty.specialtyId] = specialty.name;
+      return acc;
+    },
+    {} as Record<string, string>
+  );
 
   // Helper function to get specialty display name
   const getSpecialtyDisplayName = (specialtyId: string) => {
@@ -251,11 +256,22 @@ export default function AdminDashboardPage() {
                         0}
                     </Badge>
                   </div>
-                  <Link href="/admin/consultation-requests">
-                    <Button className="w-full mt-2">
-                      Ver Solicitudes de Consulta
-                    </Button>
-                  </Link>
+                  <div className="flex gap-2 mt-2">
+                    <CreateConsultationRequestModal
+                      onSuccess={() => {
+                        // Refresh dashboard data after creating a request
+                        window.location.reload();
+                      }}
+                    />
+                    <Link
+                      href="/admin/consultation-requests"
+                      className="flex-1"
+                    >
+                      <Button variant="outline" className="w-full">
+                        Ver Solicitudes
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -291,11 +307,19 @@ export default function AdminDashboardPage() {
                       {dashboardData?.requests.interviewRequests.scheduled || 0}
                     </Badge>
                   </div>
-                  <Link href="/admin/interview-requests">
-                    <Button variant="outline" className="w-full mt-2">
-                      Ver Solicitudes de Entrevista
-                    </Button>
-                  </Link>
+                  <div className="flex gap-2 mt-2">
+                    <CreateInterviewRequestModal
+                      onSuccess={() => {
+                        // Refresh dashboard data after creating a request
+                        window.location.reload();
+                      }}
+                    />
+                    <Link href="/admin/interview-requests" className="flex-1">
+                      <Button variant="outline" className="w-full">
+                        Ver Solicitudes
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </CardContent>
             </Card>

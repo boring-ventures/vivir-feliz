@@ -313,6 +313,7 @@ model Appointment {
   consultationRequestId String?            @map("consultation_request_id")
   rescheduledFrom       DateTime?          @map("rescheduled_from")
   rescheduledTo      DateTime?          @map("rescheduled_to")
+  rescheduleReason     String?            @map("reschedule_reason")
   sessionNotes       String?            @map("session_notes")
   status             AppointmentStatus  @default(SCHEDULED)
   absenceReason       String?            @map("absence_reason")

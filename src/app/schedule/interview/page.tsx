@@ -49,11 +49,32 @@ export default function ScheduleInterviewPage() {
     return age.toString();
   };
 
+  // Helper function to capitalize text in real-time
+  const capitalizeText = (text: string) => {
+    return text
+      .split(" ")
+      .map((word) => {
+        if (word.length === 0) return word;
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(" ");
+  };
+
   const handleInputChange = (
     field: keyof InterviewRequestFormData,
     value: string
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Apply capitalization for text fields
+    const shouldCapitalize = [
+      "childFirstName",
+      "childLastName",
+      "parentName",
+      "schoolName",
+      "derivationDescription",
+    ].includes(field);
+
+    const processedValue = shouldCapitalize ? capitalizeText(value) : value;
+    setFormData((prev) => ({ ...prev, [field]: processedValue }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

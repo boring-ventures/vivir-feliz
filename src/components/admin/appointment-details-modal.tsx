@@ -47,6 +47,9 @@ interface Appointment {
   homework?: string;
   nextSessionPlan?: string;
   sessionNotes?: string;
+  rescheduleReason?: string;
+  rescheduledFrom?: string;
+  rescheduledTo?: string;
   patient?: {
     firstName: string;
     lastName: string;
@@ -847,6 +850,45 @@ export function AppointmentDetailsModal({
                 </div>
               </div>
             )}
+
+          {/* Reschedule Information */}
+          {appointment.status === "RESCHEDULED" && (
+            <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <h3 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Información de Reprogramación
+              </h3>
+
+              <div className="space-y-2">
+                {appointment.rescheduleReason && (
+                  <div>
+                    <span className="font-medium">Motivo:</span>
+                    <p className="mt-1 text-sm bg-white p-2 rounded border">
+                      {appointment.rescheduleReason}
+                    </p>
+                  </div>
+                )}
+
+                {appointment.rescheduledFrom && (
+                  <div>
+                    <span className="font-medium">Fecha original:</span>
+                    <span className="ml-2">
+                      {formatDate(appointment.rescheduledFrom)}
+                    </span>
+                  </div>
+                )}
+
+                {appointment.rescheduledTo && (
+                  <div>
+                    <span className="font-medium">Nueva fecha:</span>
+                    <span className="ml-2">
+                      {formatDate(appointment.rescheduledTo)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>

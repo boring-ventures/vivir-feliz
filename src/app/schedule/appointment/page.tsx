@@ -138,6 +138,43 @@ export default function ScheduleAppointmentPage() {
     return edad.toString();
   };
 
+  // Helper function to capitalize text in real-time
+  const capitalizeText = (text: string) => {
+    return text
+      .split(" ")
+      .map((word) => {
+        if (word.length === 0) return word;
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(" ");
+  };
+
+  // Helper function to handle input changes with real-time capitalization
+  const handleTextInputChange = <T extends Record<string, unknown>>(
+    setter: React.Dispatch<React.SetStateAction<T>>,
+    field: string,
+    value: string,
+    shouldCapitalize: boolean = true
+  ) => {
+    const processedValue = shouldCapitalize ? capitalizeText(value) : value;
+    setter((prev: T) => {
+      if (field.includes(".")) {
+        const [parent, child] = field.split(".");
+        return {
+          ...prev,
+          [parent]: {
+            ...(prev[parent] as Record<string, unknown>),
+            [child]: processedValue,
+          },
+        };
+      }
+      return {
+        ...prev,
+        [field]: processedValue,
+      };
+    });
+  };
+
   // Clear errors when user starts typing
   const clearError = (field: string) => {
     if (errors[field]) {
@@ -306,8 +343,19 @@ export default function ScheduleAppointmentPage() {
     campo: string,
     valor: string | boolean
   ) => {
+    // Apply capitalization for text fields
+    const processedValue =
+      typeof valor === "string" &&
+      (campo === "nombre" ||
+        campo === "gradoEscolar" ||
+        campo === "descripcionProblemas")
+        ? capitalizeText(valor)
+        : valor;
+
     setHijos(
-      hijos.map((hijo) => (hijo.id === id ? { ...hijo, [campo]: valor } : hijo))
+      hijos.map((hijo) =>
+        hijo.id === id ? { ...hijo, [campo]: processedValue } : hijo
+      )
     );
 
     // Clear errors when user updates field
@@ -473,7 +521,7 @@ export default function ScheduleAppointmentPage() {
               id="nombre"
               value={datosNino.nombre}
               onChange={(e) => {
-                setDatosNino({ ...datosNino, nombre: e.target.value });
+                handleTextInputChange(setDatosNino, "nombre", e.target.value);
                 clearError("childName");
               }}
               placeholder="Nombre completo del niño/a"
@@ -614,7 +662,11 @@ export default function ScheduleAppointmentPage() {
                   placeholder="Especificar..."
                   value={datosNino.otroViveCon}
                   onChange={(e) => {
-                    setDatosNino({ ...datosNino, otroViveCon: e.target.value });
+                    handleTextInputChange(
+                      setDatosNino,
+                      "otroViveCon",
+                      e.target.value
+                    );
                     clearError("childOtherLivesWith");
                   }}
                   className={cn(
@@ -643,7 +695,11 @@ export default function ScheduleAppointmentPage() {
               id="domicilio"
               value={datosNino.domicilio}
               onChange={(e) => {
-                setDatosNino({ ...datosNino, domicilio: e.target.value });
+                handleTextInputChange(
+                  setDatosNino,
+                  "domicilio",
+                  e.target.value
+                );
                 clearError("childAddress");
               }}
               placeholder="Dirección completa"
@@ -691,10 +747,11 @@ export default function ScheduleAppointmentPage() {
               id="madre-nombre"
               value={datosPadres.madre.nombre}
               onChange={(e) => {
-                setDatosPadres({
-                  ...datosPadres,
-                  madre: { ...datosPadres.madre, nombre: e.target.value },
-                });
+                handleTextInputChange(
+                  setDatosPadres,
+                  "madre.nombre",
+                  e.target.value
+                );
                 clearError("parentRequired");
               }}
               placeholder="Nombre completo de la madre"
@@ -766,10 +823,11 @@ export default function ScheduleAppointmentPage() {
               id="madre-grado"
               value={datosPadres.madre.gradoEscolar}
               onChange={(e) =>
-                setDatosPadres({
-                  ...datosPadres,
-                  madre: { ...datosPadres.madre, gradoEscolar: e.target.value },
-                })
+                handleTextInputChange(
+                  setDatosPadres,
+                  "madre.gradoEscolar",
+                  e.target.value
+                )
               }
               placeholder="Ej: Universitario, Secundaria, etc."
             />
@@ -780,10 +838,11 @@ export default function ScheduleAppointmentPage() {
               id="madre-ocupacion"
               value={datosPadres.madre.ocupacion}
               onChange={(e) =>
-                setDatosPadres({
-                  ...datosPadres,
-                  madre: { ...datosPadres.madre, ocupacion: e.target.value },
-                })
+                handleTextInputChange(
+                  setDatosPadres,
+                  "madre.ocupacion",
+                  e.target.value
+                )
               }
               placeholder="Ocupación actual"
               className="capitalize"
@@ -804,10 +863,11 @@ export default function ScheduleAppointmentPage() {
               id="padre-nombre"
               value={datosPadres.padre.nombre}
               onChange={(e) => {
-                setDatosPadres({
-                  ...datosPadres,
-                  padre: { ...datosPadres.padre, nombre: e.target.value },
-                });
+                handleTextInputChange(
+                  setDatosPadres,
+                  "padre.nombre",
+                  e.target.value
+                );
                 clearError("parentRequired");
               }}
               placeholder="Nombre completo del padre"
@@ -879,10 +939,11 @@ export default function ScheduleAppointmentPage() {
               id="padre-grado"
               value={datosPadres.padre.gradoEscolar}
               onChange={(e) =>
-                setDatosPadres({
-                  ...datosPadres,
-                  padre: { ...datosPadres.padre, gradoEscolar: e.target.value },
-                })
+                handleTextInputChange(
+                  setDatosPadres,
+                  "padre.gradoEscolar",
+                  e.target.value
+                )
               }
               placeholder="Ej: Universitario, Secundaria, etc."
             />
@@ -893,10 +954,11 @@ export default function ScheduleAppointmentPage() {
               id="padre-ocupacion"
               value={datosPadres.padre.ocupacion}
               onChange={(e) =>
-                setDatosPadres({
-                  ...datosPadres,
-                  padre: { ...datosPadres.padre, ocupacion: e.target.value },
-                })
+                handleTextInputChange(
+                  setDatosPadres,
+                  "padre.ocupacion",
+                  e.target.value
+                )
               }
               placeholder="Ocupación actual"
               className="capitalize"
@@ -925,10 +987,11 @@ export default function ScheduleAppointmentPage() {
             id="institucion"
             value={datosEscolares.institucion}
             onChange={(e) => {
-              setDatosEscolares({
-                ...datosEscolares,
-                institucion: e.target.value,
-              });
+              handleTextInputChange(
+                setDatosEscolares,
+                "institucion",
+                e.target.value
+              );
               clearError("schoolName");
             }}
             placeholder="Nombre del colegio o institución educativa"
@@ -968,10 +1031,11 @@ export default function ScheduleAppointmentPage() {
             id="nivel-escolar"
             value={datosEscolares.nivelEscolar}
             onChange={(e) => {
-              setDatosEscolares({
-                ...datosEscolares,
-                nivelEscolar: e.target.value,
-              });
+              handleTextInputChange(
+                setDatosEscolares,
+                "nivelEscolar",
+                e.target.value
+              );
               clearError("schoolLevel");
             }}
             placeholder="Ej: 3ro de Primaria, Kinder, etc."
@@ -994,10 +1058,11 @@ export default function ScheduleAppointmentPage() {
             id="direccion-colegio"
             value={datosEscolares.direccion}
             onChange={(e) =>
-              setDatosEscolares({
-                ...datosEscolares,
-                direccion: e.target.value,
-              })
+              handleTextInputChange(
+                setDatosEscolares,
+                "direccion",
+                e.target.value
+              )
             }
             placeholder="Dirección completa del colegio"
           />
@@ -1009,7 +1074,11 @@ export default function ScheduleAppointmentPage() {
             id="maestra"
             value={datosEscolares.maestra}
             onChange={(e) =>
-              setDatosEscolares({ ...datosEscolares, maestra: e.target.value })
+              handleTextInputChange(
+                setDatosEscolares,
+                "maestra",
+                e.target.value
+              )
             }
             placeholder="Nombre completo de la maestra"
             className="capitalize"
@@ -1624,7 +1693,7 @@ export default function ScheduleAppointmentPage() {
           onChange={(e) =>
             setMotivosConsulta({
               ...motivosConsulta,
-              quienDeriva: e.target.value,
+              quienDeriva: capitalizeText(e.target.value),
             })
           }
           placeholder="Especificar quién deriva al niño/a (ej: pediatra, colegio, psicólogo, etc.)"

@@ -10,6 +10,7 @@ const rescheduleSchema = z.object({
   newDate: z.string().min(1, "New date is required"),
   newStartTime: z.string().min(1, "New start time is required"),
   newEndTime: z.string().min(1, "New end time is required"),
+  rescheduleReason: z.string().optional(),
 });
 
 // PATCH: Reschedule appointment (admin only)
@@ -115,6 +116,7 @@ export async function PATCH(
         status: "RESCHEDULED" as AppointmentStatus,
         rescheduledFrom: appointment.date,
         rescheduledTo: new Date(validatedData.newDate),
+        rescheduleReason: validatedData.rescheduleReason,
       },
       include: {
         patient: true,

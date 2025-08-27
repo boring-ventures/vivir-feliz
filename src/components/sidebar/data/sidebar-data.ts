@@ -43,6 +43,11 @@ export const getRoleBasedSidebarData = (
             title: "Super Administración",
             items: [
               {
+                title: "Inicio",
+                url: "/dashboard",
+                icon: Home,
+              },
+              {
                 title: "Dashboard",
                 url: "/super-admin/dashboard",
                 icon: BarChart,
@@ -89,6 +94,11 @@ export const getRoleBasedSidebarData = (
           {
             title: "Administración",
             items: [
+              {
+                title: "Inicio",
+                url: "/dashboard",
+                icon: Home,
+              },
               {
                 title: "Dashboard",
                 url: "/admin/dashboard",
@@ -154,9 +164,14 @@ export const getRoleBasedSidebarData = (
               title: "Mi Trabajo",
               items: [
                 {
+                  title: "Inicio",
+                  url: "/dashboard",
+                  icon: Home,
+                },
+                {
                   title: "Dashboard",
                   url: "/therapist/dashboard",
-                  icon: Home,
+                  icon: BarChart,
                 },
                 {
                   title: "Pacientes",
@@ -202,6 +217,11 @@ export const getRoleBasedSidebarData = (
             title: "Mi Trabajo",
             items: [
               {
+                title: "Inicio",
+                url: "/dashboard",
+                icon: Home,
+              },
+              {
                 title: "Dashboard",
                 url: "/therapist/dashboard",
                 icon: BarChart,
@@ -238,6 +258,11 @@ export const getRoleBasedSidebarData = (
           {
             title: "Mi Familia",
             items: [
+              {
+                title: "Inicio",
+                url: "/dashboard",
+                icon: Home,
+              },
               {
                 title: "Dashboard",
                 url: "/parent/dashboard",
@@ -281,9 +306,14 @@ export const getRoleBasedSidebarData = (
             title: "Navegación",
             items: [
               {
-                title: "Dashboard",
+                title: "Inicio",
                 url: "/dashboard",
                 icon: Home,
+              },
+              {
+                title: "Dashboard",
+                url: "/dashboard",
+                icon: BarChart,
               },
             ],
           },
