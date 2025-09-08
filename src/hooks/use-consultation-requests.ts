@@ -68,6 +68,7 @@ export interface ConsultationRequestFormData {
   schoolAddress?: string;
   schoolLevel?: string;
   teacherName?: string;
+  notEnrolled?: boolean;
 
   // Additional children
   children?: ConsultationChild[];
@@ -258,4 +259,3 @@ export function useUpdateConsultationRequest() {
     },
   });
 }
- 

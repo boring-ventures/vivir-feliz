@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       schoolAddress,
       schoolLevel,
       teacherName,
+      notEnrolled,
 
       // Children array
       children,
@@ -98,6 +99,7 @@ export async function POST(request: NextRequest) {
         schoolAddress: schoolAddress ? capitalizeAddress(schoolAddress) : null,
         schoolLevel: schoolLevel ? capitalizeWords(schoolLevel) : null,
         teacherName: teacherName ? capitalizeName(teacherName) : null,
+        notEnrolled: notEnrolled || false,
 
         // Consultation reasons
         consultationReasons,

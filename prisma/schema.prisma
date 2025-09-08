@@ -519,6 +519,7 @@ model ConsultationRequest {
   schoolAddress         String?                   @map("school_address")
   schoolLevel           String?                   @map("school_level")
   teacherName           String?                   @map("teacher_name")
+  notEnrolled           Boolean                   @default(false) @map("not_enrolled")
   
   // Consultation reasons (stored as JSON)
   consultationReasons   Json                      @map("consultation_reasons")

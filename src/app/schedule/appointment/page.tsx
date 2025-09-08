@@ -82,6 +82,7 @@ export default function ScheduleAppointmentPage() {
     direccion: "",
     nivelEscolar: "",
     maestra: "",
+    notEnrolled: false,
   });
 
   // Family history
@@ -240,11 +241,14 @@ export default function ScheduleAppointmentPage() {
   const validateStep3 = (): boolean => {
     const newErrors: ValidationErrors = {};
 
-    if (!datosEscolares.institucion.trim()) {
-      newErrors.schoolName = "El nombre de la institución es requerido";
-    }
-    if (!datosEscolares.nivelEscolar.trim()) {
-      newErrors.schoolLevel = "El nivel escolar es requerido";
+    // Only validate school fields if the child is not "not enrolled"
+    if (!datosEscolares.notEnrolled) {
+      if (!datosEscolares.institucion.trim()) {
+        newErrors.schoolName = "El nombre de la institución es requerido";
+      }
+      if (!datosEscolares.nivelEscolar.trim()) {
+        newErrors.schoolLevel = "El nivel escolar es requerido";
+      }
     }
 
     setErrors(newErrors);
@@ -437,6 +441,7 @@ export default function ScheduleAppointmentPage() {
       schoolAddress: datosEscolares.direccion,
       schoolLevel: datosEscolares.nivelEscolar,
       teacherName: datosEscolares.maestra,
+      notEnrolled: datosEscolares.notEnrolled,
 
       // Children array (convert to expected format)
       children: hijos.map(
@@ -479,6 +484,7 @@ export default function ScheduleAppointmentPage() {
           direccion: datosEscolares.direccion,
           nivelEscolar: datosEscolares.nivelEscolar,
           maestra: datosEscolares.maestra,
+          notEnrolled: datosEscolares.notEnrolled,
 
           // Family history
           hijos: hijos,
@@ -999,6 +1005,7 @@ export default function ScheduleAppointmentPage() {
               "capitalize",
               errors.schoolName && "border-red-500 focus:border-red-500"
             )}
+            disabled={datosEscolares.notEnrolled}
           />
           {errors.schoolName && (
             <p className="text-sm text-red-600 mt-1 flex items-center">
@@ -1017,6 +1024,7 @@ export default function ScheduleAppointmentPage() {
               setDatosEscolares({ ...datosEscolares, telefono: e.target.value })
             }
             placeholder="+591-4-123-4567"
+            disabled={datosEscolares.notEnrolled}
           />
         </div>
 
@@ -1043,6 +1051,7 @@ export default function ScheduleAppointmentPage() {
               "capitalize",
               errors.schoolLevel && "border-red-500 focus:border-red-500"
             )}
+            disabled={datosEscolares.notEnrolled}
           />
           {errors.schoolLevel && (
             <p className="text-sm text-red-600 mt-1 flex items-center">
@@ -1050,6 +1059,42 @@ export default function ScheduleAppointmentPage() {
               {errors.schoolLevel}
             </p>
           )}
+        </div>
+
+        <div className="md:col-span-2">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="not-enrolled"
+              checked={datosEscolares.notEnrolled}
+              onCheckedChange={(checked) => {
+                const newValue = checked as boolean;
+                setDatosEscolares((prev) => ({
+                  ...prev,
+                  notEnrolled: newValue,
+                  // Auto-fill the school level when checked
+                  nivelEscolar: newValue
+                    ? "No está escolarizado"
+                    : prev.nivelEscolar === "No está escolarizado"
+                      ? ""
+                      : prev.nivelEscolar,
+                  // Clear other fields when checked
+                  institucion: newValue
+                    ? "No está escolarizado"
+                    : prev.institucion === "No está escolarizado"
+                      ? ""
+                      : prev.institucion,
+                  telefono: newValue ? "" : prev.telefono,
+                  direccion: newValue ? "" : prev.direccion,
+                  maestra: newValue ? "" : prev.maestra,
+                }));
+                clearError("schoolLevel");
+                clearError("schoolName");
+              }}
+            />
+            <Label htmlFor="not-enrolled" className="text-sm">
+              No está escolarizado
+            </Label>
+          </div>
         </div>
 
         <div className="md:col-span-2">
@@ -1065,6 +1110,7 @@ export default function ScheduleAppointmentPage() {
               )
             }
             placeholder="Dirección completa del colegio"
+            disabled={datosEscolares.notEnrolled}
           />
         </div>
 
@@ -1082,6 +1128,7 @@ export default function ScheduleAppointmentPage() {
             }
             placeholder="Nombre completo de la maestra"
             className="capitalize"
+            disabled={datosEscolares.notEnrolled}
           />
         </div>
       </div>
